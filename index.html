@@ -143,7 +143,7 @@
         ctx.textAlign = 'center';
         ctx.fillText(inputEl.value, canvas.width/2, 30); // adjust the position of the text
         var printWindow = window.open();
-        printWindow.document.write('<div style="text-align:center;"><h2>' + inputEl.value + '</h2><img src="' + canvas.toDataURL() + '" onload="window.print()"></div>'); // wrap the image with the text
+        printWindow.document.write('<div><h2>' + inputEl.value + '</h2><img src="' + canvas.toDataURL() + '" onload="window.print()"></div>'); // wrap the image with the text
         printWindow.document.close();
       });
 
