@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Selgros Regalnummer Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        text-align: center;
+      }
+      
+      label {
+        display: block;
+        margin-bottom: 10px;
+      }
+      
+      input {
+        text-align: center;
+        width: 50%;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: none;
+        background-color: #eee;
+        color: #333;
+        font-size: 18px;
+        border-radius: 5px;
+      }
+      
+      canvas {
+        width: 100%;
+        max-width: 100px;
+        height: auto;
+        margin: 0 auto;
+        display: block;
+        border-radius: 10px;
+      }
+      
+      button {
+        width: 50%;
+        padding: 10px;
+        margin-top: 20px;
+        border: none;
+        background-color: #333;
+        color: #fff;
+        font-size: 18px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      button i {
+        margin-right: 10px;
+      }
+      /*
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.3);
+      }
+      */
+      button:active {
+        transform: translateY(1px);
+        box-shadow: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="text-align:center;">
+      <img src="https://www.selgros.de/sites/default/files/styles/original_extra_large/public/2023-03/Selgros-Logo.png.jpg" alt="Selgros Logo" width="300">
+    </div>    
+    <div>
+      <label for="qr-input">Trage die Regalnummer ein um einen QR code zu generieren:</label>
+      <input type="text" id="qr-input">
+    </div>
+    <div>
+      <canvas id="qr-canvas"></canvas>
+    </div>
+    <button id="download-btn"><i class="fas fa-download"></i>Download QR Code und Regalnummer</button>
+    <button id="print-btn"><i class="fas fa-print"></i>QR Code und Regalnummer drucken</button>
+    <script>
+      var inputEl = document.getElementById('qr-input');
+      var canvasEl = document.getElementById('qr-canvas');
+      var downloadBtn = document.getElementById('download-btn');
+      var printBtn = document.getElementById('print-btn');
+      var titleEl = document.createElement('h2'); // create a new h2 element
+      titleEl.textContent = inputEl.value; // set its text content to the input value
+
+      function updateQRCode() {
+        if (inputEl.value.trim() === '') {
+          canvasEl.width = 0;
+          titleEl.textContent = '';
+          downloadBtn.disabled = true;
+          printBtn.disabled = true;
+        } else {
+          var qr = new QRious({
+            element: canvasEl,
+            value: inputEl.value,
+            size: 100,
+            level: 'H',
+            background: '#fff',
+            foreground: '#333'
+          });
+          titleEl.textContent = inputEl.value;
+          downloadBtn.disabled = false;
+          printBtn.disabled = false;
+        }
+      }
+
+      inputEl.addEventListener('input', updateQRCode);
+
+      canvasEl.parentNode.insertBefore(titleEl, canvasEl.nextSibling);
+
+      downloadBtn.addEventListener('click', function() {
+        var canvas = document.createElement('canvas');
+        canvas.width = canvasEl.width;
+        canvas.height = canvasEl.height + 40;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(canvasEl, 0, 0);
+        ctx.fillStyle = '#333';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(inputEl.value, canvas.width/2, canvasEl.height + 30);
+        var link = document.createElement('a');
+        link.download = 'qr-code.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+
+      printBtn.addEventListener('click', function() {
+        var canvas = document.createElement('canvas');
+        canvas.width = canvasEl.width;
+        canvas.height = canvasEl.height + 40;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(canvasEl, 0, 0);
+        ctx.fillStyle = '#333';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(inputEl.value, canvas.width/2, canvasEl.height + 30);
+        var printWindow = window.open();
+        printWindow.document.write('<img src="' + canvas.toDataURL() + '" onload="window.print()">');
+        printWindow.document.close();
+      });
+
+      updateQRCode();
+    </script>
+  </body>  
+</html>
