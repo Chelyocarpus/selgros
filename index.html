@@ -114,15 +114,15 @@
       downloadBtn.addEventListener('click', function() {
         var canvas = document.createElement('canvas');
         canvas.width = canvasEl.width;
-        canvas.height = canvasEl.height + 60; // increased to accommodate the text
+        canvas.height = canvasEl.height + 20; // increased to accommodate the text
         var ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.font = '20px Arial';
         ctx.fillStyle = '#333';
         ctx.textAlign = 'center';
-        ctx.fillText(inputEl.value, canvas.width/2, 30); // position the text above the QR code
-        ctx.drawImage(canvasEl, 0, 40); // position the QR code below the text
+        ctx.fillText(inputEl.value, canvas.width/2, 15); // position the text above the QR code
+        ctx.drawImage(canvasEl, 0, 20); // position the QR code below the text
         var link = document.createElement('a');
         link.download = 'qr-code.png';
         link.href = canvas.toDataURL();
@@ -133,17 +133,17 @@
       printBtn.addEventListener('click', function() {
         var canvas = document.createElement('canvas');
         canvas.width = canvasEl.width;
-        canvas.height = canvasEl.height + 60; // increased to accommodate the text
+        canvas.height = canvasEl.height + 20; // increased to accommodate the text
         var ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(canvasEl, 0, 0);
         ctx.fillStyle = '#333';
         ctx.font = '20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(inputEl.value, canvas.width/2, 30); // adjust the position of the text
+        ctx.fillText(inputEl.value, canvas.width/2, 15); // position the text above the QR code
+        ctx.drawImage(canvasEl, 0, 20) // position the QR code below the text
         var printWindow = window.open();
-        printWindow.document.write('<div><h2>' + inputEl.value + '</h2><img src="' + canvas.toDataURL() + '" onload="window.print()"></div>'); // wrap the image with the text
+        printWindow.document.write('<div><img src="' + canvas.toDataURL() + '" onload="window.print()"></div>');
         printWindow.document.close();
       });
 
