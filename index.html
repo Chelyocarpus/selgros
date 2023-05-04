@@ -72,21 +72,21 @@
       <img src="https://www.selgros.de/sites/default/files/styles/original_extra_large/public/2023-03/Selgros-Logo.png.jpg" alt="Selgros Logo" width="300">
     </div>    
     <div>
-      <label for="qr-input">Trage die Regalnummer ein um einen QR code zu generieren:</label>
+      <label for="qr-input">Trage die Regalnummer ein um einen QR-Code zu generieren:</label>
       <input type="text" id="qr-input">
     </div>
     <div>
+      <h2 id="title"></h2>
       <canvas id="qr-canvas"></canvas>
     </div>
-    <button id="download-btn"><i class="fas fa-download"></i>Download QR Code und Regalnummer</button>
-    <button id="print-btn"><i class="fas fa-print"></i>QR Code und Regalnummer drucken</button>
+    <button id="download-btn"><i class="fas fa-download"></i>QR-Code und Regalnummer herunterladen</button>
+    <button id="print-btn"><i class="fas fa-print"></i>QR-Code und Regalnummer drucken</button>
     <script>
       var inputEl = document.getElementById('qr-input');
       var canvasEl = document.getElementById('qr-canvas');
       var downloadBtn = document.getElementById('download-btn');
       var printBtn = document.getElementById('print-btn');
-      var titleEl = document.createElement('h2'); // create a new h2 element
-      titleEl.textContent = inputEl.value; // set its text content to the input value
+      var titleEl = document.getElementById('title'); // Neue Variablendefinition für die H2-Überschrift
 
       function updateQRCode() {
         if (inputEl.value.trim() === '') {
@@ -111,30 +111,29 @@
 
       inputEl.addEventListener('input', updateQRCode);
 
-      canvasEl.parentNode.insertBefore(titleEl, canvasEl.nextSibling);
-
       downloadBtn.addEventListener('click', function() {
         var canvas = document.createElement('canvas');
         canvas.width = canvasEl.width;
-        canvas.height = canvasEl.height + 40;
+        canvas.height = canvasEl.height + 60; // increased to accommodate the text
         var ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(canvasEl, 0, 0);
-        ctx.fillStyle = '#333';
         ctx.font = '20px Arial';
+        ctx.fillStyle = '#333';
         ctx.textAlign = 'center';
-        ctx.fillText(inputEl.value, canvas.width/2, canvasEl.height + 30);
+        ctx.fillText(inputEl.value, canvas.width/2, 30); // position the text above the QR code
+        ctx.drawImage(canvasEl, 0, 40); // position the QR code below the text
         var link = document.createElement('a');
         link.download = 'qr-code.png';
         link.href = canvas.toDataURL();
         link.click();
       });
 
+
       printBtn.addEventListener('click', function() {
         var canvas = document.createElement('canvas');
         canvas.width = canvasEl.width;
-        canvas.height = canvasEl.height + 40;
+        canvas.height = canvasEl.height + 60; // increased to accommodate the text
         var ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -142,9 +141,9 @@
         ctx.fillStyle = '#333';
         ctx.font = '20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(inputEl.value, canvas.width/2, canvasEl.height + 30);
+        ctx.fillText(inputEl.value, canvas.width/2, 30); // adjust the position of the text
         var printWindow = window.open();
-        printWindow.document.write('<img src="' + canvas.toDataURL() + '" onload="window.print()">');
+        printWindow.document.write('<div style="text-align:center;"><h2>' + inputEl.value + '</h2><img src="' + canvas.toDataURL() + '" onload="window.print()"></div>'); // wrap the image with the text
         printWindow.document.close();
       });
 
