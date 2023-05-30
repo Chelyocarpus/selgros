@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Selgros Regalnummer Generator</title>
+    <title>Selgros | Regalnummer Generator</title>
     <link rel="shortcut icon" type="image/x-icon" href="https://www.selgros.de/themes/contrib/transgourmet-base-theme/apps/drupal/assets/logo-icon.svg">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
@@ -91,7 +91,7 @@
       var canvasEl = document.getElementById('qr-canvas');
       var downloadBtn = document.getElementById('download-btn');
       var printBtn = document.getElementById('print-btn');
-      var titleEl = document.getElementById('title'); // Neue Variablendefinition für die H2-Überschrift
+      var titleEl = document.getElementById('title'); //
 
       function updateQRCode() {
         if (inputEl.value.trim() === '') {
@@ -129,7 +129,7 @@
         ctx.fillText(inputEl.value, canvas.width/2, 15); // position the text above the QR code
         ctx.drawImage(canvasEl, 0, 20); // position the QR code below the text
         var link = document.createElement('a');
-        link.download = 'qr-code.png';
+        link.download = inputEl.value + '.png';
         link.href = canvas.toDataURL();
         link.click();
       });
