@@ -316,9 +316,9 @@ $(document).ready(function() {
         // Calculate normal sales
         let sumVerkauft = verkauft * bruttoPrice;
         
-        // Calculate rabbatiert (corrected formula)
+        // Calculate rabbatiert (fixed formula)
         let discountedPrice = bruttoPrice * 0.5;  // 50% discount
-        let naturalrabattBonus = discountedPrice * 0.25;  // 25% of discounted price
+        let naturalrabattBonus = discountedPrice * 0.25;  // 25% of discounted price only (was using full price before)
         let finalRabbatPrice = discountedPrice + naturalrabattBonus;
         let sumRabbatiert = rabbatiert * finalRabbatPrice;
         
@@ -739,7 +739,7 @@ $(document).ready(function() {
         
         const sumVerkauft = inputs.verkauft * bruttoPrice;
         const discountedPrice = bruttoPrice * 0.5;
-        const naturalrabattBonus = bruttoPrice * 0.25;
+        const naturalrabattBonus = discountedPrice * 0.25;  // Fixed here too
         const finalRabbatPrice = discountedPrice + naturalrabattBonus;
         const sumRabbatiert = inputs.rabbatiert * finalRabbatPrice;
         
