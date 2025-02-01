@@ -540,26 +540,31 @@ $(document).ready(function() {
         let discountItems = 0;
         let lostItems = 0;
 
-        // Use DataTables API to get all rows across all pages
         const table = $('#sapTable').DataTable();
         table.rows().every(function() {
             const row = $(this.node());
+            
+            // Get values from the row
+            const schwund = parseInt(row.find('.schwund').val()) || 0;
+            const verkauft = parseInt(row.find('.verkauft').val()) || 0;
+            const rabbatiert = parseInt(row.find('.rabbatiert').val()) || 0;
+            const ekPrice = parseGermanNumber(row.find('td:nth-child(5)').text());
+            
+            // Calculate totals
             totalProfit += parseFloat(row.find('.sumProfit').text().replace('€', '').trim()) || 0;
             totalRevenue += parseFloat(row.find('.sumGesamt').text().replace('€', '').trim()) || 0;
             discountedSales += parseFloat(row.find('.sumRabbatiert').text().replace('€', '').trim()) || 0;
             
-            const schwund = parseInt(row.find('.schwund').val()) || 0;
-            const verkauft = parseInt(row.find('.verkauft').val()) || 0;
-            const rabbatiert = parseInt(row.find('.rabbatiert').val()) || 0;
-            const ekPrice = parseFloat(row.find('td:nth-child(5)').text().replace('€', '').trim()) || 0;
-            
+            // Calculate loss based on EK price and schwund quantity
             totalLoss += schwund * ekPrice;
+            
+            // Update counters
             itemsSold += verkauft;
             discountItems += rabbatiert;
             lostItems += schwund;
         });
 
-        // Update stats display
+        // Update stats display with proper formatting
         $('#totalProfit').text(totalProfit.toFixed(2) + ' €');
         $('#totalRevenue').text(totalRevenue.toFixed(2) + ' €');
         $('#discountedSales').text(discountedSales.toFixed(2) + ' €');
@@ -700,6 +705,7 @@ $(document).ready(function() {
         // Skip if all values are 0
         if (Object.values(inputs).every(v => v === 0)) {
             row.find('.sumVerkauft, .sumRabbatiert, .sumGesamt, .sumProfit').text('0.00 €');
+            updateStats();
             return;
         }
 
@@ -710,7 +716,7 @@ $(document).ready(function() {
         // Calculate normal sales
         const sumVerkauft = inputs.verkauft * bruttoPrice;
         
-        // Calculate discounted sales (simplified to avoid rounding errors)
+        // Calculate discounted sales
         const discountedPrice = bruttoPrice * 0.5; // 50% off
         const naturalrabattBonus = discountedPrice * 0.25; // 25% of discounted price
         const finalRabbatPrice = discountedPrice + naturalrabattBonus;
@@ -719,12 +725,15 @@ $(document).ready(function() {
         // Calculate total revenue
         const sumGesamt = sumVerkauft + sumRabbatiert;
         
-        // Calculate profit (only for sold and discounted items)
-        const soldItems = inputs.verkauft + inputs.rabbatiert;
-        const totalCost = soldItems * ekPrice;
+        // Calculate costs including lost items (Schwund)
+        const lostItemsCost = inputs.schwund * ekPrice;        // Cost of lost items
+        const soldItemsCost = (inputs.verkauft + inputs.rabbatiert) * ekPrice;  // Cost of sold items
+        const totalCost = soldItemsCost + lostItemsCost;       // Total cost including lost items
+        
+        // Calculate final profit (revenue minus all costs)
         const sumProfit = sumGesamt - totalCost;
 
-        // Update display with calculated values (fixed to 2 decimal places)
+        // Update display with calculated values
         row.find('.sumVerkauft').text(sumVerkauft.toFixed(2) + ' €');
         row.find('.sumRabbatiert').text(sumRabbatiert.toFixed(2) + ' €');
         row.find('.sumGesamt').text(sumGesamt.toFixed(2) + ' €');
