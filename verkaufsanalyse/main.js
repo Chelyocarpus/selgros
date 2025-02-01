@@ -590,35 +590,10 @@ $(document).ready(function() {
 
     // Force calculation for a specific row
     function forceCalculateRow(row) {
-        // Skip calculation if all inputs are 0
         if (!hasInputValues(row)) {
             return;
         }
-
-        let verkauft = parseFloat(row.find('.verkauft').val()) || 0;
-        let schwund = parseFloat(row.find('.schwund').val()) || 0;
-        let rabbatiert = parseFloat(row.find('.rabbatiert').val()) || 0;
-        
-        let bruttoText = row.find('td:nth-child(8)').text();
-        let ekText = row.find('td:nth-child(5)').text();
-        let bruttoPrice = parseGermanNumber(bruttoText);
-        let ekPrice = parseGermanNumber(ekText);
-        
-        let sumVerkauft = verkauft * bruttoPrice;
-        let discountedPrice = bruttoPrice * 0.5;  // 50% discount
-        let naturalrabattBonus = discountedPrice * 0.25;  // 25% of discounted price
-        let finalRabbatPrice = discountedPrice + naturalrabattBonus;
-        let sumRabbatiert = rabbatiert * finalRabbatPrice;
-        let sumGesamt = sumVerkauft + sumRabbatiert;
-        let totalPieces = parseInt(row.find('td:nth-child(4)').text());
-        let totalEKCost = totalPieces * ekPrice;
-        let sumProfit = sumGesamt - totalEKCost;
-
-        // Update display
-        row.find('.sumVerkauft').text(sumVerkauft.toFixed(2) + ' €');
-        row.find('.sumRabbatiert').text(sumRabbatiert.toFixed(2) + ' €');
-        row.find('.sumGesamt').text(sumGesamt.toFixed(2) + ' €');
-        row.find('.sumProfit').text(sumProfit.toFixed(2) + ' €');
+        calculateRow(row); // Use the same calculation logic
     }
 
     // Initialize all calculations
@@ -722,35 +697,38 @@ $(document).ready(function() {
             rabbatiert: parseInt(row.find('.rabbatiert').val()) || 0
         };
 
-        // Store values back to inputs (ensures they are numbers)
-        Object.entries(inputs).forEach(([key, value]) => {
-            row.find(`.${key}`).val(value);
-        });
-
         // Skip if all values are 0
         if (Object.values(inputs).every(v => v === 0)) {
             row.find('.sumVerkauft, .sumRabbatiert, .sumGesamt, .sumProfit').text('0.00 €');
             return;
         }
 
-        // Rest of calculation logic
+        // Get prices (ensure proper parsing)
         const bruttoPrice = parseGermanNumber(row.find('td:nth-child(8)').text());
         const ekPrice = parseGermanNumber(row.find('td:nth-child(5)').text());
         
+        // Calculate normal sales
         const sumVerkauft = inputs.verkauft * bruttoPrice;
-        const discountedPrice = bruttoPrice * 0.5;
-        const naturalrabattBonus = discountedPrice * 0.25;  // Fixed here too
+        
+        // Calculate discounted sales (simplified to avoid rounding errors)
+        const discountedPrice = bruttoPrice * 0.5; // 50% off
+        const naturalrabattBonus = discountedPrice * 0.25; // 25% of discounted price
         const finalRabbatPrice = discountedPrice + naturalrabattBonus;
         const sumRabbatiert = inputs.rabbatiert * finalRabbatPrice;
         
-        // Update display with calculated values
+        // Calculate total revenue
+        const sumGesamt = sumVerkauft + sumRabbatiert;
+        
+        // Calculate profit (only for sold and discounted items)
+        const soldItems = inputs.verkauft + inputs.rabbatiert;
+        const totalCost = soldItems * ekPrice;
+        const sumProfit = sumGesamt - totalCost;
+
+        // Update display with calculated values (fixed to 2 decimal places)
         row.find('.sumVerkauft').text(sumVerkauft.toFixed(2) + ' €');
         row.find('.sumRabbatiert').text(sumRabbatiert.toFixed(2) + ' €');
-        row.find('.sumGesamt').text((sumVerkauft + sumRabbatiert).toFixed(2) + ' €');
-        
-        const totalPieces = parseInt(row.find('td:nth-child(4)').text());
-        const totalEKCost = totalPieces * ekPrice;
-        row.find('.sumProfit').text(((sumVerkauft + sumRabbatiert) - totalEKCost).toFixed(2) + ' €');
+        row.find('.sumGesamt').text(sumGesamt.toFixed(2) + ' €');
+        row.find('.sumProfit').text(sumProfit.toFixed(2) + ' €');
         
         updateStats();
     }
