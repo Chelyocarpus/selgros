@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wareneingang</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Add DOMPurify -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+</head>
+<body class="bg-gray-100 p-5">
+  <div class="container mx-auto">
+    <div id="browserWarning" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+      <strong class="font-bold">Unsupported Browser! </strong>
+      <span class="block sm:inline">This application requires Chrome, Edge, or Opera. Please use a supported browser for full functionality.</span>
+    </div>
+
+    <!-- Add restore state banner -->
+    <div id="restoreStateBanner" class="hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4 flex justify-between items-center" role="alert">
+      <div>
+        <strong class="font-bold">Previous session found! </strong>
+        <span class="block sm:inline" id="restoreStateMessage"></span>
+      </div>
+      <div>
+        <button id="restoreStateButton" class="bg-blue-500 text-white px-4 py-2 rounded mr-2">Restore</button>
+        <button id="clearStateButton" class="bg-gray-500 text-white px-4 py-2 rounded">Dismiss</button>
+      </div>
+    </div>
+
+    <!-- Add notification banner -->
+    <div id="notificationBanner" class="hidden mb-4 rounded relative" role="alert">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center">
+                <span id="notificationIcon" class="mr-2"></span>
+                <span id="notificationMessage"></span>
+            </div>
+            <button onclick="hideNotification()" class="ml-4">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <h1 class="text-2xl font-bold mb-5">Negative Gelieferte Menge</h1>
+    
+    <div class="flex items-center gap-4 mb-3">
+      <!-- Replace file input with custom button -->
+      <div class="flex-grow">
+        <button id="selectFileButton" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+          </svg>
+          Select TXT File
+        </button>
+        <div id="fileInfo" class="mt-2 text-sm text-gray-600 hidden">
+          <div class="flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+            </svg>
+            <span id="fileName">No file selected</span>
+          </div>
+          <div id="fileDetails" class="ml-5 mt-1 text-xs text-gray-500"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="inline-flex items-center">
+          <input type="checkbox" id="autoReload" class="form-checkbox">
+          <span class="ml-2">Auto-reload</span>
+        </label>
+        <span id="monitorStatus" class="ml-2 px-2 py-1 rounded text-sm">⚪ Idle</span>
+      </div>
+    </div>
+    
+    <button id="processFileButton" class="bg-blue-500 text-white px-4 py-2 rounded">Process File</button>
+
+    <h2 class="text-xl font-bold mt-5">Filtered Data</h2>
+    <div id="output" class="mt-3"></div>
+  </div>
+
+  <script>
+    // Add browser detection at the start
+    function isSupported() {
+      return 'showOpenFilePicker' in window;
+    }
+
+    // Show warning and disable functionality if unsupported
+    if (!isSupported()) {
+      document.getElementById('browserWarning').classList.remove('hidden');
+      document.getElementById('fileInput').disabled = true;
+      document.getElementById('autoReload').disabled = true;
+      document.getElementById('processFileButton').disabled = true;
+    }
+
+    let fileHandle = null;
+    let monitorInterval = null;
+    let lastModified = null;
+    let fileChanged = false;
+    let checkInterval = 5000; // Start with 5 seconds
+    const maxInterval = 30000; // Max 30 seconds
+    const backoffFactor = 1.5;
+
+    // Add persistence handling
+    let persistenceGranted = false;
+
+    // Request persistence permission
+    async function requestPersistence() {
+        try {
+            if ('permissions' in navigator) {
+                const result = await navigator.permissions.query({ name: 'persistent-storage' });
+                if (result.state === 'granted') {
+                    persistenceGranted = true;
+                    return true;
+                }
+            }
+            
+            const granted = await navigator.storage?.persist();
+            persistenceGranted = granted;
+            return granted;
+        } catch (e) {
+            console.warn('Persistence not supported:', e);
+            return false;
+        }
+    }
+
+    // Add helper function to check localStorage availability
+    function isLocalStorageAvailable() {
+        try {
+            const test = '__storage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Add error handling utilities at the top after constants
+    const ERROR_TYPES = {
+        FILE_ACCESS: 'FILE_ACCESS',
+        FILE_PROCESSING: 'FILE_PROCESSING',
+        STORAGE: 'STORAGE',
+        MONITORING: 'MONITORING',
+        BROWSER_SUPPORT: 'BROWSER_SUPPORT'
+    };
+
+    // Add notification utilities after constants
+    const NOTIFICATION_TYPES = {
+        ERROR: 'error',
+        WARNING: 'warning',
+        INFO: 'info',
+        SUCCESS: 'success'
+    };
+
+    const NOTIFICATION_CONFIGS = {
+        [NOTIFICATION_TYPES.ERROR]: {
+            icon: '⚠️',
+            classes: 'bg-red-100 border border-red-400 text-red-700'
+        },
+        [NOTIFICATION_TYPES.WARNING]: {
+            icon: '⚠️',
+            classes: 'bg-yellow-100 border border-yellow-400 text-yellow-700'
+        },
+        [NOTIFICATION_TYPES.INFO]: {
+            icon: 'ℹ️',
+            classes: 'bg-blue-100 border border-blue-400 text-blue-700'
+        },
+        [NOTIFICATION_TYPES.SUCCESS]: {
+            icon: '✅',
+            classes: 'bg-green-100 border border-green-400 text-green-700'
+        }
+    };
+
+    function showNotification(message, type = NOTIFICATION_TYPES.INFO, duration = 5000) {
+        const banner = document.getElementById('notificationBanner');
+        const icon = document.getElementById('notificationIcon');
+        const messageEl = document.getElementById('notificationMessage');
+        
+        // Apply styling
+        const config = NOTIFICATION_CONFIGS[type];
+        banner.className = `mb-4 rounded relative ${config.classes}`;
+        icon.textContent = config.icon;
+        messageEl.textContent = message;
+        
+        // Show banner
+        banner.classList.remove('hidden');
+        
+        // Auto-hide after duration if specified
+        if (duration > 0) {
+            setTimeout(hideNotification, duration);
+        }
+    }
+
+    function hideNotification() {
+        document.getElementById('notificationBanner').classList.add('hidden');
+    }
+
+    // Modify handleError to use notification system
+    function handleError(error, type, silent = false) {
+        // Always log to console
+        console.error(`[${type}]`, error);
+
+        // Determine user-friendly message
+        let userMessage = 'An unexpected error occurred.';
+        if (error instanceof Error) {
+            switch (type) {
+                case ERROR_TYPES.FILE_ACCESS:
+                    userMessage = `Cannot access file: ${error.message}`;
+                    break;
+                case ERROR_TYPES.FILE_PROCESSING:
+                    userMessage = `Error processing file: ${error.message}`;
+                    break;
+                case ERROR_TYPES.STORAGE:
+                    userMessage = `Storage error: ${error.message}`;
+                    break;
+                case ERROR_TYPES.MONITORING:
+                    userMessage = `File monitoring error: ${error.message}`;
+                    break;
+                case ERROR_TYPES.BROWSER_SUPPORT:
+                    userMessage = `Browser compatibility error: ${error.message}`;
+                    break;
+            }
+        } else if (typeof error === 'string') {
+            userMessage = error;
+        }
+
+        // Show notification unless silent
+        if (!silent) {
+            showNotification(userMessage, NOTIFICATION_TYPES.ERROR);
+        }
+
+        return { type, message: userMessage, error };
+    }
+
+    // Modified saveState function with standardized error handling
+    function saveState() {
+        if (!fileHandle || !isLocalStorageAvailable()) return;
+        
+        const state = {
+            monitoring: !!monitorInterval,
+            lastModified: lastModified,
+            fileName: fileHandle.name,
+            filePath: fileHandle.name
+        };
+
+        try {
+            localStorage.setItem('fileProcessor', JSON.stringify(state));
+        } catch (e) {
+            const error = handleError(e, ERROR_TYPES.STORAGE, true);
+            
+            if (e.name === 'QuotaExceededError' || 
+                e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                try {
+                    localStorage.removeItem('fileProcessor');
+                    localStorage.setItem('fileProcessor', JSON.stringify(state));
+                    return;
+                } catch (retryError) {
+                    handleError(retryError, ERROR_TYPES.STORAGE, true);
+                }
+            }
+
+            // Show error in status
+            const status = document.getElementById('monitorStatus');
+            status.textContent = '⚠️ Storage Error';
+            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-red-100';
+            setTimeout(() => {
+                if (monitorInterval) {
+                    status.textContent = '🟢 Monitoring';
+                    status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
+                } else {
+                    status.textContent = '⚪ Idle';
+                    status.className = 'ml-2 px-2 py-1 rounded text-sm';
+                }
+            }, 3000);
+        }
+    }
+
+    // Modified loadState function with path suggestion
+    async function loadState() {
+        const saved = localStorage.getItem('fileProcessor');
+        if (!saved) return;
+
+        const state = JSON.parse(saved);
+        
+        if (state.monitoring || state.filePath) {
+            const banner = document.getElementById('restoreStateBanner');
+            const message = document.getElementById('restoreStateMessage');
+            const safeMessage = state.monitoring ? 
+                `Resume monitoring "${DOMPurify.sanitize(state.filePath)}"?` :
+                `Last used file: "${DOMPurify.sanitize(state.filePath)}"`;
+            message.textContent = '';
+            const span = document.createElement('span');
+            span.className = 'font-mono text-xs bg-gray-100 px-1';
+            span.textContent = state.filePath;
+            message.appendChild(document.createTextNode(state.monitoring ? 'Resume monitoring "' : 'Last used file: "'));
+            message.appendChild(span);
+            message.appendChild(document.createTextNode('"'));
+
+            banner.classList.remove('hidden');
+
+            document.getElementById('restoreStateButton').onclick = async () => {
+                try {
+                    const handles = await window.showOpenFilePicker({
+                        types: [{
+                            description: 'MHTML Files',
+                            accept: {
+                                'multipart/related': ['.mhtml', '.MHTML']
+                            }
+                        }],
+                        multiple: false,
+                        startIn: 'downloads' // Try to start in downloads folder
+                    });
+                    
+                    fileHandle = handles[0];
+                    const file = await fileHandle.getFile();
+                    
+                    if (state.monitoring) {
+                        if (file.name === state.fileName) {
+                            // ... existing monitoring restoration code ...
+                            lastModified = file.lastModified;
+                            document.getElementById('output').innerHTML = 
+                                `<p class="text-gray-500">File selected: ${file.name}<br>Last modified: ${new Date(lastModified).toLocaleString()}</p>`;
+                            
+                            document.getElementById('autoReload').checked = true;
+                            const status = document.getElementById('monitorStatus');
+                            status.innerHTML = '🟢 Monitoring';
+                            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
+                            updateTitle('🟢 Monitoring');
+                            monitorInterval = setInterval(checkFileChanges, 1000);
+                            
+                            const text = await file.text();
+                            processFile(text.trim());
+                            banner.classList.add('hidden');
+                        } else {
+                            showNotification('Different file selected. Monitoring not resumed.', NOTIFICATION_TYPES.WARNING);
+                            // But still save the new file as current
+                            await handleSelectedFile(file);
+                        }
+                    } else {
+                        await handleSelectedFile(file);
+                    }
+                    banner.classList.add('hidden');
+                    
+                } catch (err) {
+                    console.error('Error restoring state:', err);
+                    showNotification('Failed to restore state', NOTIFICATION_TYPES.ERROR);
+                    localStorage.removeItem('fileProcessor');
+                    banner.classList.add('hidden');
+                }
+            };
+
+            // Update restore button text based on state
+            document.getElementById('restoreStateButton').textContent = 
+                state.monitoring ? 'Restore Monitoring' : 'Open Last File';
+
+            document.getElementById('clearStateButton').onclick = () => {
+                localStorage.removeItem('fileProcessor');
+                banner.classList.add('hidden');
+            };
+        }
+    }
+
+    // New helper function to handle selected file
+    async function handleSelectedFile(file) {
+        lastModified = file.lastModified;
+        
+        // Update file info display safely
+        document.getElementById('fileInfo').classList.remove('hidden');
+        document.getElementById('fileName').textContent = file.name;
+        const details = document.getElementById('fileDetails');
+        details.textContent = '';
+        
+        const lastMod = document.createElement('div');
+        lastMod.textContent = `Last modified: ${new Date(lastModified).toLocaleString()}`;
+        const size = document.createElement('div');
+        size.textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+        
+        details.appendChild(lastMod);
+        details.appendChild(size);
+        
+        const text = await file.text();
+        processFile(text.trim());
+        saveState();
+    }
+
+    // Modified initialization
+    async function initialize() {
+        if (isSupported()) {
+            const granted = await requestPersistence();
+            console.log('Persistence granted:', granted);
+            await loadState();
+        } else {
+            // ...existing browser warning code...
+        }
+    }
+    
+    // Run initialization
+    initialize();
+
+    // Update file picker handler to use handleSelectedFile
+    document.getElementById('selectFileButton').addEventListener('click', async function () {
+        try {
+            const handles = await window.showOpenFilePicker({
+                types: [{
+                    description: 'MHTML Files',
+                    accept: {
+                        'application/x-mimearchive': ['.mhtml', '.mht'],
+                        'message/rfc822': ['.mhtml', '.mht']
+                    }
+                }],
+                multiple: false,
+                startIn: 'downloads' // Try to start in downloads folder
+            });
+            
+            fileHandle = handles[0];
+            const file = await fileHandle.getFile();
+            await handleSelectedFile(file);
+            
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                handleError(err, ERROR_TYPES.FILE_ACCESS);
+            }
+        }
+    });
+
+    // Add helper function for cleaning up monitoring state
+    function cleanupMonitoringState() {
+        fileHandle = null;
+        lastModified = null;
+        fileChanged = false;
+        checkInterval = 5000; // Reset to initial interval
+        if (monitorInterval) {
+            clearInterval(monitorInterval);
+            monitorInterval = null;
+        }
+        
+        // Reset UI state
+        const autoReload = document.getElementById('autoReload');
+        autoReload.checked = false;
+        
+        const fileInfo = document.getElementById('fileInfo');
+        fileInfo.classList.add('hidden');
+        
+        document.getElementById('fileName').textContent = 'No file selected';
+        document.getElementById('fileDetails').textContent = '';
+        
+        // Clear any existing data
+        const output = document.getElementById('output');
+        output.textContent = '';
+    }
+
+    // Modified checkFileChanges function with complete error cleanup
+    async function checkFileChanges() {
+        if (!fileHandle) return;
+        
+        try {
+            const file = await fileHandle.getFile();
+            if (file.lastModified !== lastModified) {
+                fileChanged = true;
+                lastModified = file.lastModified;
+                const text = await file.text();
+                processFile(text.trim());
+                
+                // Visual feedback with title update
+                const status = document.getElementById('monitorStatus');
+                status.textContent = `🔄 Updated: ${new Date().toLocaleTimeString()}`;
+                status.className = 'ml-2 px-2 py-1 rounded text-sm bg-yellow-100';
+                updateTitle('🔄 Updated');
+                setTimeout(() => {
+                    status.textContent = '🟢 Monitoring';
+                    status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
+                    updateTitle('🟢 Monitoring');
+                }, 1000);
+            } else {
+                fileChanged = false;
+            }
+        } catch (err) {
+            const error = handleError(err, ERROR_TYPES.MONITORING);
+            cleanupMonitoringState();
+            
+            const status = document.getElementById('monitorStatus');
+            status.textContent = '⚠️ Error';
+            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-red-100';
+            updateTitle('⚠️ Error');
+        }
+    }
+
+    // New function to setup monitoring with exponential backoff
+    function setupMonitoring() {
+        if (monitorInterval) {
+            clearInterval(monitorInterval);
+        }
+
+        monitorInterval = setInterval(() => {
+            checkFileChanges();
+            // Increase interval up to maxInterval if no changes detected
+            if (!fileChanged) {
+                checkInterval = Math.min(checkInterval * backoffFactor, maxInterval);
+                clearInterval(monitorInterval);
+                monitorInterval = setInterval(arguments.callee, checkInterval);
+            } else {
+                // Reset interval to 5 seconds when changes are detected
+                checkInterval = 5000;
+                clearInterval(monitorInterval);
+                monitorInterval = setInterval(arguments.callee, checkInterval);
+            }
+        }, checkInterval);
+    }
+
+    // Update process file button
+    document.getElementById('processFileButton').addEventListener('click', async function () {
+        if (!fileHandle) {
+            showNotification('Please select a file first!', NOTIFICATION_TYPES.WARNING);
+            return;
+        }
+
+        try {
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            processFile(text.trim());
+        } catch (err) {
+            handleError(err, ERROR_TYPES.FILE_ACCESS);
+        }
+    });
+
+    // Modified auto-reload toggle
+    document.getElementById('autoReload').addEventListener('change', function(e) {
+        const status = document.getElementById('monitorStatus');
+        if (e.target.checked) {
+            if (!fileHandle) {
+                showNotification('Please select a file first!', NOTIFICATION_TYPES.WARNING);
+                e.target.checked = false;
+                return;
+            }
+            status.innerHTML = '🟢 Monitoring';
+            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
+            updateTitle('🟢 Monitoring');
+            checkInterval = 5000; // Reset interval when starting monitoring
+            setupMonitoring();
+            saveState();
+        } else {
+            status.innerHTML = '⚪ Idle';
+            status.className = 'ml-2 px-2 py-1 rounded text-sm';
+            updateTitle();
+            if (monitorInterval) {
+                clearInterval(monitorInterval);
+            }
+            saveState();
+        }
+    });
+
+    // Add beforeunload handler
+    window.addEventListener('beforeunload', () => {
+        if (monitorInterval) {
+            saveState();
+        }
+    });
+
+    // Replace complex column configuration with just the required filter column
+    const DELIVERED_QUANTITY_COLUMN = 'Gelieferte Menge';
+
+    // New function to update title
+    function updateTitle(status) {
+        const baseTitle = 'Wareneingang';
+        document.title = status ? `${baseTitle} (${status})` : baseTitle;
+    }
+
+    // Modified processFile function with HTML content validation
+    function processFile(rawData) {
+        try {
+            // Find the HTML content section in MHTML
+            const htmlStart = rawData.indexOf('<html');
+            
+            // Add explicit check for HTML content
+            if (htmlStart === -1) {
+                throw new Error('No HTML content found in file. Please ensure this is a valid MHTML file.');
+            }
+            
+            const htmlContent = rawData.substring(htmlStart);
+            
+            // Sanitize and parse the HTML content
+            const sanitizedHtml = DOMPurify.sanitize(htmlContent, {
+                WHOLE_DOCUMENT: true, // Required for parsing complete HTML documents
+                RETURN_DOM: false,    // Return string for DOMParser
+                USE_PROFILES: {
+                    html: true,       // Allow HTML syntax
+                    svg: false,       // Disable SVG
+                    svgFilters: false // Disable SVG filters
+                }
+            });
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(sanitizedHtml, 'text/html');
+            
+            // Additional security check after parsing
+            if (!doc.querySelector('table') && !doc.querySelector('tr')) {
+                throw new Error('Invalid file format: No table data found after sanitization');
+            }
+
+            // Rest of the function remains the same
+            // Find the table rows
+            const rows = doc.querySelectorAll('tr');
+            if (!rows.length) {
+                throw new Error('No table data found');
+            }
+
+            // Extract headers directly from the file
+            const headers = Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
+            
+            // Only find the index for the column we need to filter
+            const gelieferteMengeIndex = headers.indexOf(DELIVERED_QUANTITY_COLUMN);
+            if (gelieferteMengeIndex === -1) {
+                showNotification(`Required column '${DELIVERED_QUANTITY_COLUMN}' not found!`, NOTIFICATION_TYPES.ERROR);
+                return;
+            }
+
+            // Process data rows
+            const filteredData = Array.from(rows)
+                .slice(1)
+                .map(row => Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim()))
+                .filter(row => {
+                    if (!row[gelieferteMengeIndex]) return false;
+                    const value = parseFloat(row[gelieferteMengeIndex].replace(',', '.'));
+                    return !isNaN(value) && value < 0;
+                });
+
+            // Generate table safely
+            const table = document.createElement('table');
+            table.className = 'table-auto border-collapse border border-gray-400 w-full text-sm';
+
+            // Create headers using all headers found
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            headerRow.className = 'bg-gray-200';
+            
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.className = 'border border-gray-400 px-2 py-1';
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create body using all columns
+            const tbody = document.createElement('tbody');
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, index) => {
+                    const td = document.createElement('td');
+                    // Special alignment for numbers
+                    const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+                    td.className = `border border-gray-400 px-2 py-1 ${isNumber ? 'text-right' : 'text-left'}`;
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+
+            // Display results
+            const output = document.getElementById('output');
+            output.textContent = '';
+            if (filteredData.length > 0) {
+                output.appendChild(table);
+            } else {
+                const p = document.createElement('p');
+                p.className = 'text-green-700';
+                p.textContent = 'No negative entries found!';
+                output.appendChild(p);
+            }
+
+        } catch (err) {
+            handleError(err, ERROR_TYPES.FILE_PROCESSING);
+        }
+    }
+  </script>
+</body>
+</html>
