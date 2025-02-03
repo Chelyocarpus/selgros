@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wareneingang</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-5">
+  <div class="container mx-auto">
+    <div id="browserWarning" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+      <strong class="font-bold">Unsupported Browser! </strong>
+      <span class="block sm:inline">This application requires Chrome, Edge, or Opera. Please use a supported browser for full functionality.</span>
+    </div>
+
+    <!-- Add restore state banner -->
+    <div id="restoreStateBanner" class="hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4 flex justify-between items-center" role="alert">
+      <div>
+        <strong class="font-bold">Previous session found! </strong>
+        <span class="block sm:inline" id="restoreStateMessage"></span>
+      </div>
+      <div>
+        <button id="restoreStateButton" class="bg-blue-500 text-white px-4 py-2 rounded mr-2">Restore</button>
+        <button id="clearStateButton" class="bg-gray-500 text-white px-4 py-2 rounded">Dismiss</button>
+      </div>
+    </div>
+
+    <h1 class="text-2xl font-bold mb-5">Negative Gelieferte Menge</h1>
+    
+    <div class="flex items-center gap-4 mb-3">
+      <!-- Replace file input with custom button -->
+      <div class="flex-grow">
+        <button id="selectFileButton" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+          </svg>
+          Select TXT File
+        </button>
+        <div id="fileInfo" class="mt-2 text-sm text-gray-600 hidden">
+          <div class="flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+            </svg>
+            <span id="fileName">No file selected</span>
+          </div>
+          <div id="fileDetails" class="ml-5 mt-1 text-xs text-gray-500"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="inline-flex items-center">
+          <input type="checkbox" id="autoReload" class="form-checkbox">
+          <span class="ml-2">Auto-reload</span>
+        </label>
+        <span id="monitorStatus" class="ml-2 px-2 py-1 rounded text-sm">⚪ Idle</span>
+      </div>
+    </div>
+    
+    <button id="processFileButton" class="bg-blue-500 text-white px-4 py-2 rounded">Process File</button>
+
+    <h2 class="text-xl font-bold mt-5">Filtered Data</h2>
+    <div id="output" class="mt-3"></div>
+  </div>
+
+  <script>
+    // New function to update title
+    function updateTitle(status) {
+        const baseTitle = 'Wareneingang';
+        document.title = status ? `${baseTitle} (${status})` : baseTitle;
+    }
+
+    // Add browser detection at the start
+    function isSupported() {
+      return 'showOpenFilePicker' in window;
+    }
+
+    // Show warning and disable functionality if unsupported
+    if (!isSupported()) {
+      document.getElementById('browserWarning').classList.remove('hidden');
+      document.getElementById('fileInput').disabled = true;
+      document.getElementById('autoReload').disabled = true;
+      document.getElementById('processFileButton').disabled = true;
+    }
+
+    let fileHandle = null;
+    let monitorInterval = null;
+    let lastModified = null;
+
+    // Add persistence handling
+    let persistenceGranted = false;
+
+    // Request persistence permission
+    async function requestPersistence() {
+        try {
+            if ('permissions' in navigator) {
+                const result = await navigator.permissions.query({ name: 'persistent-storage' });
+                if (result.state === 'granted') {
+                    persistenceGranted = true;
+                    return true;
+                }
+            }
+            
+            const granted = await navigator.storage?.persist();
+            persistenceGranted = granted;
+            return granted;
+        } catch (e) {
+            console.warn('Persistence not supported:', e);
+            return false;
+        }
+    }
+
+    // Save state to localStorage
+    function saveState() {
+        if (!fileHandle) return;
+        
+        const state = {
+            monitoring: !!monitorInterval,
+            lastModified: lastModified,
+            fileName: fileHandle.name,
+            filePath: fileHandle.name // In modern browsers, this is the best we can do for security reasons
+        };
+        localStorage.setItem('fileProcessor', JSON.stringify(state));
+    }
+
+    // Modified loadState function with path suggestion
+    async function loadState() {
+        const saved = localStorage.getItem('fileProcessor');
+        if (!saved) return;
+
+        const state = JSON.parse(saved);
+        
+        if (state.monitoring || state.filePath) {
+            const banner = document.getElementById('restoreStateBanner');
+            const message = document.getElementById('restoreStateMessage');
+            message.innerHTML = state.monitoring ? 
+                `Resume monitoring "<span class="font-mono text-xs bg-gray-100 px-1">${state.filePath}</span>"?` :
+                `Last used file: "<span class="font-mono text-xs bg-gray-100 px-1">${state.filePath}</span>"`;
+            banner.classList.remove('hidden');
+
+            document.getElementById('restoreStateButton').onclick = async () => {
+                try {
+                    const handles = await window.showOpenFilePicker({
+                        types: [{
+                            description: 'MHTML Files',
+                            accept: {
+                                'multipart/related': ['.mhtml', '.MHTML']
+                            }
+                        }],
+                        multiple: false,
+                        startIn: 'downloads' // Try to start in downloads folder
+                    });
+                    
+                    fileHandle = handles[0];
+                    const file = await fileHandle.getFile();
+                    
+                    if (state.monitoring) {
+                        if (file.name === state.fileName) {
+                            // ... existing monitoring restoration code ...
+                            lastModified = file.lastModified;
+                            document.getElementById('output').innerHTML = 
+                                `<p class="text-gray-500">File selected: ${file.name}<br>Last modified: ${new Date(lastModified).toLocaleString()}</p>`;
+                            
+                            document.getElementById('autoReload').checked = true;
+                            const status = document.getElementById('monitorStatus');
+                            status.innerHTML = '🟢 Monitoring';
+                            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
+                            updateTitle('🟢 Monitoring');
+                            monitorInterval = setInterval(checkFileChanges, 1000);
+                            
+                            const text = await file.text();
+                            processFile(text.trim());
+                            banner.classList.add('hidden');
+                        } else {
+                            alert('Different file selected. Monitoring not resumed.');
+                            // But still save the new file as current
+                            await handleSelectedFile(file);
+                        }
+                    } else {
+                        await handleSelectedFile(file);
+                    }
+                    banner.classList.add('hidden');
+                    
+                } catch (err) {
+                    console.error('Error restoring state:', err);
+                    alert('Failed to restore state');
+                    localStorage.removeItem('fileProcessor');
+                    banner.classList.add('hidden');
+                }
+            };
+
+            // Update restore button text based on state
+            document.getElementById('restoreStateButton').textContent = 
+                state.monitoring ? 'Restore Monitoring' : 'Open Last File';
+
+            document.getElementById('clearStateButton').onclick = () => {
+                localStorage.removeItem('fileProcessor');
+                banner.classList.add('hidden');
+            };
+        }
+    }
+
+    // New helper function to handle selected file
+    async function handleSelectedFile(file) {
+        lastModified = file.lastModified;
+        
+        // Update file info display
+        document.getElementById('fileInfo').classList.remove('hidden');
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileDetails').innerHTML = `
+            Last modified: ${new Date(lastModified).toLocaleString()}<br>
+            Size: ${(file.size / 1024).toFixed(2)} KB
+        `;
+        
+        const text = await file.text();
+        processFile(text.trim());
+        saveState();
+    }
+
+    // Modified initialization
+    async function initialize() {
+        if (isSupported()) {
+            const granted = await requestPersistence();
+            console.log('Persistence granted:', granted);
+            await loadState();
+        } else {
+            // ...existing browser warning code...
+        }
+    }
+    
+    // Run initialization
+    initialize();
+
+    // Update file picker handler to use handleSelectedFile
+    document.getElementById('selectFileButton').addEventListener('click', async function () {
+        try {
+            const handles = await window.showOpenFilePicker({
+                types: [{
+                    description: 'MHTML Files',
+                    accept: {
+                        'multipart/related': ['.mhtml', '.MHTML']
+                    }
+                }],
+                multiple: false,
+                startIn: 'downloads' // Try to start in downloads folder
+            });
+            
+            fileHandle = handles[0];
+            const file = await fileHandle.getFile();
+            await handleSelectedFile(file);
+            
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Error:', err);
+                alert('Error selecting file');
+            }
+        }
+    });
+
+    // Modified checkFileChanges function
+    async function checkFileChanges() {
+        if (!fileHandle) return;
+        
+        try {
+            const file = await fileHandle.getFile();
+            if (file.lastModified !== lastModified) {
+                lastModified = file.lastModified;
+                const text = await file.text();
+                processFile(text.trim());
+                
+                // Visual feedback with title update
+                const status = document.getElementById('monitorStatus');
+                status.innerHTML = `🔄 Updated: ${new Date().toLocaleTimeString()}`;
+                status.className = 'ml-2 px-2 py-1 rounded text-sm bg-yellow-100';
+                updateTitle('🔄 Updated');
+                setTimeout(() => {
+                    status.innerHTML = '🟢 Monitoring';
+                    status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
+                    updateTitle('🟢 Monitoring');
+                }, 1000);
+            }
+        } catch (err) {
+            console.error('Error checking file:', err);
+            document.getElementById('autoReload').checked = false;
+            clearInterval(monitorInterval);
+            const status = document.getElementById('monitorStatus');
+            status.innerHTML = '⚠️ Error';
+            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-red-100';
+            updateTitle('⚠️ Error');
+        }
+    }
+
+    // Update process file button
+    document.getElementById('processFileButton').addEventListener('click', async function () {
+        if (!fileHandle) {
+            alert('Please select a file first!');
+            return;
+        }
+
+        try {
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            processFile(text.trim());
+        } catch (err) {
+            console.error('Error reading file:', err);
+            alert('Error reading file');
+        }
+    });
+
+    // Modified auto-reload toggle
+    document.getElementById('autoReload').addEventListener('change', function(e) {
+        const status = document.getElementById('monitorStatus');
+        if (e.target.checked) {
+            if (!fileHandle) {
+                alert('Please select a file first!');
+                e.target.checked = false;
+                return;
+            }
+            status.innerHTML = '🟢 Monitoring';
+            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
+            updateTitle('🟢 Monitoring');
+            monitorInterval = setInterval(checkFileChanges, 1000);
+            saveState();
+        } else {
+            status.innerHTML = '⚪ Idle';
+            status.className = 'ml-2 px-2 py-1 rounded text-sm';
+            updateTitle();
+            if (monitorInterval) {
+                clearInterval(monitorInterval);
+            }
+            saveState();
+        }
+    });
+
+    // Add beforeunload handler
+    window.addEventListener('beforeunload', () => {
+        if (monitorInterval) {
+            saveState();
+        }
+    });
+
+    // Process the file data
+    function processFile(rawData) {
+        try {
+            // Find the HTML content section in MHTML
+            const htmlStart = rawData.indexOf('<html');
+            const htmlContent = rawData.substring(htmlStart);
+            
+            // Create a DOM parser
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            
+            // Find the table rows
+            const rows = doc.querySelectorAll('tr');
+            if (!rows.length) {
+                throw new Error('No table data found');
+            }
+
+            // Extract headers from first row
+            const headers = Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
+            const gelieferteMengeIndex = headers.indexOf('Gelieferte Menge');
+
+            if (gelieferteMengeIndex === -1) {
+                alert("Column 'Gelieferte Menge' not found!");
+                return;
+            }
+
+            // Process data rows
+            const filteredData = Array.from(rows)
+                .slice(1) // Skip header row
+                .map(row => Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim()))
+                .filter(row => {
+                    if (!row[gelieferteMengeIndex]) return false;
+                    const value = parseFloat(row[gelieferteMengeIndex].replace(',', '.'));
+                    return !isNaN(value) && value < 0;
+                });
+
+            // Generate table
+            const table = document.createElement('table');
+            table.className = 'table-auto border-collapse border border-gray-400 w-full text-sm';
+
+            // Create headers
+            const thead = document.createElement('thead');
+            thead.innerHTML = `<tr class="bg-gray-200">${headers.map(header => 
+                `<th class="border border-gray-400 px-2 py-1">${header}</th>`).join('')}</tr>`;
+            table.appendChild(thead);
+
+            // Create body
+            const tbody = document.createElement('tbody');
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = row.map(cell => 
+                    `<td class="border border-gray-400 px-2 py-1">${cell}</td>`).join('');
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+
+            // Display results
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+            if (filteredData.length > 0) {
+                output.appendChild(table);
+            } else {
+                output.innerHTML = '<p class="text-green-700">No negative entries found!</p>';
+            }
+
+        } catch (err) {
+            console.error('Error processing file:', err);
+            alert('Error processing file: ' + err.message);
+        }
+    }
+  </script>
+</body>
+</html>
