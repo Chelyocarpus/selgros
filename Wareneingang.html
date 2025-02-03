@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wareneingang</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Add DOMPurify -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body class="bg-gray-100 p-5">
   <div class="container mx-auto">
@@ -62,6 +64,30 @@
   </div>
 
   <script>
+    // Add column name constants at the top
+    const COLUMNS = {
+        DELIVERED_QUANTITY: 'Gelieferte Menge',
+        ORDER_NUMBER: 'Bestellnummer',
+        MATERIAL: 'Material',
+        DESCRIPTION: 'Bezeichnung',
+        PLANT: 'Werk',
+        STORAGE_LOCATION: 'Lagerort',
+        DELIVERY_NOTE: 'Lieferschein',
+        POSTING_DATE: 'Buchungsdatum'
+    };
+
+    // Add column display order (optional - for explicit control over table layout)
+    const COLUMN_ORDER = [
+        COLUMNS.ORDER_NUMBER,
+        COLUMNS.MATERIAL,
+        COLUMNS.DESCRIPTION,
+        COLUMNS.DELIVERED_QUANTITY,
+        COLUMNS.PLANT,
+        COLUMNS.STORAGE_LOCATION,
+        COLUMNS.DELIVERY_NOTE,
+        COLUMNS.POSTING_DATE
+    ];
+
     // New function to update title
     function updateTitle(status) {
         const baseTitle = 'Wareneingang';
@@ -84,6 +110,10 @@
     let fileHandle = null;
     let monitorInterval = null;
     let lastModified = null;
+    let fileChanged = false;
+    let checkInterval = 5000; // Start with 5 seconds
+    const maxInterval = 30000; // Max 30 seconds
+    const backoffFactor = 1.5;
 
     // Add persistence handling
     let persistenceGranted = false;
@@ -108,17 +138,105 @@
         }
     }
 
-    // Save state to localStorage
+    // Add helper function to check localStorage availability
+    function isLocalStorageAvailable() {
+        try {
+            const test = '__storage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Add error handling utilities at the top after constants
+    const ERROR_TYPES = {
+        FILE_ACCESS: 'FILE_ACCESS',
+        FILE_PROCESSING: 'FILE_PROCESSING',
+        STORAGE: 'STORAGE',
+        MONITORING: 'MONITORING',
+        BROWSER_SUPPORT: 'BROWSER_SUPPORT'
+    };
+
+    function handleError(error, type, silent = false) {
+        // Always log to console
+        console.error(`[${type}]`, error);
+
+        // Determine user-friendly message
+        let userMessage = 'An unexpected error occurred.';
+        if (error instanceof Error) {
+            switch (type) {
+                case ERROR_TYPES.FILE_ACCESS:
+                    userMessage = `Cannot access file: ${error.message}`;
+                    break;
+                case ERROR_TYPES.FILE_PROCESSING:
+                    userMessage = `Error processing file: ${error.message}`;
+                    break;
+                case ERROR_TYPES.STORAGE:
+                    userMessage = `Storage error: ${error.message}`;
+                    break;
+                case ERROR_TYPES.MONITORING:
+                    userMessage = `File monitoring error: ${error.message}`;
+                    break;
+                case ERROR_TYPES.BROWSER_SUPPORT:
+                    userMessage = `Browser compatibility error: ${error.message}`;
+                    break;
+            }
+        } else if (typeof error === 'string') {
+            userMessage = error;
+        }
+
+        // Show UI feedback unless silent
+        if (!silent) {
+            alert(userMessage);
+        }
+
+        // Return the formatted error for potential further handling
+        return { type, message: userMessage, error };
+    }
+
+    // Modified saveState function with standardized error handling
     function saveState() {
-        if (!fileHandle) return;
+        if (!fileHandle || !isLocalStorageAvailable()) return;
         
         const state = {
             monitoring: !!monitorInterval,
             lastModified: lastModified,
             fileName: fileHandle.name,
-            filePath: fileHandle.name // In modern browsers, this is the best we can do for security reasons
+            filePath: fileHandle.name
         };
-        localStorage.setItem('fileProcessor', JSON.stringify(state));
+
+        try {
+            localStorage.setItem('fileProcessor', JSON.stringify(state));
+        } catch (e) {
+            const error = handleError(e, ERROR_TYPES.STORAGE, true);
+            
+            if (e.name === 'QuotaExceededError' || 
+                e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                try {
+                    localStorage.removeItem('fileProcessor');
+                    localStorage.setItem('fileProcessor', JSON.stringify(state));
+                    return;
+                } catch (retryError) {
+                    handleError(retryError, ERROR_TYPES.STORAGE, true);
+                }
+            }
+
+            // Show error in status
+            const status = document.getElementById('monitorStatus');
+            status.textContent = '⚠️ Storage Error';
+            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-red-100';
+            setTimeout(() => {
+                if (monitorInterval) {
+                    status.textContent = '🟢 Monitoring';
+                    status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
+                } else {
+                    status.textContent = '⚪ Idle';
+                    status.className = 'ml-2 px-2 py-1 rounded text-sm';
+                }
+            }, 3000);
+        }
     }
 
     // Modified loadState function with path suggestion
@@ -131,9 +249,17 @@
         if (state.monitoring || state.filePath) {
             const banner = document.getElementById('restoreStateBanner');
             const message = document.getElementById('restoreStateMessage');
-            message.innerHTML = state.monitoring ? 
-                `Resume monitoring "<span class="font-mono text-xs bg-gray-100 px-1">${state.filePath}</span>"?` :
-                `Last used file: "<span class="font-mono text-xs bg-gray-100 px-1">${state.filePath}</span>"`;
+            const safeMessage = state.monitoring ? 
+                `Resume monitoring "${DOMPurify.sanitize(state.filePath)}"?` :
+                `Last used file: "${DOMPurify.sanitize(state.filePath)}"`;
+            message.textContent = '';
+            const span = document.createElement('span');
+            span.className = 'font-mono text-xs bg-gray-100 px-1';
+            span.textContent = state.filePath;
+            message.appendChild(document.createTextNode(state.monitoring ? 'Resume monitoring "' : 'Last used file: "'));
+            message.appendChild(span);
+            message.appendChild(document.createTextNode('"'));
+
             banner.classList.remove('hidden');
 
             document.getElementById('restoreStateButton').onclick = async () => {
@@ -202,13 +328,19 @@
     async function handleSelectedFile(file) {
         lastModified = file.lastModified;
         
-        // Update file info display
+        // Update file info display safely
         document.getElementById('fileInfo').classList.remove('hidden');
         document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileDetails').innerHTML = `
-            Last modified: ${new Date(lastModified).toLocaleString()}<br>
-            Size: ${(file.size / 1024).toFixed(2)} KB
-        `;
+        const details = document.getElementById('fileDetails');
+        details.textContent = '';
+        
+        const lastMod = document.createElement('div');
+        lastMod.textContent = `Last modified: ${new Date(lastModified).toLocaleString()}`;
+        const size = document.createElement('div');
+        size.textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+        
+        details.appendChild(lastMod);
+        details.appendChild(size);
         
         const text = await file.text();
         processFile(text.trim());
@@ -249,43 +381,93 @@
             
         } catch (err) {
             if (err.name !== 'AbortError') {
-                console.error('Error:', err);
-                alert('Error selecting file');
+                handleError(err, ERROR_TYPES.FILE_ACCESS);
             }
         }
     });
 
-    // Modified checkFileChanges function
+    // Add helper function for cleaning up monitoring state
+    function cleanupMonitoringState() {
+        fileHandle = null;
+        lastModified = null;
+        fileChanged = false;
+        checkInterval = 5000; // Reset to initial interval
+        if (monitorInterval) {
+            clearInterval(monitorInterval);
+            monitorInterval = null;
+        }
+        
+        // Reset UI state
+        const autoReload = document.getElementById('autoReload');
+        autoReload.checked = false;
+        
+        const fileInfo = document.getElementById('fileInfo');
+        fileInfo.classList.add('hidden');
+        
+        document.getElementById('fileName').textContent = 'No file selected';
+        document.getElementById('fileDetails').textContent = '';
+        
+        // Clear any existing data
+        const output = document.getElementById('output');
+        output.textContent = '';
+    }
+
+    // Modified checkFileChanges function with complete error cleanup
     async function checkFileChanges() {
         if (!fileHandle) return;
         
         try {
             const file = await fileHandle.getFile();
             if (file.lastModified !== lastModified) {
+                fileChanged = true;
                 lastModified = file.lastModified;
                 const text = await file.text();
                 processFile(text.trim());
                 
                 // Visual feedback with title update
                 const status = document.getElementById('monitorStatus');
-                status.innerHTML = `🔄 Updated: ${new Date().toLocaleTimeString()}`;
+                status.textContent = `🔄 Updated: ${new Date().toLocaleTimeString()}`;
                 status.className = 'ml-2 px-2 py-1 rounded text-sm bg-yellow-100';
                 updateTitle('🔄 Updated');
                 setTimeout(() => {
-                    status.innerHTML = '🟢 Monitoring';
+                    status.textContent = '🟢 Monitoring';
                     status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
                     updateTitle('🟢 Monitoring');
                 }, 1000);
+            } else {
+                fileChanged = false;
             }
         } catch (err) {
-            console.error('Error checking file:', err);
-            document.getElementById('autoReload').checked = false;
-            clearInterval(monitorInterval);
+            const error = handleError(err, ERROR_TYPES.MONITORING);
+            cleanupMonitoringState();
+            
             const status = document.getElementById('monitorStatus');
-            status.innerHTML = '⚠️ Error';
+            status.textContent = '⚠️ Error';
             status.className = 'ml-2 px-2 py-1 rounded text-sm bg-red-100';
             updateTitle('⚠️ Error');
         }
+    }
+
+    // New function to setup monitoring with exponential backoff
+    function setupMonitoring() {
+        if (monitorInterval) {
+            clearInterval(monitorInterval);
+        }
+
+        monitorInterval = setInterval(() => {
+            checkFileChanges();
+            // Increase interval up to maxInterval if no changes detected
+            if (!fileChanged) {
+                checkInterval = Math.min(checkInterval * backoffFactor, maxInterval);
+                clearInterval(monitorInterval);
+                monitorInterval = setInterval(arguments.callee, checkInterval);
+            } else {
+                // Reset interval to 5 seconds when changes are detected
+                checkInterval = 5000;
+                clearInterval(monitorInterval);
+                monitorInterval = setInterval(arguments.callee, checkInterval);
+            }
+        }, checkInterval);
     }
 
     // Update process file button
@@ -300,8 +482,7 @@
             const text = await file.text();
             processFile(text.trim());
         } catch (err) {
-            console.error('Error reading file:', err);
-            alert('Error reading file');
+            handleError(err, ERROR_TYPES.FILE_ACCESS);
         }
     });
 
@@ -317,7 +498,8 @@
             status.innerHTML = '🟢 Monitoring';
             status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
             updateTitle('🟢 Monitoring');
-            monitorInterval = setInterval(checkFileChanges, 1000);
+            checkInterval = 5000; // Reset interval when starting monitoring
+            setupMonitoring();
             saveState();
         } else {
             status.innerHTML = '⚪ Idle';
@@ -356,16 +538,16 @@
 
             // Extract headers from first row
             const headers = Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
-            const gelieferteMengeIndex = headers.indexOf('Gelieferte Menge');
+            const gelieferteMengeIndex = headers.indexOf(COLUMNS.DELIVERED_QUANTITY);
 
             if (gelieferteMengeIndex === -1) {
-                alert("Column 'Gelieferte Menge' not found!");
+                alert(`Column '${COLUMNS.DELIVERED_QUANTITY}' not found!`);
                 return;
             }
 
             // Process data rows
             const filteredData = Array.from(rows)
-                .slice(1) // Skip header row
+                .slice(1)
                 .map(row => Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim()))
                 .filter(row => {
                     if (!row[gelieferteMengeIndex]) return false;
@@ -373,38 +555,55 @@
                     return !isNaN(value) && value < 0;
                 });
 
-            // Generate table
+            // Generate table safely
             const table = document.createElement('table');
             table.className = 'table-auto border-collapse border border-gray-400 w-full text-sm';
 
-            // Create headers
+            // Create headers - optionally use COLUMN_ORDER for explicit ordering
             const thead = document.createElement('thead');
-            thead.innerHTML = `<tr class="bg-gray-200">${headers.map(header => 
-                `<th class="border border-gray-400 px-2 py-1">${header}</th>`).join('')}</tr>`;
+            const headerRow = document.createElement('tr');
+            headerRow.className = 'bg-gray-200';
+            
+            // Use either original headers or ordered headers
+            const displayHeaders = COLUMN_ORDER.filter(col => headers.includes(col));
+            displayHeaders.forEach(header => {
+                const th = document.createElement('th');
+                th.className = 'border border-gray-400 px-2 py-1';
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
             table.appendChild(thead);
 
-            // Create body
+            // Create body with ordered columns
             const tbody = document.createElement('tbody');
             filteredData.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = row.map(cell => 
-                    `<td class="border border-gray-400 px-2 py-1">${cell}</td>`).join('');
+                displayHeaders.forEach(header => {
+                    const index = headers.indexOf(header);
+                    const td = document.createElement('td');
+                    td.className = 'border border-gray-400 px-2 py-1';
+                    td.textContent = index > -1 ? row[index] : '';
+                    tr.appendChild(td);
+                });
                 tbody.appendChild(tr);
             });
             table.appendChild(tbody);
 
             // Display results
             const output = document.getElementById('output');
-            output.innerHTML = '';
+            output.textContent = '';
             if (filteredData.length > 0) {
                 output.appendChild(table);
             } else {
-                output.innerHTML = '<p class="text-green-700">No negative entries found!</p>';
+                const p = document.createElement('p');
+                p.className = 'text-green-700';
+                p.textContent = 'No negative entries found!';
+                output.appendChild(p);
             }
 
         } catch (err) {
-            console.error('Error processing file:', err);
-            alert('Error processing file: ' + err.message);
+            handleError(err, ERROR_TYPES.FILE_PROCESSING);
         }
     }
   </script>
