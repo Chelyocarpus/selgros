@@ -27,6 +27,21 @@
       </div>
     </div>
 
+    <!-- Add notification banner -->
+    <div id="notificationBanner" class="hidden mb-4 rounded relative" role="alert">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center">
+                <span id="notificationIcon" class="mr-2"></span>
+                <span id="notificationMessage"></span>
+            </div>
+            <button onclick="hideNotification()" class="ml-4">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <h1 class="text-2xl font-bold mb-5">Negative Gelieferte Menge</h1>
     
     <div class="flex items-center gap-4 mb-3">
@@ -64,36 +79,6 @@
   </div>
 
   <script>
-    // Add column name constants at the top
-    const COLUMNS = {
-        DELIVERED_QUANTITY: 'Gelieferte Menge',
-        ORDER_NUMBER: 'Bestellnummer',
-        MATERIAL: 'Material',
-        DESCRIPTION: 'Bezeichnung',
-        PLANT: 'Werk',
-        STORAGE_LOCATION: 'Lagerort',
-        DELIVERY_NOTE: 'Lieferschein',
-        POSTING_DATE: 'Buchungsdatum'
-    };
-
-    // Add column display order (optional - for explicit control over table layout)
-    const COLUMN_ORDER = [
-        COLUMNS.ORDER_NUMBER,
-        COLUMNS.MATERIAL,
-        COLUMNS.DESCRIPTION,
-        COLUMNS.DELIVERED_QUANTITY,
-        COLUMNS.PLANT,
-        COLUMNS.STORAGE_LOCATION,
-        COLUMNS.DELIVERY_NOTE,
-        COLUMNS.POSTING_DATE
-    ];
-
-    // New function to update title
-    function updateTitle(status) {
-        const baseTitle = 'Wareneingang';
-        document.title = status ? `${baseTitle} (${status})` : baseTitle;
-    }
-
     // Add browser detection at the start
     function isSupported() {
       return 'showOpenFilePicker' in window;
@@ -159,6 +144,58 @@
         BROWSER_SUPPORT: 'BROWSER_SUPPORT'
     };
 
+    // Add notification utilities after constants
+    const NOTIFICATION_TYPES = {
+        ERROR: 'error',
+        WARNING: 'warning',
+        INFO: 'info',
+        SUCCESS: 'success'
+    };
+
+    const NOTIFICATION_CONFIGS = {
+        [NOTIFICATION_TYPES.ERROR]: {
+            icon: '⚠️',
+            classes: 'bg-red-100 border border-red-400 text-red-700'
+        },
+        [NOTIFICATION_TYPES.WARNING]: {
+            icon: '⚠️',
+            classes: 'bg-yellow-100 border border-yellow-400 text-yellow-700'
+        },
+        [NOTIFICATION_TYPES.INFO]: {
+            icon: 'ℹ️',
+            classes: 'bg-blue-100 border border-blue-400 text-blue-700'
+        },
+        [NOTIFICATION_TYPES.SUCCESS]: {
+            icon: '✅',
+            classes: 'bg-green-100 border border-green-400 text-green-700'
+        }
+    };
+
+    function showNotification(message, type = NOTIFICATION_TYPES.INFO, duration = 5000) {
+        const banner = document.getElementById('notificationBanner');
+        const icon = document.getElementById('notificationIcon');
+        const messageEl = document.getElementById('notificationMessage');
+        
+        // Apply styling
+        const config = NOTIFICATION_CONFIGS[type];
+        banner.className = `mb-4 rounded relative ${config.classes}`;
+        icon.textContent = config.icon;
+        messageEl.textContent = message;
+        
+        // Show banner
+        banner.classList.remove('hidden');
+        
+        // Auto-hide after duration if specified
+        if (duration > 0) {
+            setTimeout(hideNotification, duration);
+        }
+    }
+
+    function hideNotification() {
+        document.getElementById('notificationBanner').classList.add('hidden');
+    }
+
+    // Modify handleError to use notification system
     function handleError(error, type, silent = false) {
         // Always log to console
         console.error(`[${type}]`, error);
@@ -187,12 +224,11 @@
             userMessage = error;
         }
 
-        // Show UI feedback unless silent
+        // Show notification unless silent
         if (!silent) {
-            alert(userMessage);
+            showNotification(userMessage, NOTIFICATION_TYPES.ERROR);
         }
 
-        // Return the formatted error for potential further handling
         return { type, message: userMessage, error };
     }
 
@@ -296,7 +332,7 @@
                             processFile(text.trim());
                             banner.classList.add('hidden');
                         } else {
-                            alert('Different file selected. Monitoring not resumed.');
+                            showNotification('Different file selected. Monitoring not resumed.', NOTIFICATION_TYPES.WARNING);
                             // But still save the new file as current
                             await handleSelectedFile(file);
                         }
@@ -307,7 +343,7 @@
                     
                 } catch (err) {
                     console.error('Error restoring state:', err);
-                    alert('Failed to restore state');
+                    showNotification('Failed to restore state', NOTIFICATION_TYPES.ERROR);
                     localStorage.removeItem('fileProcessor');
                     banner.classList.add('hidden');
                 }
@@ -368,7 +404,8 @@
                 types: [{
                     description: 'MHTML Files',
                     accept: {
-                        'multipart/related': ['.mhtml', '.MHTML']
+                        'application/x-mimearchive': ['.mhtml', '.mht'],
+                        'message/rfc822': ['.mhtml', '.mht']
                     }
                 }],
                 multiple: false,
@@ -473,7 +510,7 @@
     // Update process file button
     document.getElementById('processFileButton').addEventListener('click', async function () {
         if (!fileHandle) {
-            alert('Please select a file first!');
+            showNotification('Please select a file first!', NOTIFICATION_TYPES.WARNING);
             return;
         }
 
@@ -491,7 +528,7 @@
         const status = document.getElementById('monitorStatus');
         if (e.target.checked) {
             if (!fileHandle) {
-                alert('Please select a file first!');
+                showNotification('Please select a file first!', NOTIFICATION_TYPES.WARNING);
                 e.target.checked = false;
                 return;
             }
@@ -519,29 +556,61 @@
         }
     });
 
-    // Process the file data
+    // Replace complex column configuration with just the required filter column
+    const DELIVERED_QUANTITY_COLUMN = 'Gelieferte Menge';
+
+    // New function to update title
+    function updateTitle(status) {
+        const baseTitle = 'Wareneingang';
+        document.title = status ? `${baseTitle} (${status})` : baseTitle;
+    }
+
+    // Modified processFile function with HTML content validation
     function processFile(rawData) {
         try {
             // Find the HTML content section in MHTML
             const htmlStart = rawData.indexOf('<html');
+            
+            // Add explicit check for HTML content
+            if (htmlStart === -1) {
+                throw new Error('No HTML content found in file. Please ensure this is a valid MHTML file.');
+            }
+            
             const htmlContent = rawData.substring(htmlStart);
             
-            // Create a DOM parser
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlContent, 'text/html');
+            // Sanitize and parse the HTML content
+            const sanitizedHtml = DOMPurify.sanitize(htmlContent, {
+                WHOLE_DOCUMENT: true, // Required for parsing complete HTML documents
+                RETURN_DOM: false,    // Return string for DOMParser
+                USE_PROFILES: {
+                    html: true,       // Allow HTML syntax
+                    svg: false,       // Disable SVG
+                    svgFilters: false // Disable SVG filters
+                }
+            });
             
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(sanitizedHtml, 'text/html');
+            
+            // Additional security check after parsing
+            if (!doc.querySelector('table') && !doc.querySelector('tr')) {
+                throw new Error('Invalid file format: No table data found after sanitization');
+            }
+
+            // Rest of the function remains the same
             // Find the table rows
             const rows = doc.querySelectorAll('tr');
             if (!rows.length) {
                 throw new Error('No table data found');
             }
 
-            // Extract headers from first row
+            // Extract headers directly from the file
             const headers = Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
-            const gelieferteMengeIndex = headers.indexOf(COLUMNS.DELIVERED_QUANTITY);
-
+            
+            // Only find the index for the column we need to filter
+            const gelieferteMengeIndex = headers.indexOf(DELIVERED_QUANTITY_COLUMN);
             if (gelieferteMengeIndex === -1) {
-                alert(`Column '${COLUMNS.DELIVERED_QUANTITY}' not found!`);
+                showNotification(`Required column '${DELIVERED_QUANTITY_COLUMN}' not found!`, NOTIFICATION_TYPES.ERROR);
                 return;
             }
 
@@ -559,14 +628,12 @@
             const table = document.createElement('table');
             table.className = 'table-auto border-collapse border border-gray-400 w-full text-sm';
 
-            // Create headers - optionally use COLUMN_ORDER for explicit ordering
+            // Create headers using all headers found
             const thead = document.createElement('thead');
             const headerRow = document.createElement('tr');
             headerRow.className = 'bg-gray-200';
             
-            // Use either original headers or ordered headers
-            const displayHeaders = COLUMN_ORDER.filter(col => headers.includes(col));
-            displayHeaders.forEach(header => {
+            headers.forEach(header => {
                 const th = document.createElement('th');
                 th.className = 'border border-gray-400 px-2 py-1';
                 th.textContent = header;
@@ -575,15 +642,16 @@
             thead.appendChild(headerRow);
             table.appendChild(thead);
 
-            // Create body with ordered columns
+            // Create body using all columns
             const tbody = document.createElement('tbody');
             filteredData.forEach(row => {
                 const tr = document.createElement('tr');
-                displayHeaders.forEach(header => {
-                    const index = headers.indexOf(header);
+                row.forEach((cell, index) => {
                     const td = document.createElement('td');
-                    td.className = 'border border-gray-400 px-2 py-1';
-                    td.textContent = index > -1 ? row[index] : '';
+                    // Special alignment for numbers
+                    const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+                    td.className = `border border-gray-400 px-2 py-1 ${isNumber ? 'text-right' : 'text-left'}`;
+                    td.textContent = cell;
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
