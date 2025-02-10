@@ -409,3 +409,12 @@ td:not(.actions-column):not(:has(input)):hover {
     cursor: inherit;
     display: block;
 }
+
+/* Add styles for delete all button */
+.delete-all-button {
+    margin-left: 0.5em !important;
+}
+
+.delete-all-button:hover {
+    background-color: #db2828 !important;
+}

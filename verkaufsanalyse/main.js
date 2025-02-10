@@ -647,6 +647,9 @@ $(document).ready(function() {
             <i class="upload icon"></i> Restore
             <input type="file" accept=".json" style="display: none;">
         </label>
+        <button class="ui negative button delete-all-button">
+            <i class="trash icon"></i> Delete All
+        </button>
     `);
 
     // Add button event handlers
@@ -830,4 +833,14 @@ $(document).ready(function() {
 
     // Add Marketing Report button handler
     $('.marketing-report-btn').on('click', marketing.generateMarketingReport);
+
+    // Add Delete All functionality
+    $('.delete-all-button').on('click', function() {
+        if (confirm('Are you sure you want to delete all rows? This cannot be undone.')) {
+            let table = $('#sapTable').DataTable();
+            table.clear().draw();
+            saveTableData();
+            updateStats();
+        }
+    });
 });
