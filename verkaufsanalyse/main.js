@@ -9,6 +9,24 @@ $(document).ready(function() {
         return parseFloat(value).toFixed(2).replace('.', ',');
     }
 
+    // Add margin calculation helper function after parseGermanNumber
+    function calculateMargin(netto, ek) {
+        if (!ek) return 0;
+        return ((netto - ek) / netto * 100).toFixed(2);
+    }
+
+    // Add helper functions after parseGermanNumber
+    function calculateSpanne(netto, ek) {
+        if (!netto || !ek || netto <= 0) return 0;
+        const margin = ((netto - ek) / ek * 100).toFixed(2);
+        console.log(`Spanne calculation: (${netto} - ${ek}) / ${ek} * 100 = ${margin}%`);
+        return margin;
+    }
+
+    function calculateBrutto(netto) {
+        return (netto * 1.19).toFixed(2); // 19% MwSt
+    }
+
     // Update the saveTableData function to track edit state
     function saveTableData() {
         const tableData = [];
@@ -53,18 +71,39 @@ $(document).ready(function() {
     function loadTableData() {
         try {
             const savedData = localStorage.getItem('tableData');
-            if (savedData) {
-                const tableData = JSON.parse(savedData);
-                console.log('Loading data:', tableData);
-                const table = $('#sapTable').DataTable();
-                
-                // Clear existing rows
+            const table = $('#sapTable').DataTable();
+            
+            // If no saved data, just initialize empty table
+            if (!savedData) {
                 table.clear();
-                
+                table.draw();
+                updateStats();
+                return;
+            }
+
+            // Parse data and validate
+            let tableData;
+            try {
+                tableData = JSON.parse(savedData);
+                if (!Array.isArray(tableData)) {
+                    tableData = []; // Reset to empty array if invalid
+                }
+            } catch (e) {
+                console.error('Invalid data format:', e);
+                tableData = []; // Reset to empty array if parse fails
+            }
+
+            // Clear and update table
+            table.clear();
+            
+            if (tableData.length === 0) {
+                // Add one empty row for new tables
+                const newRow = $(getNewRowHtml());
+                table.row.add(newRow);
+            } else {
                 // Add saved rows
                 tableData.forEach(rowData => {
                     const newRow = $(getNewRowHtml());
-                    
                     if (rowData.isEditing) {
                         // If row was in edit mode, restore with input fields
                         const cells = newRow.find('td');
@@ -146,14 +185,22 @@ $(document).ready(function() {
                     
                     table.row.add(newRow);
                 });
-                
-                table.draw();
-                // Force recalculation after draw
-                initializeAllCalculations();
-                updateStats();
             }
+            
+            table.draw();
+            // Force recalculation after draw
+            initializeAllCalculations();
+            updateStats();
+            
         } catch (e) {
             console.error('Error loading data:', e);
+            // Recover by initializing empty table
+            const table = $('#sapTable').DataTable();
+            table.clear();
+            const newRow = $(getNewRowHtml());
+            table.row.add(newRow);
+            table.draw();
+            updateStats();
         }
     }
 
@@ -425,16 +472,30 @@ $(document).ready(function() {
             // Save input values back to cells
             for (let i = 1; i < 8; i++) {
                 let cell = $(cells[i]);
+                
+                // Handle calculated fields differently
+                if (i === 6 || i === 7) { // Spanne or Brutto
+                    let value = cell.find('.calculated-field').text();
+                    cell.html(value);
+                    continue;
+                }
+                
                 let input = cell.find('input');
                 let value = input.val();
                 
                 // Format numbers with German number format
-                if (i === 4 || i === 5 || i === 7) { // EK, Netto, Brutto
+                if (i === 4 || i === 5) { // EK, Netto
                     value = formatGermanNumber(parseGermanNumber(value));
                 }
                 
                 cell.html(value);
             }
+
+            // Update Spanne and Brutto after saving EK and Netto
+            const ek = parseGermanNumber(cells.eq(4).text());
+            const netto = parseGermanNumber(cells.eq(5).text());
+            cells.eq(6).text(calculateSpanne(netto, ek) + '%'); // Spanne
+            cells.eq(7).text(formatGermanNumber(calculateBrutto(netto))); // Brutto
 
             // Restore edit icon
             icon
@@ -442,13 +503,10 @@ $(document).ready(function() {
                 .addClass('edit outline')
                 .attr('title', 'Edit row');
                 
-            // Recalculate row if there are any input values
-            if (hasInputValues(row)) {
-                forceCalculateRow(row);
-                updateStats();
-            }
-            
-            saveTableData(); // Add this line before the return
+            // Force recalculation after saving prices
+            forceCalculateRow(row);
+            updateStats();
+            saveTableData();
             return;
         }
 
@@ -465,29 +523,45 @@ $(document).ready(function() {
                 currentValue = parseGermanNumber(currentValue);
             }
             
+            // Skip creating input for Brutto and Spanne - just show text
+            if (i === 6 || i === 7) { // Spanne and Brutto
+                cell.html(`<span class="calculated-field">${currentValue}</span>`);
+                continue;
+            }
+            
             // Create input field with auto-save
             let input = $('<input>')
                 .val(currentValue)
                 .addClass('ui input')
                 .css('width', '100%')
                 .on('change keyup', function() {
-                    // Auto-save on change or keyup
                     let value = $(this).val();
-                    if (i === 4 || i === 5 || i === 7) { // EK, Netto, Brutto
-                        value = parseGermanNumber(value);
-                    }
-                    // Update calculations immediately
-                    if (hasInputValues(row)) {
+                    if (i === 4 || i === 5) { // EK or Netto changed
+                        const ek = parseGermanNumber(cells.eq(4).find('input').val());
+                        const netto = parseGermanNumber(cells.eq(5).find('input').val());
+                        
+                        // Update Spanne text
+                        const spanne = calculateSpanne(netto, ek);
+                        cells.eq(6).find('.calculated-field').text(spanne + '%');
+                        
+                        // Update Brutto text immediately when Netto changes
+                        if (i === 5) { // Only when Netto field changes
+                            const brutto = calculateBrutto(netto);
+                            cells.eq(7).find('.calculated-field').text(formatGermanNumber(brutto));
+                        }
+
+                        // Trigger recalculation of sales and profits
                         forceCalculateRow(row);
                         updateStats();
                     }
+
                     saveTableData();
                 });
 
             // Handle numeric fields
             if (i === 3) { // Stück
                 input.attr('type', 'number').attr('min', '0');
-            } else if (i === 4 || i === 5 || i === 7) { // EK, Netto, Brutto
+            } else if (i === 4 || i === 5) { // EK, Netto
                 input.attr('type', 'number').attr('step', '0.01');
             }
 
@@ -501,31 +575,89 @@ $(document).ready(function() {
             .attr('title', 'Save changes');
     });
 
-    // Update delete row handler
-    $('#sapTable').on('click', '.delete-row', function() {
-        if (confirm('Are you sure you want to delete this row?')) {
-            let table = $('#sapTable').DataTable();
-            let row = $(this).closest('tr');
-            let currentPage = table.page();
-            
-            // Remove row without redrawing
-            table.row(row).remove();
-            
-            // Get info about table state after removal
-            let pageInfo = table.page.info();
-            let totalRows = pageInfo.recordsDisplay;
-            let rowsPerPage = pageInfo.length;
-            
-            // Calculate what page we should be on after deletion
-            let lastPage = Math.max(0, Math.ceil(totalRows / rowsPerPage) - 1);
-            let targetPage = Math.min(currentPage, lastPage);
-            
-            // Go to the calculated page and redraw
-            table.page(targetPage).draw(false);
-            
-            saveTableData();
-            updateStats();
-        }
+    // Add custom confirm dialog function
+    function showConfirmDialog(e, message, callback) {
+        // Remove any existing confirm dialogs
+        $('.custom-confirm-dialog').remove();
+        
+        const dialog = $(`
+            <div class="custom-confirm-dialog">
+                <div class="content">
+                    <p>${message}</p>
+                </div>
+                <div class="actions">
+                    <button class="ui negative mini button">No</button>
+                    <button class="ui positive mini button">Yes</button>
+                </div>
+            </div>
+        `).appendTo('body');
+
+        // Get viewport dimensions
+        const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+        const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+
+        // Calculate position (ensure dialog stays within viewport)
+        let left = Math.min(Math.max(e.pageX, 0), vw - dialog.outerWidth());
+        let top = Math.min(Math.max(e.pageY, 0), vh - dialog.outerHeight());
+
+        // Position dialog
+        dialog.css({
+            position: 'fixed',
+            top: top + 'px',
+            left: left + 'px',
+            display: 'block'
+        });
+
+        // Handle button clicks
+        dialog.find('.negative.button').on('click', function() {
+            dialog.remove();
+            callback(false);
+        });
+
+        dialog.find('.positive.button').on('click', function() {
+            dialog.remove();
+            callback(true);
+        });
+
+        // Close dialog when clicking outside
+        $(document).one('click', function(e) {
+            if (!$(e.target).closest('.custom-confirm-dialog').length) {
+                dialog.remove();
+                callback(false);
+            }
+        });
+    }
+
+    // Update delete row handler to use custom confirm
+    $('#sapTable').on('click', '.delete-row', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const row = $(this).closest('tr');
+        showConfirmDialog(e, 'Are you sure you want to delete this row?', (confirmed) => {
+            if (confirmed) {
+                let table = $('#sapTable').DataTable();
+                let currentPage = table.page();
+                
+                // Remove row without redrawing
+                table.row(row).remove();
+                
+                // Get info about table state after removal
+                let pageInfo = table.page.info();
+                let totalRows = pageInfo.recordsDisplay;
+                let rowsPerPage = pageInfo.length;
+                
+                // Calculate what page we should be on after deletion
+                let lastPage = Math.max(0, Math.ceil(totalRows / rowsPerPage) - 1);
+                let targetPage = Math.min(currentPage, lastPage);
+                
+                // Go to the calculated page and redraw
+                table.page(targetPage).draw(false);
+                
+                saveTableData();
+                updateStats();
+            }
+        });
     });
 
     // Existing event handlers will work with new rows automatically
@@ -572,7 +704,16 @@ $(document).ready(function() {
         $('#itemsSold').text(itemsSold);
         $('#discountItems').text(discountItems);
         $('#lostItems').text(lostItems);
-        $('#profitMargin').text(((totalProfit / totalRevenue * 100) || 0).toFixed(1) + '%');
+        
+        // Calculate profit margin with proper handling of edge cases
+        let profitMargin = 0;
+        if (totalRevenue > 0) {
+            profitMargin = (totalProfit / totalRevenue) * 100;
+        } else if (totalProfit < 0) {
+            profitMargin = -100; // Show -100% when there's loss but no revenue
+        }
+        
+        $('#profitMargin').text(profitMargin.toFixed(1) + '%');
     }
 
     // Initial stats update
@@ -657,7 +798,62 @@ $(document).ready(function() {
     $('.restore-btn input').on('change', function(e) {
         if (e.target.files.length > 0) {
             if (confirm('This will override all current data. Are you sure?')) {
-                backup.restoreBackup(e.target.files[0]);
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    try {
+                        // Parse the data first
+                        const fileData = JSON.parse(event.target.result);
+                        
+                        // Handle both old and new backup formats
+                        let parsedData;
+                        if (fileData.version && fileData.data) {
+                            // New format with version and timestamp
+                            parsedData = fileData.data;
+                        } else if (Array.isArray(fileData)) {
+                            // Old format (direct array)
+                            parsedData = fileData;
+                        } else {
+                            throw new Error('Invalid backup format');
+                        }
+
+                        if (!Array.isArray(parsedData)) {
+                            throw new Error('Backup data must be an array');
+                        }
+
+                        // Clean the data and fix German number format
+                        const cleanedData = parsedData.map(row => ({
+                            ...row,
+                            ek: row.ek.toString().replace(',', '.'),
+                            netto: row.netto.toString().replace(',', '.'),
+                            spanne: row.spanne.toString().replace(',', '.'),
+                            brutto: row.brutto.toString().replace(',', '.')
+                        }));
+
+                        // Store and load the cleaned data
+                        localStorage.setItem('tableData', JSON.stringify(cleanedData));
+                        table.clear();
+                        table.draw();
+                        
+                        setTimeout(() => {
+                            loadTableData();
+                            initializeAllCalculations();
+                            updateStats();
+                        }, 100);
+                        
+                    } catch (error) {
+                        console.error('Error restoring data:', error);
+                        alert('Error restoring backup file: ' + error.message);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    alert('Error reading backup file');
+                };
+                
+                reader.readAsText(file);
+                $(this).val(''); // Reset file input
             }
         }
     });
@@ -705,95 +901,38 @@ $(document).ready(function() {
             rabbatiert: parseInt(row.find('.rabbatiert').val()) || 0
         };
 
-        // Skip if all values are 0
-        if (Object.values(inputs).every(v => v === 0)) {
-            row.find('.sumVerkauft, .sumRabbatiert, .sumGesamt, .sumProfit').text('0.00 €');
-            updateStats();
-            return;
-        }
-
-        // Get prices (ensure proper parsing)
+        // Get current prices
         const bruttoPrice = parseGermanNumber(row.find('td:nth-child(8)').text());
         const ekPrice = parseGermanNumber(row.find('td:nth-child(5)').text());
-        
-        // Calculate normal sales
+
+        // Calculate normal sales (full price)
         const sumVerkauft = inputs.verkauft * bruttoPrice;
-        
+
         // Calculate discounted sales
-        const discountedPrice = bruttoPrice * 0.5; // 50% off
-        const naturalrabattBonus = discountedPrice * 0.25; // 25% of discounted price
+        const discountedPrice = bruttoPrice * 0.5; // 50% off brutto
+        const naturalrabattBonus = discountedPrice * 0.25; // 25% bonus on discounted price
         const finalRabbatPrice = discountedPrice + naturalrabattBonus;
         const sumRabbatiert = inputs.rabbatiert * finalRabbatPrice;
-        
-        // Calculate total revenue
+
+        // Calculate total revenue (brutto)
         const sumGesamt = sumVerkauft + sumRabbatiert;
-        
-        // Calculate costs including lost items (Schwund)
-        const lostItemsCost = inputs.schwund * ekPrice;        // Cost of lost items
-        const soldItemsCost = (inputs.verkauft + inputs.rabbatiert) * ekPrice;  // Cost of sold items
-        const totalCost = soldItemsCost + lostItemsCost;       // Total cost including lost items
-        
-        // Calculate final profit (revenue minus all costs)
+
+        // Calculate costs of sold items only
+        const soldItemsCost = inputs.verkauft * ekPrice; // Cost of regular sales
+        const discountedItemsCost = inputs.rabbatiert * ekPrice; // Cost of discounted items
+        const lostItemsCost = inputs.schwund * ekPrice; // Cost of lost items
+
+        // Calculate total cost and profit
+        const totalCost = soldItemsCost + discountedItemsCost + lostItemsCost;
         const sumProfit = sumGesamt - totalCost;
 
-        // Update display with calculated values
-        row.find('.sumVerkauft').text(sumVerkauft.toFixed(2) + ' €');
-        row.find('.sumRabbatiert').text(sumRabbatiert.toFixed(2) + ' €');
-        row.find('.sumGesamt').text(sumGesamt.toFixed(2) + ' €');
-        row.find('.sumProfit').text(sumProfit.toFixed(2) + ' €');
-        
+        // Update display with German number formatting
+        row.find('.sumVerkauft').text(formatGermanNumber(sumVerkauft) + ' €');
+        row.find('.sumRabbatiert').text(formatGermanNumber(sumRabbatiert) + ' €');
+        row.find('.sumGesamt').text(formatGermanNumber(sumGesamt) + ' €');
+        row.find('.sumProfit').text(formatGermanNumber(sumProfit) + ' €');
+
         updateStats();
-    }
-
-    // Modify loadTableData to use the new calculation function
-    function loadTableData() {
-        try {
-            const savedData = localStorage.getItem('tableData');
-            if (savedData) {
-                const tableData = JSON.parse(savedData);
-                console.log('Loading data:', tableData);
-                
-                table.clear();
-                
-                tableData.forEach(rowData => {
-                    const newRow = $(getNewRowHtml());
-                    
-                    // Set text values with strict defaults
-                    newRow.find('td:nth-child(2)').text(rowData.sap || '0');
-                    newRow.find('td:nth-child(3)').text(rowData.article || 'New Article');
-                    newRow.find('td:nth-child(4)').text(rowData.stueck || '0');
-                    newRow.find('td:nth-child(5)').text(rowData.ek || '0.00');
-                    newRow.find('td:nth-child(6)').text(rowData.netto || '0.00');
-                    newRow.find('td:nth-child(7)').text(rowData.spanne || '33.00%');
-                    newRow.find('td:nth-child(8)').text(rowData.brutto || '0.00');
-                    
-                    // Set input values with strict numeric conversion
-                    ['verkauft', 'schwund', 'rabbatiert'].forEach(field => {
-                        const value = parseInt(rowData[field]) || 0;
-                        newRow.find(`.${field}`).val(value);
-                    });
-
-                    // Set calculated values with defaults
-                    newRow.find('.sumVerkauft').text(rowData.sumVerkauft || '0.00 €');
-                    newRow.find('.sumRabbatiert').text(rowData.sumRabbatiert || '0.00 €');
-                    newRow.find('.sumGesamt').text(rowData.sumGesamt || '0.00 €');
-                    newRow.find('.sumProfit').text(rowData.sumProfit || '0.00 €');
-                    
-                    table.row.add(newRow);
-                });
-                
-                table.draw();
-                
-                // Recalculate all rows after draw
-                table.rows().every(function() {
-                    calculateRow($(this.node()));
-                });
-                
-                updateStats();
-            }
-        } catch (e) {
-            console.error('Error loading data:', e);
-        }
     }
 
     // Update initialization sequence
@@ -838,8 +977,9 @@ $(document).ready(function() {
     $('.delete-all-button').on('click', function() {
         if (confirm('Are you sure you want to delete all rows? This cannot be undone.')) {
             let table = $('#sapTable').DataTable();
-            table.clear().draw();
-            saveTableData();
+            table.clear();
+            table.draw();
+            localStorage.removeItem('tableData'); // Clear storage instead of saving empty state
             updateStats();
         }
     });

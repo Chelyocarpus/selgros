@@ -1,6 +1,10 @@
 function initializeReports(tableElement) {
     const table = tableElement.DataTable();
 
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
     function generateNRReport() {
         const today = new Date().toLocaleDateString('de-DE');
         
@@ -68,9 +72,9 @@ function initializeReports(tableElement) {
                     table: {
                         widths: ['*', 'auto'],
                         body: [
-                            ['Gesamtanzahl Rabbatierte Artikel:', totalItems],
-                            ['Gesamtwert (Brutto):', `€${totalValue.toFixed(2)}`],
-                            ['Naturalrabatt (25%):', `€${totalNaturalrabatt.toFixed(2)}`]
+                            ['Gesamtanzahl Rabbatierte Artikel:', formatNumber(totalItems)],
+                            ['Gesamtwert (Brutto):', `€${formatNumber(totalValue.toFixed(2))}`],
+                            ['Naturalrabatt (25%):', `€${formatNumber(totalNaturalrabatt.toFixed(2))}`]
                         ]
                     },
                     layout: 'lightHorizontalLines',
@@ -95,9 +99,9 @@ function initializeReports(tableElement) {
                             ...reportData.map(item => [
                                 item.sapNr,
                                 item.article,
-                                item.rabbatiertCount,
+                                formatNumber(item.rabbatiertCount),
                                 item.brutto,
-                                item.sumRabbatiert
+                                `${formatNumber(item.totalValue.toFixed(2))} €`
                             ])
                         ]
                     }
