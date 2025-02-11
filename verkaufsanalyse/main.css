@@ -418,3 +418,77 @@ td:not(.actions-column):not(:has(input)):hover {
 .delete-all-button:hover {
     background-color: #db2828 !important;
 }
+
+/* Custom confirm dialog styling */
+.custom-confirm-dialog {
+    position: fixed;
+    background: white;
+    padding: 1em;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 9999;
+    width: 250px;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.custom-confirm-dialog .content {
+    margin-bottom: 1em;
+}
+
+.custom-confirm-dialog .content p {
+    margin: 0;
+    font-size: 0.9em;
+}
+
+.custom-confirm-dialog .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5em;
+}
+
+.custom-confirm-dialog .ui.button {
+    margin: 0 !important;
+}
+
+/* Remove modal styles since we're not using Semantic UI modal */
+.custom-confirm-dialog.ui.modal {
+    position: fixed !important;
+    margin: 0 !important;
+    transform: none !important;
+}
+
+/* Updated read-only field styling */
+input[readonly],
+.calculated,
+td input[readonly] {
+    background-color: #f8f9fa !important;
+    color: rgba(0, 0, 0, 0.87) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    cursor: default !important;
+    text-align: right !important;
+    padding-right: 0.5em !important;
+}
+
+/* Read-only fields hover state */
+input[readonly]:hover,
+.calculated:hover,
+td input[readonly]:hover {
+    background-color: #e9ecef !important;
+}
+
+/* Ensure consistent text alignment for calculated values */
+.calculated,
+input[readonly],
+td:has(input[readonly]) {
+    text-align: right !important;
+}
+
+/* Spanne and Brutto specific styling */
+td:nth-child(7) input[readonly], /* Spanne */
+td:nth-child(8) input[readonly] { /* Brutto */
+    font-weight: normal;
+    font-family: inherit;
+    width: 80px !important;
+    padding: 4px 8px !important;
+}
