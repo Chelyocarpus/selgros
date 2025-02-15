@@ -11,7 +11,15 @@ function initializeClipboard($table, { formatGermanNumber, parseGermanNumber, fo
         let values = clipboardData.split(/[\t]+/);
         values = values.map(val => val.trim());
         
-        if (values.length >= 7) {
+        if (values.length === 1) {
+            // Handle single word paste
+            let cellIndex = $(this).index();
+            if (isEditing) {
+                row.find(`td:nth-child(${cellIndex + 1}) input`).val(values[0]);
+            } else {
+                $(this).text(values[0]);
+            }
+        } else if (values.length >= 7) {
             // If row is in edit mode, update input values instead of text
             if (isEditing) {
                 row.find('td:nth-child(2) input').val(values[0]); // SAP
