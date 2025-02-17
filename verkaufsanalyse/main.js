@@ -1,31 +1,25 @@
 $(document).ready(function() {
-    // Add helper function for German number format
-    function parseGermanNumber(value) {
+    // Helper functions for number formatting
+    const parseGermanNumber = value => {
         if (typeof value === 'number') return value;
         return parseFloat(value.toString().replace(/\s/g, '').replace(',', '.')) || 0;
-    }
+    };
 
-    function formatGermanNumber(value) {
-        return parseFloat(value).toFixed(2).replace('.', ',');
-    }
+    const formatGermanNumber = value => parseFloat(value).toFixed(2).replace('.', ',');
 
-    // Add margin calculation helper function after parseGermanNumber
-    function calculateMargin(netto, ek) {
+    const calculateMargin = (netto, ek) => {
         if (!ek) return 0;
         return ((netto - ek) / netto * 100).toFixed(2);
-    }
+    };
 
-    // Add helper functions after parseGermanNumber
-    function calculateSpanne(netto, ek) {
+    const calculateSpanne = (netto, ek) => {
         if (!netto || !ek || netto <= 0) return 0;
         const margin = ((netto - ek) / ek * 100).toFixed(2);
         console.log(`Spanne calculation: (${netto} - ${ek}) / ${ek} * 100 = ${margin}%`);
         return margin;
-    }
+    };
 
-    function calculateBrutto(netto) {
-        return (netto * 1.19).toFixed(2); // 19% MwSt
-    }
+    const calculateBrutto = netto => (netto * 1.19).toFixed(2);
 
     // Update the saveTableData function to track edit state
     function saveTableData() {
@@ -277,7 +271,7 @@ $(document).ready(function() {
         }
     });
 
-    function validateInputs(row) {
+    const validateInputs = row => {
         const maxStueck = parseInt(row.find('td:nth-child(4)').text());
         const verkauft = parseInt(row.find('.verkauft').val()) || 0;
         const schwund = parseInt(row.find('.schwund').val()) || 0;
@@ -312,76 +306,33 @@ $(document).ready(function() {
     }
 
     // Helper function to check if any inputs have values
-    function hasInputValues(row) {
+    const hasInputValues = row => {
         return ['verkauft', 'schwund', 'rabbatiert'].some(className => 
             parseFloat(row.find('.' + className).val()) > 0
         );
     }
 
-    // Consolidate calculation logic into a single function
-    function calculateRow(row) {
-        // Get and validate all input values
-        const inputs = {
-            verkauft: parseInt(row.find('.verkauft').val()) || 0,
-            schwund: parseInt(row.find('.schwund').val()) || 0,
-            rabbatiert: parseInt(row.find('.rabbatiert').val()) || 0
-        };
-
-        // Get current prices
-        const bruttoPrice = parseGermanNumber(row.find('td:nth-child(8)').text());
-        const ekPrice = parseGermanNumber(row.find('td:nth-child(5)').text());
-
-        // Calculate normal sales (full price)
-        const sumVerkauft = inputs.verkauft * bruttoPrice;
-
-        // Calculate discounted sales
-        const discountedPrice = bruttoPrice * 0.5; // 50% off brutto
-        const naturalrabattBonus = discountedPrice * 0.25; // 25% bonus on discounted price
-        const finalRabbatPrice = discountedPrice + naturalrabattBonus;
-        const sumRabbatiert = inputs.rabbatiert * finalRabbatPrice;
-
-        // Calculate total revenue (brutto)
-        const sumGesamt = sumVerkauft + sumRabbatiert;
-
-        // Calculate costs of sold items only
-        const soldItemsCost = inputs.verkauft * ekPrice; // Cost of regular sales
-        const discountedItemsCost = inputs.rabbatiert * ekPrice; // Cost of discounted items
-        const lostItemsCost = inputs.schwund * ekPrice; // Cost of lost items
-
-        // Calculate total cost and profit
-        const totalCost = soldItemsCost + discountedItemsCost + lostItemsCost;
-        const sumProfit = sumGesamt - totalCost;
-
-        // Update display with German number formatting
-        row.find('.sumVerkauft').text(formatGermanNumber(sumVerkauft) + ' €');
-        row.find('.sumRabbatiert').text(formatGermanNumber(sumRabbatiert) + ' €');
-        row.find('.sumGesamt').text(formatGermanNumber(sumGesamt) + ' €');
-        row.find('.sumProfit').text(formatGermanNumber(sumProfit) + ' €');
-
-        updateStats();
-    }
-
-    // Event delegation for input changes
+    // Modify the event binding to use event delegation for dynamic rows
     $('#sapTable').on('input', '.number-input', function() {
         const input = $(this);
         const value = input.val();
-
+        
         // Ensure empty or invalid values become 0
         if (value === '' || isNaN(value)) {
             input.val(0);
         }
-
+        
         // Force numerical value
         input.val(parseInt(input.val()) || 0);
-
+        
         let row = input.closest('tr');
-
+        
         if (!validateInputs(row)) {
             // Reset the changed input to 0
             $(this).val(0);
             return;
         }
-
+        
         // Skip calculation if all inputs are 0
         if (!hasInputValues(row)) {
             // Reset all sum fields to 0
@@ -389,9 +340,9 @@ $(document).ready(function() {
             updateStats();
             return;
         }
-
-        calculateRow(row);
-        saveTableData();
+        
+        calculateRow(row); // Use the separated calculation logic
+        saveTableData(); // Add save to storage at the end
     });
 
     // Row template for new rows
@@ -739,7 +690,7 @@ $(document).ready(function() {
         if (!hasInputValues(row)) {
             return;
         }
-        calculateRow(row);
+        calculateRow(row); // Use the same calculation logic
     }
 
     // Initialize all calculations
@@ -872,9 +823,9 @@ $(document).ready(function() {
     $('.nr-report-btn').on('click', reports.generateNRReport);
 
     // Add debounce function at the top of the file
-    function debounce(func, wait) {
+    const debounce = (func, wait) => {
         let timeout;
-        return function(...args) {
+        return (...args) => {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(this, args), wait);
         };
@@ -893,6 +844,52 @@ $(document).ready(function() {
         saveTableData();
     }, 100));
 
+    // Calculation logic separated from DOM updates
+    const calculateRowValues = (inputs, bruttoPrice, ekPrice) => {
+        const sumVerkauft = inputs.verkauft * bruttoPrice;
+        const discountedPrice = bruttoPrice * 0.5;
+        const naturalrabattBonus = discountedPrice * 0.25;
+        const finalRabbatPrice = discountedPrice + naturalrabattBonus;
+        const sumRabbatiert = inputs.rabbatiert * finalRabbatPrice;
+        const sumGesamt = sumVerkauft + sumRabbatiert;
+        const soldItemsCost = inputs.verkauft * ekPrice;
+        const discountedItemsCost = inputs.rabbatiert * ekPrice;
+        const lostItemsCost = inputs.schwund * ekPrice;
+        const totalCost = soldItemsCost + discountedItemsCost + lostItemsCost;
+        const sumProfit = sumGesamt - totalCost;
+
+        return {
+            sumVerkauft,
+            sumRabbatiert,
+            sumGesamt,
+            sumProfit
+        };
+    }
+
+    const updateRowDisplay = (row, { sumVerkauft, sumRabbatiert, sumGesamt, sumProfit }) => {
+        row.find('.sumVerkauft').text(formatGermanNumber(sumVerkauft) + ' €');
+        row.find('.sumRabbatiert').text(formatGermanNumber(sumRabbatiert) + ' €');
+        row.find('.sumGesamt').text(formatGermanNumber(sumGesamt) + ' €');
+        row.find('.sumProfit').text(formatGermanNumber(sumProfit) + ' €');
+    }
+
+    const computeRowData = row => {
+        const inputs = {
+            verkauft: parseInt(row.find('.verkauft').val()) || 0,
+            schwund: parseInt(row.find('.schwund').val()) || 0,
+            rabbatiert: parseInt(row.find('.rabbatiert').val()) || 0
+        };
+        const bruttoPrice = parseGermanNumber(row.find('td:nth-child(8)').text());
+        const ekPrice = parseGermanNumber(row.find('td:nth-child(5)').text());
+        return calculateRowValues(inputs, bruttoPrice, ekPrice);
+    }
+
+    const calculateRow = row => {
+        const result = computeRowData(row);
+        updateRowDisplay(row, result);
+        updateStats();
+    }
+
     // Update initialization sequence
     let isInitialized = false;
 
@@ -908,6 +905,7 @@ $(document).ready(function() {
         }
     });
 
+    // Prevent multiple initialization
     if (!isInitialized) {
         isInitialized = true;
         setTimeout(() => {
