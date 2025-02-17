@@ -2,7 +2,10 @@ function initializeReports(tableElement) {
     const table = tableElement.DataTable();
 
     function formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return new Intl.NumberFormat('de-DE', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(num);
     }
 
     function generateNRReport() {
@@ -15,16 +18,20 @@ function initializeReports(tableElement) {
             const rabbatiertCount = parseInt($row.find('.rabbatiert').val()) || 0;
             
             if (rabbatiertCount > 0) {
-                const bruttoPrice = parseFloat($row.find('td:nth-child(8)').text().replace('€', '').trim()) || 0;
+                const bruttoPrice = parseFloat($row.find('td:nth-child(8)').text()
+                    .replace('€', '')
+                    .replace('.', '')
+                    .replace(',', '.')
+                    .trim()) || 0;
                 const totalValue = bruttoPrice * rabbatiertCount;
                 
                 reportData.push({
                     sapNr: $row.find('td:nth-child(2)').text(),
                     article: $row.find('td:nth-child(3)').text(),
-                    brutto: $row.find('td:nth-child(8)').text(),
+                    brutto: `${formatNumber(bruttoPrice)} €`,
                     rabbatiertCount: rabbatiertCount,
                     totalValue: totalValue,
-                    sumRabbatiert: `${totalValue.toFixed(2)} €`
+                    sumRabbatiert: `${formatNumber(totalValue)} €`
                 });
             }
         });
@@ -99,9 +106,9 @@ function initializeReports(tableElement) {
                             ...reportData.map(item => [
                                 item.sapNr,
                                 item.article,
-                                formatNumber(item.rabbatiertCount),
+                                item.rabbatiertCount,
                                 item.brutto,
-                                `${formatNumber(item.totalValue.toFixed(2))} €`
+                                item.sumRabbatiert
                             ])
                         ]
                     }
