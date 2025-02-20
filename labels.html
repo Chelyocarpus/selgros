@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Print Labels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
             @page {
@@ -16,57 +17,46 @@
             #controls {
                 display: none; /* Hide controls when printing */
             }
-        }
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        #controls {
-            margin-bottom: 10px;
-        }
-        .page {
-            width: 210mm;
-            height: 297mm;
-            display: grid;
-            grid-template-columns: repeat(3, 69mm); /* 3 labels per row */
-            grid-template-rows: repeat(7, 39mm); /* 7 rows per page */
-            gap: 3mm; /* Space between labels */
-            padding: 4mm; /* Prevents border cutoff */
-            box-sizing: border-box;
-        }
-        .label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 69mm;
-            height: 39mm;
-            box-sizing: border-box;
-            border: 0.5mm solid black; /* Thin border for better print results */
-            background: white; /* Ensure a clean print */
-        }
-        .label img {
-            width: 60mm;
-            height: auto;
-            max-height: 35mm; /* Prevents oversized images */
-        }
-        .no-border .label {
-            border: none !important;
+            .page {
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                background: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
         }
     </style>
 </head>
-<body>
+<body class="font-sans text-center bg-gray-100 p-4">
 
-<div id="controls">
-    <input type="file" id="imageUpload" accept="image/*">
-    <input type="number" id="labelCount" min="1" max="21" value="21">
-    <label>
-        <input type="checkbox" id="borderToggle" checked> Show Borders
+<div id="controls" class="mb-4 p-4 bg-white shadow rounded-lg">
+    <input type="file" id="imageUpload" accept="image/*" class="mb-2 p-2 border rounded">
+    <input type="number" id="labelCount" min="1" max="21" value="21" class="mb-2 p-2 border rounded">
+    <label class="mb-2 inline-flex items-center">
+        <input type="checkbox" id="borderToggle" checked class="mr-2"> Show Borders
     </label>
-    <button onclick="generateLabels()">Generate Labels</button>
-    <button onclick="window.print()">Print</button>
+    <button onclick="generateLabels()" class="mb-2 p-2 bg-blue-500 text-white rounded hover:bg-blue-600">Generate Labels</button>
+    <button onclick="window.print()" class="mb-2 p-2 bg-green-500 text-white rounded hover:bg-green-600">Print</button>
+    <!-- New Tutorial button -->
+    <button id="tutorialBtn" class="mb-2 p-2 bg-purple-500 text-white rounded hover:bg-purple-600">Tutorial</button>
 </div>
 
-<div class="page" id="labelContainer"></div>
+<!-- Updated preview container with explicit A4 dimensions -->
+<div class="page grid grid-cols-3 grid-rows-7 gap-2 p-2 box-border bg-white shadow rounded-lg mx-auto w-[210mm] h-[297mm]" id="labelContainer"></div>
+
+<!-- New Tutorial Modal -->
+<div id="tutorialModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+  <div class="bg-white p-6 rounded shadow-lg max-w-md w-full">
+    <h2 id="tutorialTitle" class="text-xl font-bold mb-2"></h2>
+    <p id="tutorialContent" class="mb-4"></p>
+    <div class="flex justify-between">
+      <button id="tutorialPrev" class="px-4 py-2 bg-gray-300 text-gray-800 rounded">Previous</button>
+      <button id="tutorialNext" class="px-4 py-2 bg-blue-500 text-white rounded">Next</button>
+    </div>
+    <button id="tutorialClose" class="mt-4 text-red-500 underline">Close</button>
+  </div>
+</div>
 
 <script>
     let uploadedImageSrc = ""; // Store the uploaded image
@@ -100,15 +90,72 @@
         container.innerHTML = ""; // Clear existing labels
         container.classList.toggle("no-border", !showBorders); // Toggle border class
 
+        const fragment = document.createDocumentFragment();
         for (let i = 0; i < labelCount; i++) {
             const label = document.createElement("div");
-            label.classList.add("label");
+            label.classList.add("flex", "items-center", "justify-center", "w-[69mm]", "h-[39mm]", "box-border", "bg-white", "shadow", "rounded");
+            if (showBorders) {
+                label.classList.add("border", "border-gray-300");
+            }
             const img = document.createElement("img");
             img.src = uploadedImageSrc;
+            img.classList.add("w-[60mm]", "max-h-[35mm]");
             label.appendChild(img);
-            container.appendChild(label);
+            fragment.appendChild(label);
         }
+        container.appendChild(fragment);
     }
+
+    // Interactive Tutorial Script
+    const tutorialSteps = [
+      { title: "Step 1: Upload an Image", content: "Click the 'Choose File' button to upload an image." },
+      { title: "Step 2: Set Label Count", content: "Enter a number between 1 and 21 for the label count." },
+      { title: "Step 3: Toggle Borders", content: "Check or uncheck the 'Show Borders' box to toggle borders." },
+      { title: "Step 4: Generate Labels", content: "Click 'Generate Labels' to preview your labels in an A4 grid." },
+      { title: "Step 5: Print Labels", content: "Press 'Print' to print your labels." }
+    ];
+    let tutorialIndex = 0;
+    const tutorialModal = document.getElementById("tutorialModal");
+    const tutorialTitle = document.getElementById("tutorialTitle");
+    const tutorialContent = document.getElementById("tutorialContent");
+    const tutorialPrev = document.getElementById("tutorialPrev");
+    const tutorialNext = document.getElementById("tutorialNext");
+    const tutorialClose = document.getElementById("tutorialClose");
+
+    function showTutorialStep() {
+      const step = tutorialSteps[tutorialIndex];
+      tutorialTitle.textContent = step.title;
+      tutorialContent.textContent = step.content;
+      tutorialPrev.disabled = (tutorialIndex === 0);
+      tutorialNext.disabled = (tutorialIndex === tutorialSteps.length - 1);
+    }
+
+    function openTutorial() {
+      tutorialModal.classList.remove("hidden");
+      tutorialIndex = 0;
+      showTutorialStep();
+    }
+
+    function closeTutorial() {
+      tutorialModal.classList.add("hidden");
+    }
+
+    tutorialPrev.addEventListener("click", () => {
+      if (tutorialIndex > 0) {
+        tutorialIndex--;
+        showTutorialStep();
+      }
+    });
+
+    tutorialNext.addEventListener("click", () => {
+      if (tutorialIndex < tutorialSteps.length - 1) {
+        tutorialIndex++;
+        showTutorialStep();
+      }
+    });
+
+    document.getElementById("tutorialBtn").addEventListener("click", openTutorial);
+    tutorialClose.addEventListener("click", closeTutorial);
 </script>
 
 </body>
