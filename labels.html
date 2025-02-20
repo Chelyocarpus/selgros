@@ -40,11 +40,15 @@
             justify-content: center;
             width: 70mm;
             height: 40mm;
+            border: 1px solid black; /* Border enabled by default */
         }
         .label img {
             width: 60mm;
             height: auto;
             max-height: 35mm; /* Prevents oversized images */
+        }
+        .no-border .label {
+            border: none !important;
         }
     </style>
 </head>
@@ -52,34 +56,53 @@
 
 <div id="controls">
     <input type="file" id="imageUpload" accept="image/*">
+    <input type="number" id="labelCount" min="1" max="21" value="21">
+    <label>
+        <input type="checkbox" id="borderToggle" checked> Show Borders
+    </label>
+    <button onclick="generateLabels()">Generate Labels</button>
     <button onclick="window.print()">Print</button>
 </div>
 
 <div class="page" id="labelContainer"></div>
 
 <script>
+    let uploadedImageSrc = ""; // Store the uploaded image
+
     document.getElementById("imageUpload").addEventListener("change", function (event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = function (e) {
-            generateLabels(e.target.result);
+            uploadedImageSrc = e.target.result;
         };
         reader.readAsDataURL(file);
     });
 
-    function generateLabels(imgSrc) {
+    function generateLabels() {
         const container = document.getElementById("labelContainer");
+        const labelCount = parseInt(document.getElementById("labelCount").value, 10);
+        const showBorders = document.getElementById("borderToggle").checked;
+        
+        if (!uploadedImageSrc) {
+            alert("Please upload an image first.");
+            return;
+        }
+        
+        if (labelCount < 1 || labelCount > 21) {
+            alert("Please enter a valid number of labels (1-21).");
+            return;
+        }
+
         container.innerHTML = ""; // Clear existing labels
+        container.classList.toggle("no-border", !showBorders); // Toggle border class
 
-        const labelsPerPage = 3 * 7; // 3 columns, 7 rows
-
-        for (let i = 0; i < labelsPerPage; i++) {
+        for (let i = 0; i < labelCount; i++) {
             const label = document.createElement("div");
             label.classList.add("label");
             const img = document.createElement("img");
-            img.src = imgSrc;
+            img.src = uploadedImageSrc;
             label.appendChild(img);
             container.appendChild(label);
         }
