@@ -13,6 +13,7 @@
             }
             body {
                 margin: 0;
+                padding: 0 !important; /* Remove body padding that can cause extra blank page */
             }
             #controls {
                 display: none; /* Hide controls when printing */
@@ -24,6 +25,8 @@
                 background: none !important;
                 padding: 0 !important;
                 margin: 0 !important;
+                overflow: hidden; /* Prevent any overflow */
+                page-break-after: avoid; /* Avoid a forced page break after the container */
             }
         }
     </style>
@@ -40,6 +43,15 @@
     <button onclick="window.print()" class="mb-2 p-2 bg-green-500 text-white rounded hover:bg-green-600">Print</button>
     <!-- New Tutorial button -->
     <button id="tutorialBtn" class="mb-2 p-2 bg-purple-500 text-white rounded hover:bg-purple-600">Tutorial</button>
+</div>
+
+<!-- Updated Loading Indicator with Moving Icon -->
+<div id="loadingIndicator" class="fixed inset-0 bg-gray-800 bg-opacity-70 flex items-center justify-center text-white text-xl hidden">
+  <svg class="animate-spin h-8 w-8 mr-3" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+  </svg>
+  Generating...
 </div>
 
 <!-- Updated preview container with explicit A4 dimensions -->
@@ -64,10 +76,14 @@
     document.getElementById("imageUpload").addEventListener("change", function (event) {
         const file = event.target.files[0];
         if (!file) return;
+        // Show loading indicator
+        document.getElementById("loadingIndicator").classList.remove("hidden");
 
         const reader = new FileReader();
         reader.onload = function (e) {
             uploadedImageSrc = e.target.result;
+            // Hide loading indicator when done
+            document.getElementById("loadingIndicator").classList.add("hidden");
         };
         reader.readAsDataURL(file);
     });
@@ -86,25 +102,46 @@
             alert("Please enter a valid number of labels (1-21).");
             return;
         }
+        
+        // Show loading indicator while generating labels
+        document.getElementById("loadingIndicator").classList.remove("hidden");
+        
+        // Use a timeout to allow the loading indicator to display
+        setTimeout(() => {
+            container.innerHTML = ""; // Clear existing labels
+            container.classList.toggle("no-border", !showBorders); // Toggle border class
 
-        container.innerHTML = ""; // Clear existing labels
-        container.classList.toggle("no-border", !showBorders); // Toggle border class
+            const fragment = document.createDocumentFragment();
+            for (let i = 0; i < labelCount; i++) {
+                const label = document.createElement("div");
+                // Remove shadow; only add border classes if showBorders is true
+                label.classList.add("flex", "items-center", "justify-center", "w-[69mm]", "h-[39mm]", "box-border", "bg-white", "rounded");
+                if (showBorders) {
+                    label.classList.add("border", "border-gray-300");
+                }
+                const img = document.createElement("img");
+                img.src = uploadedImageSrc;
+                img.classList.add("w-[60mm]", "max-h-[35mm]");
+                label.appendChild(img);
+                fragment.appendChild(label);
+            }
+            container.appendChild(fragment);
+            // Hide loading indicator after generation is complete
+            document.getElementById("loadingIndicator").classList.add("hidden");
+        }, 100);
+    }
 
-        const fragment = document.createDocumentFragment();
-        for (let i = 0; i < labelCount; i++) {
-            const label = document.createElement("div");
-            label.classList.add("flex", "items-center", "justify-center", "w-[69mm]", "h-[39mm]", "box-border", "bg-white", "shadow", "rounded");
+    // Update border toggle handler to remove "shadow" class management
+    document.getElementById("borderToggle").addEventListener("change", function() {
+        const showBorders = this.checked;
+        document.querySelectorAll("#labelContainer > div").forEach(label => {
             if (showBorders) {
                 label.classList.add("border", "border-gray-300");
+            } else {
+                label.classList.remove("border", "border-gray-300");
             }
-            const img = document.createElement("img");
-            img.src = uploadedImageSrc;
-            img.classList.add("w-[60mm]", "max-h-[35mm]");
-            label.appendChild(img);
-            fragment.appendChild(label);
-        }
-        container.appendChild(fragment);
-    }
+        });
+    });
 
     // Interactive Tutorial Script
     const tutorialSteps = [
