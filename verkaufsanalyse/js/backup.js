@@ -7,21 +7,29 @@ function initializeBackup(tableElement, { saveTableData }) {
         
         table.rows().every(function() {
             const $row = $(this.node());
+            
+            // Get position from the counter cell
+            const position = parseInt($row.find('td.counter-cell').text()) || 0;
+            
+            // Get netto and brutto values
+            const nettoValue = $row.find('td:nth-child(7)').text().trim() || '0,00';
+            const bruttoValue = $row.find('td:nth-child(8)').text().trim() || 
+                window.utils.formatGermanNumber(window.utils.parseGermanNumber(nettoValue) * 1.19);
+
             const rowData = {
-                // Renamed fields to match their actual content
-                index: $row.find('td.counter-cell').text(), // This is the row index
-                sap: $row.find('td:nth-child(3)').text(),  // This is the SAP number
-                article: $row.find('td:nth-child(4)').text(), // This is the article name
+                index: position,
+                position: position, // Add explicit position field
+                sap: $row.find('td:nth-child(3)').text(),
+                article: $row.find('td:nth-child(4)').text(),
                 stueck: $row.find('td:nth-child(5)').text(),
                 ek: $row.find('td:nth-child(6)').text(),
-                netto: $row.find('td:nth-child(7)').text(),
-                spanne: $row.find('td:nth-child(8)').text(),
-                brutto: $row.find('td:nth-child(9)').text(),
+                netto: nettoValue,
+                brutto: bruttoValue,
                 verkauft: $row.find('.verkauft').val(),
                 schwund: $row.find('.schwund').val(),
                 rabbatiert: $row.find('.rabbatiert').val(),
-                rabattNetto: $row.find('.rabatt-netto').val(), // Add rabattNetto to backup
-                rabattBrutto: $row.find('.rabatt-brutto').text(), // Store text content instead of val()
+                rabattNetto: $row.find('.rabatt-netto').val() || '0,00',
+                rabattBrutto: $row.find('.rabatt-brutto').text().trim() || '0,00',
                 sumVerkauft: $row.find('.sumVerkauft').text(),
                 sumRabbatiert: $row.find('.sumRabbatiert').text(),
                 sumGesamt: $row.find('.sumGesamt').text(),
@@ -30,6 +38,9 @@ function initializeBackup(tableElement, { saveTableData }) {
             };
             tableData.push(rowData);
         });
+
+        // Sort data by position before saving
+        tableData.sort((a, b) => (a.position || 0) - (b.position || 0));
 
         // Create backup object with metadata
         const backup = {
@@ -67,30 +78,25 @@ function initializeBackup(tableElement, { saveTableData }) {
                 // Clear existing table data
                 table.clear();
 
-                // Add rows from backup with corrected field mapping
+                // Add rows from backup with simplified field mapping
                 backup.data.forEach(rowData => {
-                    const verkauftValue = rowData.verkauft !== undefined && rowData.verkauft !== null ? rowData.verkauft : '0';
-                    const schwundValue = rowData.schwund !== undefined && rowData.schwund !== null ? rowData.schwund : '0';
-                    const rabbatiertValue = rowData.rabbatiert !== undefined && rowData.rabbatiert !== null ? rowData.rabbatiert : '0';
-                    const rabattNettoValue = rowData.rabattNetto !== undefined ? rowData.rabattNetto : '0,00';
+                    const nettoValue = rowData.netto || '0,00';
+                    const bruttoValue = rowData.brutto || 
+                        window.utils.formatGermanNumber(window.utils.parseGermanNumber(nettoValue) * 1.19);
                     
-                    // Get rabattBrutto from backup if available, otherwise calculate it
-                    let bruttoFormatted;
-                    if (rowData.rabattBrutto) {
-                        bruttoFormatted = rowData.rabattBrutto;
-                    } else {
-                        // Calculate Rabatt Brutto from Netto
-                        const nettoNumeric = window.utils ? 
-                            window.utils.parseGermanNumber(rabattNettoValue) : 
-                            parseFloat(rabattNettoValue.replace(',', '.')) || 0;
-                        
-                        const bruttoNumeric = nettoNumeric * 1.19;
-                        bruttoFormatted = window.utils ? 
-                            window.utils.formatGermanNumber(bruttoNumeric) : 
-                            bruttoNumeric.toFixed(2).replace('.', ',');
-                    }
+                    // Properly format rabatt values for restoration
+                    const rabattNettoValue = rowData.rabattNetto ? 
+                        (typeof rowData.rabattNetto === 'number' ? 
+                            window.utils.formatGermanNumber(rowData.rabattNetto) : 
+                            rowData.rabattNetto.toString().replace('.', ',')) : 
+                        '0,00';
                     
-                    // Create the row with the SAP number directly in the SAP cell
+                    const rabattBruttoValue = rowData.rabattBrutto ? 
+                        (typeof rowData.rabattBrutto === 'number' ? 
+                            window.utils.formatGermanNumber(rowData.rabattBrutto) : 
+                            rowData.rabattBrutto.toString().replace('.', ',')) : 
+                        '0,00';
+
                     const newRow = $(`
                         <tr>
                             <td class="actions-column">
@@ -99,28 +105,28 @@ function initializeBackup(tableElement, { saveTableData }) {
                                     <i class="trash alternate outline icon delete-row" title="Delete row"></i>
                                 </div>
                             </td>
-                            <td class="counter-cell"></td>
+                            <td class="counter-cell">${rowData.index || ''}</td>
+                            <td>${rowData.sap || ''}</td>
                             <td>${rowData.article || ''}</td>
-                            <td>${rowData.stueck || ''}</td>
-                            <td>${rowData.ek || '0'}</td>
-                            <td>${rowData.netto || '0,00'}</td>
-                            <td>${rowData.spanne || '0,00'}</td>
-                            <td>${rowData.brutto || '0,00'}</td>
+                            <td>${rowData.stueck || '0'}</td>
+                            <td>${rowData.ek || '0,00'}</td>
+                            <td>${nettoValue}</td>
+                            <td>${bruttoValue}</td>
                             <td>
                                 <div class="input-container">
-                                    <input type="number" class="number-input verkauft" min="0" step="1" value="${parseInt(verkauftValue) || 0}">
+                                    <input type="number" class="number-input verkauft" min="0" step="1" value="${parseInt(rowData.verkauft) || 0}">
                                     <div class="error-message"></div>
                                 </div>
                             </td>
                             <td>
                                 <div class="input-container">
-                                    <input type="number" class="number-input schwund" min="0" step="1" value="${parseInt(schwundValue) || 0}">
+                                    <input type="number" class="number-input schwund" min="0" step="1" value="${parseInt(rowData.schwund) || 0}">
                                     <div class="error-message"></div>
                                 </div>
                             </td>
                             <td>
                                 <div class="input-container">
-                                    <input type="number" class="number-input rabbatiert" min="0" step="1" value="${parseInt(rabbatiertValue) || 0}">
+                                    <input type="number" class="number-input rabbatiert" min="0" step="1" value="${parseInt(rowData.rabbatiert) || 0}">
                                     <div class="error-message"></div>
                                 </div>
                             </td>
@@ -130,7 +136,7 @@ function initializeBackup(tableElement, { saveTableData }) {
                                     <div class="error-message"></div>
                                 </div>
                             </td>
-                            <td class="rabatt-brutto">${bruttoFormatted}</td>
+                            <td class="rabatt-brutto">${rabattBruttoValue}</td>
                             <td class="calculated sumVerkauft">${rowData.sumVerkauft || '0,00'}</td>
                             <td class="calculated sumRabbatiert">${rowData.sumRabbatiert || '0,00'}</td>
                             <td class="calculated sumGesamt">${rowData.sumGesamt || '0,00'}</td>
@@ -141,20 +147,27 @@ function initializeBackup(tableElement, { saveTableData }) {
                     table.row.add(newRow);
                 });
 
-                // Redraw table and update counters in a way that doesn't affect the SAP field
+                // Redraw table and recalculate
                 table.draw();
                 
-                // Ensure counter cells are numbered but SAP numbers aren't affected
-                let counter = 1;
-                table.rows().every(function(rowIdx) {
-                    $(this.node()).find('td.counter-cell').text(counter++);
-                });
-                
-                saveTableData();
+                // Ensure Rabatt Brutto values are updated after draw
+                setTimeout(() => {
+                    $('#sapTable tbody tr').each(function() {
+                        const row = $(this);
+                        const rabattNettoInput = row.find('.rabatt-netto');
+                        if (rabattNettoInput.length) {
+                            const rabattNetto = window.utils.parseGermanNumber(rabattNettoInput.val()) || 0;
+                            const rabattBrutto = rabattNetto * 1.19;
+                            row.find('.rabatt-brutto').text(window.utils.formatGermanNumber(rabattBrutto));
+                        }
+                    });
+                    
+                    window.calculations.initializeAllCalculations();
+                    window.stats.updateStats();
+                    saveTableData();
+                }, 100);
 
-                // Show success message
                 alert('Backup restored successfully!');
-                
             } catch (error) {
                 console.error('Error restoring backup:', error);
                 alert('Error restoring backup. Please check the file format.');

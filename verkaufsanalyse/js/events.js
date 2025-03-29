@@ -127,6 +127,84 @@ function initializeEventHandlers(table) {
         }, 2000);
     }
 
+    // Show a notification for row movement
+    function showRowMoveNotification(message) {
+        // Remove any existing notifications
+        $('.row-move-notification').remove();
+        
+        // Create notification
+        const notification = $(`
+            <div class="row-move-notification">
+                <div class="content">
+                    <i class="arrows alternate vertical icon"></i>
+                    ${message}
+                </div>
+            </div>
+        `).appendTo('body');
+        
+        // Position at the top of the page
+        notification.css({
+            position: 'fixed',
+            top: '10px',
+            right: '10px',
+            zIndex: 9999,
+            padding: '8px 12px',
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            borderRadius: '4px',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+        });
+        
+        // Auto-remove after a delay
+        setTimeout(() => {
+            notification.fadeOut(300, function() {
+                $(this).remove();
+            });
+        }, 2000);
+    }
+
+    // Add row reorder event handler
+    table.on('row-reorder', function(e, diff, edit) {
+        if (diff.length > 0) {
+            const change = diff[0];
+            const $movedRow = $(change.node);
+            
+            const fromPosition = parseInt($movedRow.find('td.counter-cell').text()) || 0;
+            const targetNode = table.row(change.newPosition).node();
+            const toPosition = parseInt($(targetNode).find('td.counter-cell').text()) || 0;
+            
+            // Handle row movement directly
+            const nodes = table.rows().nodes().toArray();
+            let fromRowIndex = -1, toRowIndex = -1;
+            
+            table.rows().every(function(rowIdx) {
+                const position = parseInt($(this.node()).find('td.counter-cell').text()) || 0;
+                if (position === fromPosition) fromRowIndex = rowIdx;
+                if (position === toPosition) toRowIndex = rowIdx;
+            });
+            
+            if (fromRowIndex !== -1 && toRowIndex !== -1) {
+                const row = nodes.splice(fromRowIndex, 1)[0];
+                nodes.splice(toRowIndex, 0, row);
+                
+                table.clear();
+                nodes.forEach(node => table.row.add($(node)));
+                table.draw();
+                
+                window.tableModule.updateRowCounters(table);
+                window.storage.saveTableData();
+                
+                // Show move notification
+                const articleName = $movedRow.find('td:nth-child(4)').text().trim();
+                const message = articleName ? 
+                    `Row "${articleName}" moved successfully` : 
+                    'Row moved successfully';
+                
+                showRowMoveNotification(message);
+            }
+        }
+    });
+
     // Handle number input changes - Fix for decimal comma entry
     $('#sapTable').on('input', '.number-input', function() {
         const input = $(this);
@@ -138,7 +216,6 @@ function initializeEventHandlers(table) {
             // Allow user to keep typing after comma without replacing it immediately
             if (value.includes(',')) {
                 // Don't immediately replace comma during typing - let the user enter the full value
-                // The blur handler will normalize it later
                 return;
             }
             
@@ -472,7 +549,7 @@ function setupNormalRow(newRow, rowData) {
     newRow.find('td:nth-child(5)').text(rowData.stueck || '0');
     newRow.find('td:nth-child(6)').text(rowData.ek || '0.00');
     newRow.find('td:nth-child(7)').text(rowData.netto || '0.00');
-    newRow.find('td:nth-child(8)').text(rowData.brutto || '0.00');
+    newRow.find('td:nth-child(8)').text(rowData.brutto || '0.00'); // Use brutto directly
 }
 
 // Set input values on a row
@@ -482,9 +559,22 @@ function setInputValues(newRow, rowData) {
     newRow.find('.schwund').val(rowData.schwund !== undefined ? rowData.schwund : '0');
     newRow.find('.rabbatiert').val(rowData.rabbatiert !== undefined ? rowData.rabbatiert : '0');
     
-    // For Rabatt Netto - use German format
-    const rabattNetto = rowData.rabattNetto !== undefined && rowData.rabattNetto > 0 ? 
-        window.utils.formatGermanNumber(rowData.rabattNetto) : '0,00';
+    // Handle rabattNetto value based on its type and existence
+    let rabattNetto;
+    if (rowData.rabattNetto !== undefined) {
+        // Handle both string and numeric formats
+        if (typeof rowData.rabattNetto === 'string' && rowData.rabattNetto.trim() !== '') {
+            rabattNetto = window.utils.formatGermanNumber(window.utils.parseGermanNumber(rowData.rabattNetto));
+        } else if (typeof rowData.rabattNetto === 'number' && rowData.rabattNetto > 0) {
+            rabattNetto = window.utils.formatGermanNumber(rowData.rabattNetto);
+        } else {
+            rabattNetto = '0,00';
+        }
+    } else {
+        rabattNetto = '0,00';
+    }
+    
+    // Set the formatted rabattNetto
     newRow.find('.rabatt-netto').val(rabattNetto);
     
     // Calculate and set Rabatt Brutto based on Netto - always format properly

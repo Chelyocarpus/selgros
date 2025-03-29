@@ -6,6 +6,7 @@ function getNewRowHtml() {
         <tr>
             <td class="actions-column">
                 <div class="row-actions">
+                    <i class="bars icon drag-handle" title="Drag to reorder"></i>
                     <i class="edit outline icon edit-row" title="Edit row"></i>
                     <i class="trash alternate outline icon delete-row" title="Delete row"></i>
                 </div>
@@ -95,6 +96,12 @@ function initializeDataTable() {
             { orderable: false, targets: 1 },
             { type: 'num', targets: [4,5,6,7,8,9,10,11,12,13,14] }
         ],
+        // Enable row reordering
+        rowReorder: {
+            selector: '.drag-handle',
+            dataSrc: 1, // Use the counter cell as the data source for reordering
+            update: true
+        },
         hover: true,
         stripeClasses: false,
         rowClass: 'ui-state-default',
