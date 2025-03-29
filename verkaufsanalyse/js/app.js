@@ -138,7 +138,7 @@ function setupButtons(table) {
     // Add NR Report button
     buttons.container().append(`
         <button class="ui teal button nr-report-btn">
-            <i class="file alternate outline icon"></i> NR Report
+            <i class="file alternate outline icon"></i> Duni NR Report
         </button>
     `);
     
@@ -184,14 +184,41 @@ function handleRestore(file, table) {
                 throw new Error('Backup data must be an array');
             }
 
-            // Clean the data and fix German number format
-            const cleanedData = parsedData.map(row => ({
-                ...row,
-                ek: row.ek.toString().replace(',', '.'),
-                netto: row.netto.toString().replace(',', '.'),
-                spanne: row.spanne ? row.spanne.toString().replace(',', '.') : '',
-                brutto: row.brutto.toString().replace(',', '.')
-            }));
+            // Clean the data and fix German number format - preserve rabatt values
+            const cleanedData = parsedData.map(row => {
+                // Handle various formats of rabattNetto and rabattBrutto
+                let rabattNetto = row.rabattNetto;
+                let rabattBrutto = row.rabattBrutto;
+                
+                // Ensure rabattNetto is properly formatted
+                if (typeof rabattNetto === 'string') {
+                    // Convert to numeric value for storage
+                    rabattNetto = window.utils.parseGermanNumber(rabattNetto);
+                }
+                
+                // Ensure rabattBrutto is properly formatted
+                if (typeof rabattBrutto === 'string') {
+                    // Convert to numeric value for storage
+                    rabattBrutto = window.utils.parseGermanNumber(rabattBrutto);
+                }
+                
+                return {
+                    ...row,
+                    ek: row.ek.toString().replace(',', '.'),
+                    netto: row.netto.toString().replace(',', '.'),
+                    spanne: row.spanne ? row.spanne.toString().replace(',', '.') : '',
+                    brutto: row.brutto.toString().replace(',', '.'),
+                    rabattNetto: rabattNetto,
+                    rabattBrutto: rabattBrutto
+                };
+            });
+
+            // Sort rows by index/counter if present to maintain order
+            cleanedData.sort((a, b) => {
+                const indexA = parseInt(a.index || '0');
+                const indexB = parseInt(b.index || '0');
+                return indexA - indexB;
+            });
 
             // Store and load the cleaned data
             localStorage.setItem('tableData', JSON.stringify(cleanedData));

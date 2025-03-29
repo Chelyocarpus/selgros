@@ -183,7 +183,7 @@ input.euro-input[readonly] {
 .rabatt-container::after {
     content: "€";
     position: absolute;
-    right: 8px;
+    right: 15px;
     top: 50%;
     transform: translateY(-50%);
     color: #999;
@@ -204,21 +204,9 @@ input.euro-input[readonly] {
     padding-right: 24px !important;
 }
 
-.rabatt-container::after {
-    content: "€";
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #999;
-    font-size: 14px;
-    pointer-events: none;
-}
-
 /* Adjust input padding for currency symbol */
 .rabatt-container input {
     width: 100%;
-    padding-right: 24px !important;
     text-align: right;
 }
 
@@ -1043,4 +1031,190 @@ td.sumProfit::after {
 .popup-content .ui.table td {
     white-space: normal;
     word-break: break-word;
+}
+
+/* Add these styles for drag and drop functionality */
+.drag-handle {
+    cursor: move;
+    color: #999;
+    padding-right: 5px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.drag-handle:hover {
+    color: #2185d0;
+    transform: scale(1.2);
+}
+
+tr.dt-rowReorder-moving {
+    background-color: #f8f8f8 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
+    outline: 2px dashed #2185d0 !important;
+}
+
+tr.dt-rowReorder-moving td {
+    background-color: #f8f8f8 !important;
+}
+
+/* Style for the reorder drop indicator */
+.dt-rowReorder-float {
+    position: absolute;
+    background-color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    opacity: 0.9 !important;
+    z-index: 1060;
+}
+
+/* Reorder drop target indicator */
+.dt-rowReorder-drop-indicator {
+    background-color: #2185d0 !important;
+    height: 3px !important;
+}
+
+/* Add highlight for counter cell to make it clear it's used for ordering */
+.counter-cell {
+    position: relative;
+    transition: background-color 0.3s ease;
+}
+
+.counter-cell:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 1px solid transparent;
+    transition: border-color 0.3s ease;
+}
+
+tr:hover .counter-cell:after {
+    border-color: rgba(33, 133, 208, 0.3);
+}
+
+/* Animation for position change */
+@keyframes positionChanged {
+    0%, 100% { background-color: transparent; }
+    20%, 80% { background-color: rgba(33, 133, 208, 0.25); }
+}
+
+.position-changed {
+    animation: positionChanged 2s ease;
+    position: relative;
+}
+
+.position-changed::before {
+    content: '↕';
+    position: absolute;
+    top: 0;
+    left: -15px;
+    color: #2185d0;
+    font-weight: bold;
+    animation: fadeInOut 2s ease;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    20%, 80% { opacity: 1; }
+}
+
+/* Enhanced animation for position change */
+@keyframes positionChanged {
+    0%, 100% { background-color: transparent; }
+    20%, 80% { background-color: rgba(33, 133, 208, 0.25); }
+}
+
+.position-changed {
+    animation: positionChanged 2s ease;
+    position: relative;
+}
+
+.position-changed::before {
+    content: '↕';
+    position: absolute;
+    top: 0;
+    left: -15px;
+    color: #2185d0;
+    font-weight: bold;
+    animation: fadeInOut 2s ease;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    20%, 80% { opacity: 1; }
+}
+
+/* Improved drag handle visibility */
+.drag-handle {
+    cursor: move;
+    color: #999;
+    padding-right: 5px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.drag-handle:hover {
+    color: #2185d0;
+    transform: scale(1.2);
+}
+
+/* Add an indicator when row is being dragged */
+tr.dt-rowReorder-moving .drag-handle {
+    color: #2185d0;
+    animation: pulse 0.5s infinite alternate;
+}
+
+@keyframes pulse {
+    from { opacity: 0.7; }
+    to { opacity: 1; }
+}
+
+/* Enhanced animation for position change */
+@keyframes positionChanged {
+    0%, 100% { background-color: transparent; }
+    20%, 80% { background-color: rgba(33, 133, 208, 0.25); }
+}
+
+.position-changed {
+    animation: positionChanged 2s ease;
+    position: relative;
+}
+
+.position-changed::before {
+    content: '↕';
+    position: absolute;
+    top: 0;
+    left: -15px;
+    color: #2185d0;
+    font-weight: bold;
+    animation: fadeInOut 2s ease;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    20%, 80% { opacity: 1; }
+}
+
+/* Improved drag handle visibility */
+.drag-handle {
+    cursor: move;
+    color: #999;
+    padding-right: 5px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.drag-handle:hover {
+    color: #2185d0;
+    transform: scale(1.2);
+}
+
+/* Add an indicator when row is being dragged */
+tr.dt-rowReorder-moving .drag-handle {
+    color: #2185d0;
+    animation: pulse 0.5s infinite alternate;
+}
+
+@keyframes pulse {
+    from { opacity: 0.7; }
+    to { opacity: 1; }
 }
