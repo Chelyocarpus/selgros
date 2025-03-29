@@ -21,11 +21,39 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-    <script src="clipboard.js"></script>
-    <script src="backup.js"></script>
-    <script src="marketing.js"></script>
-    <script src="report.js"></script>
-    <script src="main.js"></script>
+    
+    <!-- PDF.js library (added directly) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.111/pdf.min.js"></script>
+    <script>
+        // Set PDF.js worker
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.111/pdf.worker.min.js';
+        }
+    </script>
+    
+    <!-- Modular application scripts - Ensure correct loading order -->
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/table.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/rowEditor.js"></script>
+    <script src="js/events.js"></script>
+    
+    <!-- PDF Import Format Extractors - Add before pdfImport.js -->
+    <script src="js/pdfFormatExtractors.js"></script>
+    
+    <!-- External plugins -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/backup.js"></script>
+    <script src="js/marketing.js"></script>
+    <script src="js/report.js"></script>
+    
+    <!-- PDF Import module -->
+    <script src="js/pdfImport.js"></script>
+    
+    <!-- Main application script - Must be loaded last -->
+    <script src="js/app.js"></script>
 </head>
 <body>
     <div class="ui container">
@@ -35,24 +63,40 @@
         <div class="stats-panel">
             <div class="stats-grid">
                 <div class="stat-card profit">
-                    <div class="stat-label">Total Profit</div>
+                    <div class="stat-label">Total Profit (mit NR)</div>
                     <div class="stat-value" id="totalProfit">0.00 €</div>
                     <div class="stat-label">Net margin: <span id="profitMargin">0%</span></div>
+                    <i class="info circle icon stat-info-icon" data-card="profit"></i>
+                </div>
+                <div class="stat-card profit-without-nr">
+                    <div class="stat-label">Profit vor NR-Erstattung</div>
+                    <div class="stat-value" id="profitWithoutNR">0.00 €</div>
+                    <div class="stat-label">Marge vor NR: <span id="profitMarginWithoutNR">0%</span></div>
+                    <i class="info circle icon stat-info-icon" data-card="profit-without-nr"></i>
+                </div>
+                <div class="stat-card nr-highlight">
+                    <div class="stat-label">Naturalrabatt (25%)</div>
+                    <div class="stat-value" id="naturalRabatt">0.00 €</div>
+                    <div class="stat-label">Wird als Erstattung hinzugerechnet</div>
+                    <i class="info circle icon stat-info-icon" data-card="nr"></i>
                 </div>
                 <div class="stat-card sales">
                     <div class="stat-label">Total Revenue</div>
                     <div class="stat-value" id="totalRevenue">0.00 €</div>
                     <div class="stat-label">Items sold: <span id="itemsSold">0</span></div>
+                    <i class="info circle icon stat-info-icon" data-card="revenue"></i>
                 </div>
                 <div class="stat-card discount">
                     <div class="stat-label">Discounted Sales</div>
                     <div class="stat-value" id="discountedSales">0.00 €</div>
                     <div class="stat-label">Discount items: <span id="discountItems">0</span></div>
+                    <i class="info circle icon stat-info-icon" data-card="discount"></i>
                 </div>
                 <div class="stat-card loss">
                     <div class="stat-label">Total Loss (Schwund)</div>
                     <div class="stat-value" id="totalLoss">0.00 €</div>
                     <div class="stat-label">Lost items: <span id="lostItems">0</span></div>
+                    <i class="info circle icon stat-info-icon" data-card="loss"></i>
                 </div>
             </div>
         </div>
@@ -74,16 +118,18 @@
             <thead>
                 <tr>
                     <th class="actions-column">Actions</th>
+                    <th>#</th>
                     <th>SAP-Nr</th>
                     <th>Article</th>
                     <th>Stück</th>
-                    <th>EK á Stück</th>
-                    <th>Netto á Stück</th>
-                    <th>Marge</th>
-                    <th>Brutto á Stück</th>
+                    <th>EK</th>
+                    <th>Netto</th>
+                    <th>Brutto</th>
                     <th>Verkauft (Stück)</th>
                     <th>Schwund (Stück)</th>
                     <th>Rabbatiert (Stück)</th>
+                    <th>Rabatt Netto</th>
+                    <th>Rabatt Brutto</th>
                     <th>Summe Verkauft</th>
                     <th>Summe Rabbatiert</th>
                     <th>Summe Gesamt</th>
