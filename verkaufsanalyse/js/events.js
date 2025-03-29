@@ -147,14 +147,12 @@ function initializeEventHandlers(table) {
                 // Allow empty field or just decimal point during editing
                 return;
             }
-        } else {
+        } else if (value === '' || isNaN(parseInt(value))) {
             // For integer fields, ensure it's a valid integer
-            if (value === '' || isNaN(parseInt(value))) {
-                input.val('0');
-            } else {
-                // Keep what the user typed for integers
-                input.val(parseInt(value));
-            }
+            input.val('0');
+        } else {
+            // Keep what the user typed for integers
+            input.val(parseInt(value));
         }
         
         let row = input.closest('tr');
@@ -281,12 +279,12 @@ function initializeEventHandlers(table) {
     // New handler specifically for currency inputs - simplify to only handle netto
     $('#sapTable').on('input', '.currency-input', function(e) {
         const input = $(this);
-        if (input.attr('readonly')) return; // Skip readonly fields
+        if (input.attr('readonly')) { return; } // Skip readonly fields
         
         let value = input.val();
         
         // Allow empty input during typing
-        if (!value) return;
+        if (!value) { return; }
         
         // Filter to only allow digits, comma and period
         const filteredValue = value.replace(/[^\d,\.]/g, '');
@@ -311,7 +309,7 @@ function initializeEventHandlers(table) {
     // Add blur handler to format currency inputs properly and auto-calculate brutto
     $('#sapTable').on('blur', '.currency-input', function() {
         const input = $(this);
-        if (input.attr('readonly')) return; // Skip readonly fields
+        if (input.attr('readonly')) { return; } // Skip readonly fields
         
         const value = input.val();
         const row = input.closest('tr');

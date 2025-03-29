@@ -955,20 +955,6 @@ td.sumProfit::after {
     margin-top: 8px;
 }
 
-.stat-details-popup h4 {
-    margin-top: 5px;
-    margin-bottom: 15px;
-    color: #333;
-}
-
-.stat-details-popup .ui.table {
-    margin-top: 0;
-}
-
-.stat-details-popup .positive {
-    background-color: rgba(46, 204, 113, 0.1) !important;
-}
-
 /* Stat cards with detailed info */
 .stat-card {
     position: relative; /* Ensure positioning context for absolute elements */
@@ -1036,20 +1022,6 @@ td.sumProfit::after {
     margin-top: 8px;
 }
 
-.stat-details-popup h4 {
-    margin-top: 5px;
-    margin-bottom: 15px;
-    color: #333;
-}
-
-.stat-details-popup .ui.table {
-    margin-top: 0;
-}
-
-.stat-details-popup .positive {
-    background-color: rgba(46, 204, 113, 0.1) !important;
-}
-
 /* Ensure popup content is scrollable if needed */
 .popup-content {
     max-height: calc(80vh - 60px);
@@ -1065,26 +1037,6 @@ td.sumProfit::after {
     min-width: 300px; /* Increased from 280px */
     margin-top: 8px; /* Add space above table */
     margin-bottom: 8px; /* Add space below table */
-}
-
-/* Improve table layout in popups */
-.popup-content .ui.table td {
-    white-space: normal;
-    word-break: break-word;
-}
-
-/* Ensure popup content is scrollable if needed */
-.popup-content {
-    max-height: calc(80vh - 60px);
-    overflow-y: auto;
-    overflow-x: visible;
-    padding-right: 5px;
-}
-
-/* Make sure tables inside popups don't get cut off */
-.popup-content .ui.table {
-    width: 100%;
-    min-width: 280px; /* Minimum width for tables */
 }
 
 /* Improve table layout in popups */
