@@ -1,22 +1,48 @@
+/* Basic input styling */
 .number-input {
-    width: 60px;
+    width: 70px; /* Increased from 60px */
     text-align: right;
     transition: all 0.3s ease;
     border: 1px solid #ddd;
+    padding: 4px 8px;
+    height: 32px;
 }
+
+/* Calculated field styling */
 .calculated {
     background-color: #f8f9fa;
     transition: background-color 0.2s;
+    text-align: right !important;
+    padding-right: 1.5em !important; /* Increased from 1em */
+    min-width: 90px; /* Added minimum width */
 }
+
+/* Error state */
 .input-error {
     background-color: #ffe6e6;
     border-color: #ff4444;
     transition: all 0.3s ease;
 }
+
+/* Input container and error message */
 .input-container {
-    min-height: 50px;
+    min-height: 40px;
+    position: relative;
+    margin: 0;
+    padding: 0;
+}
+
+/* Input containers should align content in the middle */
+.input-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin: 0;
+    padding: 0;
+    min-height: 32px;
     position: relative;
 }
+
 .error-message {
     color: #ff4444;
     font-size: 0.8em;
@@ -29,16 +55,234 @@
     margin: 0;
     transition: visibility 0.3s ease;
 }
+
 .error-message.visible {
     visibility: visible;
 }
+
+.currency-input {
+    width: 100%; /* Take full width of the container */
+    text-align: right;
+    padding: 4px 28px 4px 8px; /* Increased right padding for € symbol */
+    height: 32px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background-color: white;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+.currency-input:focus {
+    outline: none;
+    border-color: #4d90fe;
+    box-shadow: 0 0 0 2px rgba(77, 144, 254, 0.2);
+    background-color: #f8fcff;
+}
+
+/* Adjust for touch devices */
+@media (hover: none) {
+    .currency-input {
+        font-size: 16px; /* Larger touch target */
+    }
+    
+    .rabatt-container::after {
+        font-size: 16px;
+    }
+}
+
+/* Add hover effect for better user feedback */
+.currency-input:hover {
+    border-color: #bbb;
+}
+
+/* Also style cell currency inputs */
+.cell-currency-input {
+    text-align: right;
+    padding-right: 24px !important; /* Increased from 12px */
+}
+
+/* Remove spinner buttons ONLY from decimal inputs */
+input[type="number"].rabatt-netto,
+input[type="number"].rabatt-brutto {
+    -moz-appearance: textfield; /* Firefox */
+}
+
+input[type="number"].rabatt-netto::-webkit-outer-spin-button,
+input[type="number"].rabatt-netto::-webkit-inner-spin-button,
+input[type="number"].rabatt-brutto::-webkit-outer-spin-button,
+input[type="number"].rabatt-brutto::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* ALLOW spinners for Stück columns (verkauft, schwund, rabbatiert) */
+input[type="number"].verkauft,
+input[type="number"].schwund,
+input[type="number"].rabbatiert {
+    -moz-appearance: auto; /* Firefox - show spinners */
+    appearance: auto; /* Standard - show spinners */
+}
+
+input[type="number"].verkauft::-webkit-outer-spin-button,
+input[type="number"].verkauft::-webkit-inner-spin-button,
+input[type="number"].schwund::-webkit-outer-spin-button,
+input[type="number"].schwund::-webkit-inner-spin-button,
+input[type="number"].rabbatiert::-webkit-outer-spin-button,
+input[type="number"].rabbatiert::-webkit-inner-spin-button {
+    -webkit-appearance: inner-spin-button; /* WebKit - show spinners */
+    margin: 0 2px 0 0;
+    height: 14px;
+    position: relative;
+    opacity: 1;
+}
+
+/* Read-only and calculated fields styling */
+input[readonly],
+.calculated,
+td input[readonly],
+input.rabatt-brutto[readonly],
+input.euro-input[readonly] {
+    background-color: #f8f9fa !important;
+    color: rgba(0, 0, 0, 0.87) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    cursor: default !important;
+    text-align: right !important;
+    padding-right: 0.5em !important;
+}
+
+/* Create a special container for readonly rabatt values to ensure the Euro sign displays properly */
+.rabatt-container input[readonly]::after {
+    content: "€";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    pointer-events: none;
+}
+
+/* Make the € symbol after a readonly field more visible */
+.rabatt-container:has(input[readonly])::after {
+    right: 8px;
+    color: #999;
+    z-index: 2;
+}
+
+/* Rabatt container styling */
+.rabatt-container {
+    position: relative;
+    width: 100%;
+    max-width: 90px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+}
+
+.rabatt-container::after {
+    content: "€";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Width adjustments for currency fields */
+.rabatt-container {
+    width: 90px;
+    position: relative;
+}
+
+.rabatt-brutto {
+    width: 100%;
+    text-align: right;
+    padding-right: 24px !important;
+}
+
+.rabatt-container::after {
+    content: "€";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+/* Adjust input padding for currency symbol */
+.rabatt-container input {
+    width: 100%;
+    padding-right: 24px !important;
+    text-align: right;
+}
+
+/* Auto-calculated field */
+.auto-calculated {
+    background-color: #f0f7ff !important;
+    border-color: #cce2ff !important;
+}
+
+/* Table row background resets */
+.table tr:nth-of-type(odd),
+.table tr:nth-of-type(even),
+table.dataTable.stripe tbody tr.odd,
+table.dataTable.display tbody tr.odd,
+table.dataTable.stripe tbody tr.even,
+table.dataTable.display tbody tr.even {
+    background-color: transparent;
+}
+
+/* Row hover styling */
+table.dataTable tbody tr:hover,
+table.dataTable.hover tbody tr:hover,
+table.dataTable.display tbody tr:hover,
+.ui.table tr:hover {
+    background-color: rgba(0,0,0,.05) !important;
+    cursor: pointer;
+}
+
+/* Keep calculated cell background on hover */
+table.dataTable tbody tr:hover td.calculated {
+    background-color: #e9ecef !important;
+}
+
+/* Remove old hover overrides */
+tr:hover td.calculated {
+    background-color: unset;
+}
+
+/* Action column and buttons */
+.actions-column {
+    width: 50px;
+    text-align: center;
+}
+
 .row-actions {
     visibility: visible;
     text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
 }
-tr:hover .row-actions {
-    visibility: visible;
+
+.edit-row {
+    color: #2185d0;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    font-size: 1.2em;
 }
+
+.edit-row:hover {
+    opacity: 1;
+}
+
 .delete-row {
     color: #ff4444;
     cursor: pointer;
@@ -46,64 +290,43 @@ tr:hover .row-actions {
     transition: opacity 0.2s;
     font-size: 1.2em;
 }
+
 .delete-row:hover {
     opacity: 1;
 }
-.add-row-button {
-    margin-bottom: 10px !important;
-    margin-top: 10px !important;
-}
-/* Make odd/even rows look consistent */
-.table tr:nth-of-type(odd),
-.table tr:nth-of-type(even) {
-    background-color: transparent;
-}
 
-/* Reset background for all rows */
-table.dataTable.stripe tbody tr.odd,
-table.dataTable.display tbody tr.odd,
-table.dataTable.stripe tbody tr.even,
-table.dataTable.display tbody tr.even {
-    background-color: transparent;
-}
 /* Make trash icon more visible */
 .trash.icon {
     font-size: 1.2em;
     vertical-align: middle;
 }
-.actions-column {
-    width: 50px;
-    text-align: center;
-}
-/* Article column width */
-table.dataTable thead th:nth-child(3),
-table.dataTable tbody td:nth-child(3) {
-    min-width: 250px;
-    max-width: 350px;
-}
-/* Make article inputs full width */
-.article-input {
-    width: 100%;
-    box-sizing: border-box;
-}
-/* Button styling and spacing */
-.dt-buttons {
-    margin-bottom: 1em !important;
-    padding: 10px 0;
-}
-.dt-buttons .ui.button {
-    margin-right: 0.5em !important;
-}
+
+/* Button styling */
 .add-row-button {
-    margin: 1em 0 !important;
+    margin: 0 !important;
 }
 
-/* Table layout improvements */
+.dt-buttons {
+    display: inline-flex;
+    gap: 0.5em;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.dt-buttons .ui.button {
+    margin: 0 0.5em 0 0 !important;
+}
+
+.dt-button {
+    margin: 0 !important;
+}
+
+/* Table layout */
 .ui.table {
     margin-top: 1em;
     border-collapse: collapse !important;
     width: 100% !important;
-    min-width: 1200px;  /* Ensures minimum width for better readability */
+    table-layout: auto;
 }
 
 /* Container spacing */
@@ -113,120 +336,214 @@ table.dataTable tbody td:nth-child(3) {
     width: 95% !important;
 }
 
-/* DataTables length and filter spacing */
-.dataTables_length,
-.dataTables_filter {
-    margin-bottom: 1em;
-}
-
-/* Input alignment in cells */
-.number-input,
+/* Input styling */
 .sap-input,
-.article-input {
-    padding: 4px 8px;
-    height: 32px;
+.stueck-input,
+.ek-input,
+.netto-input,
+.brutto-input,
+.spanne-input {
+    width: 80px !important;
+    max-width: 80px !important;
 }
 
-/* Table header alignment */
+.article-input {
+    width: 100% !important;
+    max-width: 350px !important;
+}
+
+/* Column widths */
+table.dataTable tbody td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 350px;
+    white-space: normal;
+    word-break: break-word;
+    vertical-align: top;
+    min-width: 80px;
+}
+
+/* Specific column widths */
+table.dataTable tbody td:nth-child(2), /* SAP-Nr */
+table.dataTable tbody td:nth-child(4), /* Stück */
+table.dataTable tbody td:nth-child(5), /* EK */
+table.dataTable tbody td:nth-child(6), /* Netto */
+table.dataTable tbody td:nth-child(7), /* Spanne */
+table.dataTable tbody td:nth-child(8), /* Brutto */
+table.dataTable tbody td:nth-child(12), /* Rabatt Netto */
+table.dataTable tbody td:nth-child(13) { /* Rabatt Brutto */
+    width: 90px; /* Increased from 80px */
+    max-width: 90px;
+    min-width: 90px; /* Added to ensure consistent width */
+}
+
+/* SAP-Nr column width fix - make it narrower to fit 6 digits */
+table.dataTable tbody td:nth-child(3), /* SAP-Nr */
+table.dataTable thead th:nth-child(3) { /* SAP-Nr header */
+    width: 80px !important;
+    max-width: 80px !important;
+    min-width: 80px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Remove conflicting styles */
+table.dataTable tbody td:nth-child(3) {
+    min-width: 80px !important; /* Override conflicting rule */
+    max-width: 80px !important; /* Override conflicting rule */
+}
+
+/* Article column width */
+table.dataTable thead th:nth-child(3),
+table.dataTable tbody td:nth-child(3) {
+    min-width: 250px;
+    max-width: 350px;
+}
+
+table.dataTable tbody td:nth-child(4) {
+    min-width: 200px;
+    max-width: none;
+}
+
+/* Counter cell styling */
+.counter-cell {
+    text-align: center !important;
+    font-weight: bold;
+    width: 40px !important;
+    max-width: 40px !important;
+    background-color: #f8f9fa;
+}
+
+/* Paste indicator */
+.ready-for-paste {
+    background-color: rgba(33, 133, 208, 0.1) !important;
+    cursor: cell !important;
+}
+
+td:not(.actions-column):not(:has(input)):hover {
+    cursor: cell;
+}
+
+/* Header styling */
 table.dataTable thead th {
     text-align: left !important;
     vertical-align: middle !important;
 }
 
-/* Calculated cells alignment */
-.calculated {
-    text-align: right !important;
-    padding-right: 1em !important;
-}
-
-/* Remove all custom hover styles */
-tr:hover,
-table.dataTable tbody tr:hover,
-table.dataTable.stripe tbody tr.odd:hover,
-table.dataTable.display tbody tr.odd:hover,
-table.dataTable.hover tbody tr:hover,
-table.dataTable.display tbody tr:hover {
-    background-color: inherit;
-}
-
-/* Keep action button always visible */
-.row-actions {
-    visibility: visible;
-    text-align: center;
-}
-
-/* DataTables hover styles */
-table.dataTable tbody tr:hover,
-table.dataTable.hover tbody tr:hover,
-table.dataTable.display tbody tr:hover {
-    background-color: rgba(0,0,0,.05) !important;
-    cursor: pointer;
-}
-
-/* Ensure hover works with Semantic UI */
-.ui.table tr:hover {
-    background-color: rgba(0,0,0,.05) !important;
-}
-
-/* Keep calculated cells background on hover */
-table.dataTable tbody tr:hover td.calculated {
-    background-color: #e9ecef !important; /* Slightly darker than normal calculated background */
-}
-
-/* Remove old hover overrides */
-tr:hover td.calculated {
-    background-color: unset;
-}
-
-/* Stats panel styling */
-.stats-panel {
-    margin: 1em 0;
-    padding: 1em;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1em;
-}
-.stat-card {
-    padding: 1em;
-    border-radius: 4px;
-    background: #f8f9fa;
-    border-left: 4px solid;
-}
-.stat-card.profit { border-color: #21ba45; }
-.stat-card.sales { border-color: #2185d0; }
-.stat-card.discount { border-color: #f2711c; }
-.stat-card.loss { border-color: #db2828; }
-.stat-value {
-    font-size: 1.5em;
-    font-weight: bold;
-    margin: 0.2em 0;
-}
-.stat-label {
-    color: #666;
-    font-size: 0.9em;
-}
-
-/* Pagination styling */
-.dataTables_paginate {
-    margin-top: 1em !important;
-}
-.dataTables_paginate .ui.pagination.menu {
-    border: none;
-    box-shadow: none;
-}
-
-/* Sort indicator styling */
+/* Sorting indicators */
 table.dataTable thead th.sorting_asc,
 table.dataTable thead th.sorting_desc {
     position: relative;
     padding-right: 20px !important;
 }
 
-/* Updated button layout */
+/* Row highlight animation */
+@keyframes highlightNewRow {
+    0% { background-color: rgba(33, 133, 208, 0.2); }
+    100% { background-color: transparent; }
+}
+
+.new-row-highlight {
+    animation: highlightNewRow 1.5s ease;
+}
+
+/* Stats panel */
+.stats-panel {
+    margin: 1em 0;
+    padding: 1em;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1em;
+}
+
+.stat-card {
+    padding: 1em;
+    border-radius: 4px;
+    border-left: 4px solid;
+    transition: transform 0.2s ease;
+    position: relative; /* Ensure positioning context for absolute elements */
+}
+
+/* Card background and border colors with lower intensity backgrounds */
+.stat-card.profit { 
+    border-color: #27ae60; /* Green - positive */
+    background-color: rgba(39, 174, 96, 0.08);
+}
+
+.stat-card.profit-without-nr { 
+    border-color: #16a085; /* Teal - slightly different positive */
+    background-color: rgba(22, 160, 133, 0.08);
+}
+
+.stat-card.nr-highlight { 
+    border-color: #2ecc71; /* Bright green - positive bonus */
+    background-color: rgba(46, 204, 113, 0.08);
+}
+
+.stat-card.sales { 
+    border-color: #3498db; /* Blue - neutral/informational */
+    background-color: rgba(52, 152, 219, 0.08);
+}
+
+.stat-card.discount { 
+    border-color: #f39c12; /* Orange - attention but not negative */
+    background-color: rgba(243, 156, 18, 0.08);
+}
+
+.stat-card.loss { 
+    border-color: #e74c3c; /* Red - negative */
+    background-color: rgba(231, 76, 60, 0.08);
+}
+
+/* Slight hover effect for better interaction */
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.stat-value {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin: 0.2em 0;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* NR styling with updated colors to match cards */
+.profit-note {
+    font-size: 0.8em;
+    color: #2ecc71; /* Match NR highlight color */
+    font-weight: normal;
+}
+
+.nr-highlight .stat-label:last-child {
+    font-style: italic;
+    font-size: 0.8em;
+    color: #2ecc71; /* Match NR highlight color */
+}
+
+/* Formula hint positioning fix */
+.formula-hint {
+    position: relative;
+    margin-top: 1.5em;
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+}
+
+/* Button container layout */
 .button-container {
     display: flex;
     justify-content: space-between;
@@ -236,33 +553,26 @@ table.dataTable thead th.sorting_desc {
     border-bottom: 1px solid rgba(0,0,0,.1);
 }
 
-.dt-buttons {
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.dt-buttons .ui.button {
-    margin: 0 0.5em 0 0 !important;
-}
-
-.add-row-button {
-    margin: 0 !important;
-}
-
-/* DataTables controls layout */
-.dataTables_wrapper .row:first-child {
-    margin-bottom: 1em;
-}
-
+/* DataTables controls */
+.dataTables_length,
 .dataTables_filter {
     margin: 0 !important;
 }
 
-.dataTables_length {
-    margin: 0.5em 0 !important;
+.dataTables_filter input {
+    margin-left: 0.5em !important;
 }
 
-/* Updated button and control layout */
+.dataTables_paginate {
+    margin-top: 1em !important;
+}
+
+.dataTables_paginate .ui.pagination.menu {
+    border: none;
+    box-shadow: none;
+}
+
+/* Table controls layout */
 .table-controls {
     display: flex;
     align-items: center;
@@ -282,107 +592,91 @@ table.dataTable thead th.sorting_desc {
     margin-left: auto;
 }
 
-/* Clean up button styles */
-.dt-buttons {
-    display: inline-flex;
-    gap: 0.5em;
-    margin: 0 !important;
-    padding: 0 !important;
+/* Quick-add notification */
+.quick-add-notification {
+    padding: 10px 15px;
+    background-color: #f8f9fa;
+    border-left: 4px solid #2185d0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    max-width: 300px;
+    font-size: 14px;
 }
 
-.dt-button {
-    margin: 0 !important;
-}
-
-/* Search box styling */
-.dataTables_filter {
-    margin: 0 !important;
-}
-
-.dataTables_filter input {
-    margin-left: 0.5em !important;
-}
-
-/* Remove conflicting margins */
-.add-row-button {
-    margin: 0 !important;
-}
-
-/* Input width controls */
-.sap-input {
-    width: 80px !important;
-    max-width: 80px !important;
-}
-
-.article-input {
-    width: 100% !important;
-    max-width: 350px !important;
-}
-
-.stueck-input,
-.ek-input,
-.netto-input,
-.brutto-input,
-.spanne-input {
-    width: 80px !important;
-    max-width: 80px !important;
-}
-
-/* Ensure consistent cell widths */
-table.dataTable tbody td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 350px; /* Maximum width for any cell */
-}
-
-/* Specific column widths */
-table.dataTable tbody td:nth-child(2), /* SAP-Nr */
-table.dataTable tbody td:nth-child(4), /* Stück */
-table.dataTable tbody td:nth-child(5), /* EK */
-table.dataTable tbody td:nth-child(6), /* Netto */
-table.dataTable tbody td:nth-child(7), /* Spanne */
-table.dataTable tbody td:nth-child(8) { /* Brutto */
-    width: 80px;
-    max-width: 80px;
-}
-
-/* Article column width (already defined but moved here for clarity) */
-table.dataTable tbody td:nth-child(3) {
-    min-width: 250px;
-    max-width: 350px;
-}
-
-/* Action buttons styling */
-.row-actions {
+.quick-add-notification .content {
     display: flex;
-    justify-content: center;
-    gap: 8px;
+    align-items: center;
 }
 
-.edit-row {
+.quick-add-notification .icon {
+    margin-right: 8px;
     color: #2185d0;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-    font-size: 1.2em;
 }
 
-.edit-row:hover {
+/* Add row button tooltip */
+.ui.button.add-row-button {
+    position: relative;
+}
+
+.ui.button.add-row-button::before {
+    content: "Tip: Hold Shift for quick-add";
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    white-space: nowrap;
+    z-index: 100;
+}
+
+.ui.button.add-row-button:hover::before {
     opacity: 1;
+    visibility: visible;
 }
 
-/* Add paste indicator styling */
-.ready-for-paste {
-    background-color: rgba(33, 133, 208, 0.1) !important;
-    cursor: cell !important;
+/* PDF Import button */
+.pdf-import-btn {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
 }
 
-td:not(.actions-column):not(:has(input)):hover {
-    cursor: cell;
+.pdf-import-btn input[type="file"] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 100px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
 }
 
-/* Add styles for backup buttons */
+/* PDF Import status */
+.pdf-import-status {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+}
+
+.pdf-import-status .close.icon {
+    position: absolute;
+    top: 0.5em;
+    right: 0.5em;
+    cursor: pointer;
+}
+
+/* Backup and restore buttons */
 .backup-btn,
 .restore-btn {
     margin-right: 0.5em !important;
@@ -410,7 +704,7 @@ td:not(.actions-column):not(:has(input)):hover {
     display: block;
 }
 
-/* Add styles for delete all button */
+/* Delete all button */
 .delete-all-button {
     margin-left: 0.5em !important;
 }
@@ -419,7 +713,7 @@ td:not(.actions-column):not(:has(input)):hover {
     background-color: #db2828 !important;
 }
 
-/* Custom confirm dialog styling */
+/* Confirm dialog */
 .custom-confirm-dialog {
     position: fixed;
     background: white;
@@ -450,45 +744,303 @@ td:not(.actions-column):not(:has(input)):hover {
     margin: 0 !important;
 }
 
-/* Remove modal styles since we're not using Semantic UI modal */
 .custom-confirm-dialog.ui.modal {
     position: fixed !important;
     margin: 0 !important;
     transform: none !important;
 }
 
-/* Updated read-only field styling */
-input[readonly],
+/* Support for mobile browsers - remove spinner buttons from all number inputs */
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Support for touch devices */
+@media (hover: none) {
+    .currency-input {
+        font-size: 16px; /* Larger touch target */
+    }
+    
+    .rabatt-container::after {
+        top: 8px;
+    }
+}
+
+td:nth-child(6)::after,
+td:nth-child(7)::after,
+td:nth-child(8)::after {
+    content: "€";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 14px;
+}
+
+/* Apply the same styling to these cells in editing mode */
+.cell-currency-input-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    max-width: 90px; /* Added max-width to match other inputs */
+    margin: 0 auto;
+}
+
+/* Remove the Euro symbol in edit mode */
+.cell-currency-input-container::after {
+    content: none; /* Remove the Euro symbol from editing fields */
+}
+
+/* Adjust input padding in edit mode since there's no € symbol */
+.cell-currency-input {
+    text-align: right;
+    padding-right: 8px !important; /* Reduced from 24px since no € symbol */
+    box-sizing: border-box;
+}
+
+/* Add spacing to tables */
+.ui.table td {
+    padding: 7px 8px; /* Added more vertical padding */
+}
+
+.ui.table th {
+    padding: 8px 8px; /* Added more vertical padding */
+}
+
+/* Standardize vertical alignment for all elements */
+.number-input,
+.currency-input,
 .calculated,
-td input[readonly] {
-    background-color: #f8f9fa !important;
-    color: rgba(0, 0, 0, 0.87) !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
-    cursor: default !important;
+.cell-currency-input,
+.input-container,
+.rabatt-container,
+td {
+    vertical-align: middle !important;
+    height: 32px;
+    box-sizing: border-box;
+}
+
+/* Make tables cells consistent */
+.ui.table td {
+    padding: 7px 8px;
+    vertical-align: middle !important;
+    height: 42px; /* Standard height for all table cells */
+}
+
+/* Center contents of all cells */
+table.dataTable tbody td {
+    display: table-cell;
+    vertical-align: middle !important;
+}
+
+/* Ensure calculated fields have consistent styling */
+td.calculated,
+td.sumVerkauft,
+td.sumRabbatiert,
+td.sumGesamt,
+td.sumProfit {
+    background-color: #f8f9fa;
     text-align: right !important;
-    padding-right: 0.5em !important;
+    padding-right: 1.5em !important;
+    vertical-align: middle !important;
+    height: 32px;
+    line-height: 32px;
 }
 
-/* Read-only fields hover state */
-input[readonly]:hover,
-.calculated:hover,
-td input[readonly]:hover {
-    background-color: #e9ecef !important;
+/* Euro symbol for price cells and calculated columns */
+td:nth-child(6), /* EK */
+td:nth-child(7), /* Netto */
+td:nth-child(8), /* Brutto */
+td:nth-child(13), /* Rabatt Brutto */
+td.calculated,   /* All calculated fields */
+td.sumVerkauft,  /* Sum Verkauft column */
+td.sumRabbatiert, /* Sum Rabbatiert column */
+td.sumGesamt,    /* Sum Gesamt column */
+td.sumProfit     /* Sum Profit column */ {
+    position: relative;
+    padding-right: 24px !important;
 }
 
-/* Ensure consistent text alignment for calculated values */
-.calculated,
-input[readonly],
-td:has(input[readonly]) {
-    text-align: right !important;
+td:nth-child(6)::after,
+td:nth-child(7)::after,
+td:nth-child(8)::after,
+td:nth-child(13)::after,
+td.calculated::after,
+td.sumVerkauft::after,
+td.sumRabbatiert::after,
+td.sumGesamt::after,
+td.sumProfit::after {
+    content: "€";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 14px;
+    pointer-events: none;
 }
 
-/* Spanne and Brutto specific styling */
-td:nth-child(7) input[readonly], /* Spanne */
-td:nth-child(8) input[readonly] { /* Brutto */
+/* Force the € symbol to display outside the input with z-index */
+.rabatt-container {
+    position: relative;
+}
+
+.rabatt-container::after {
+    z-index: 2;
+}
+
+/* NR styling */
+.profit-note {
+    font-size: 0.8em;
+    color: #27ae60;  /* Changed to green to indicate positive */
     font-weight: normal;
-    font-family: inherit;
-    width: 80px !important;
-    padding: 4px 8px !important;
+}
+
+.profit-without-nr {
+    background-color: #f5f5f5;
+    border-left: 4px solid #3498db;
+}
+
+.nr-highlight {
+    background-color: #e9f7ef;  /* Lighter green background */
+    border-left: 4px solid #27ae60;  /* Green border */
+}
+
+.nr-highlight .stat-label:last-child {
+    font-style: italic;
+    font-size: 0.8em;
+    color: #27ae60;  /* Green text to highlight positive aspect */
+}
+
+/* Stat cards with detailed info */
+.stat-info-icon {
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    margin-left: 4px;
+    font-size: 16px;
+}
+
+.stat-info-icon:hover {
+    opacity: 1;
+    color: #2185d0;
+}
+
+.stat-details-popup {
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    padding: 15px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stat-details-popup .note {
+    font-style: italic;
+    color: #666;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+/* Stat cards with detailed info */
+.stat-card {
+    position: relative; /* Ensure positioning context for absolute elements */
+}
+
+.stat-info-icon {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    font-size: 16px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: inherit;
+}
+
+.stat-info-icon:hover {
+    opacity: 1;
+    color: #2185d0;
+}
+
+.stat-details-popup {
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    padding: 15px;
+    animation: fadeIn 0.2s ease;
+    z-index: 1000;
+    min-width: 350px; /* Increased from 320px to ensure headers fit */
+    width: auto;
+    /* Add more top padding to ensure headers aren't cut off */
+    padding-top: 30px;
+}
+
+/* Ensure popup header doesn't get cut off */
+.stat-details-popup .ui.top.attached.label {
+    white-space: nowrap;
+    font-size: 0.9em;
+    padding: 0.5em 2.5em 0.5em 1em; /* Extra right padding for close button */
+    overflow: visible;
+    width: 100%; /* Ensure label spans full width */
+    box-sizing: border-box;
+}
+
+/* Fix internal headers to ensure they're not cut off */
+.stat-details-popup h4 {
+    margin-top: 10px; /* Increased from 5px */
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 14px; /* Slightly bigger for better visibility */
+    padding-top: 5px; /* Extra padding to prevent cutting off */
+    line-height: 1.4; /* Improved line height for better readability */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stat-details-popup .note {
+    font-style: italic;
+    color: #666;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+/* Ensure popup content is scrollable if needed */
+.popup-content {
+    max-height: calc(80vh - 60px);
+    overflow-y: auto;
+    overflow-x: visible; /* Allow tables to show fully */
+    padding-right: 5px; /* Prevent scrollbar from touching content */
+    padding-top: 10px; /* Add top padding to ensure content isn't cut off */
+}
+
+/* Make sure tables inside popups don't get cut off */
+.popup-content .ui.table {
+    width: 100%;
+    min-width: 300px; /* Increased from 280px */
+    margin-top: 8px; /* Add space above table */
+    margin-bottom: 8px; /* Add space below table */
+}
+
+/* Improve table layout in popups */
+.popup-content .ui.table td {
+    white-space: normal;
+    word-break: break-word;
 }
