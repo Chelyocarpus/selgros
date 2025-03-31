@@ -19,8 +19,8 @@ function initializePdfImport(table) {
         reader.onload = function(e) {
             const typedArray = new Uint8Array(e.target.result);
             
-            // Show loading message
-            showPdfImportStatus('Loading PDF file...', 'info');
+            // Don't show an initial loading message here - it causes duplicate notifications
+            // Let the app.js notification be the only one shown initially
             
             // Process PDF with PDF.js
             processPdf(typedArray)
@@ -34,9 +34,10 @@ function initializePdfImport(table) {
                             // Use specialized display if available, otherwise default to raw
                             if (extractor.displayExtractedData && data.items && data.items.length > 0) {
                                 extractor.displayExtractedData(data);
-                                showPdfImportStatus(`Found ${data.items.length} items in PDF`, 'success');
+                                // Don't show any more notifications here - the modal itself is enough
                             } else {
                                 window.pdfExtractors.rawDataExtractor.displayRawData(textContent);
+                                // Only show a notification if we're displaying raw data
                                 showPdfImportStatus('PDF loaded and raw data displayed', 'info');
                             }
                             
@@ -98,6 +99,7 @@ function initializePdfImport(table) {
                 textContent += `\n\n`;
             }
             
+            console.log('PDF processing complete, content length:', textContent.length);
             return textContent;
         } catch (error) {
             console.error('PDF.js error:', error);
@@ -105,10 +107,13 @@ function initializePdfImport(table) {
         }
     }
     
-    // Display status message
+    // Display status message - prevent duplicate notifications
     function showPdfImportStatus(message, type) {
-        // Remove any existing status messages
+        // Remove any existing status messages first
         $('.pdf-import-status').remove();
+        
+        // Also remove any app.js notifications that might be showing
+        $('.ui.message[style*="position: fixed"]').remove();
         
         const statusColors = {
             info: 'blue',

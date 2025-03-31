@@ -36,7 +36,7 @@ function initializeEventHandlers(table) {
         e.stopPropagation();
         
         const row = $(this).closest('tr');
-        const articleName = row.find('td:nth-child(4)').text().trim();
+        const articleName = row.find('td:nth-child(5)').text().trim(); // Updated index
         const confirmMessage = articleName ? 
             `Are you sure you want to delete "${articleName}"?` : 
             'Are you sure you want to delete this row?';
@@ -195,7 +195,7 @@ function initializeEventHandlers(table) {
                 window.storage.saveTableData();
                 
                 // Show move notification
-                const articleName = $movedRow.find('td:nth-child(4)').text().trim();
+                const articleName = $movedRow.find('td:nth-child(5)').text().trim(); // Updated index
                 const message = articleName ? 
                     `Row "${articleName}" moved successfully` : 
                     'Row moved successfully';
@@ -508,17 +508,18 @@ function populateRowFromData(newRow, rowData) {
 // Setup a row in editing mode
 function setupEditingRow(newRow, rowData) {
     const cells = newRow.find('td');
-    for (let i = 2; i < 8; i++) {
+    for (let i = 2; i < 9; i++) { // Updated upper limit to include brutto
         let cell = $(cells[i]);
         let value = '';
         
         switch(i) {
             case 2: value = rowData.sap; break;
-            case 3: value = rowData.article; break;
-            case 4: value = rowData.stueck; break;
-            case 5: value = rowData.ek; break;
-            case 6: value = rowData.netto; break;
-            case 7: value = rowData.brutto; break;
+            case 3: value = rowData.newColumn; break; // New column
+            case 4: value = rowData.article; break;
+            case 5: value = rowData.stueck; break;
+            case 6: value = rowData.ek; break;
+            case 7: value = rowData.netto; break;
+            case 8: value = rowData.brutto; break;
         }
         
         let input = $('<input>')
@@ -526,9 +527,9 @@ function setupEditingRow(newRow, rowData) {
             .addClass('ui input')
             .css('width', '100%');
 
-        if (i === 4) {
+        if (i === 5) { // Updated index for Stück
             input.attr('type', 'number').attr('min', '0');
-        } else if (i === 5 || i === 6) {
+        } else if (i === 6 || i === 7) { // Updated indices for EK and Netto
             input.attr('type', 'number').attr('step', '0.01');
         }
 
@@ -545,15 +546,26 @@ function setupEditingRow(newRow, rowData) {
 // Setup a normal row
 function setupNormalRow(newRow, rowData) {
     newRow.find('td:nth-child(3)').text(rowData.sap || '');
-    newRow.find('td:nth-child(4)').text(rowData.article || '');
-    newRow.find('td:nth-child(5)').text(rowData.stueck || '0');
-    newRow.find('td:nth-child(6)').text(rowData.ek || '0.00');
-    newRow.find('td:nth-child(7)').text(rowData.netto || '0.00');
-    newRow.find('td:nth-child(8)').text(rowData.brutto || '0.00'); // Use brutto directly
+    newRow.find('td:nth-child(4)').text(rowData.newColumn || '');
+    newRow.find('td:nth-child(5)').text(rowData.article || '');
+    newRow.find('td:nth-child(6)').text(rowData.stueck || '0');
+    newRow.find('td:nth-child(7)').text(rowData.ek || '0,00');
+    newRow.find('td:nth-child(8)').text(rowData.netto || '0,00');
+    newRow.find('td:nth-child(9)').text(rowData.brutto || '0,00');
 }
 
 // Set input values on a row
 function setInputValues(newRow, rowData) {
+    // For fields that are non-editable and set by text:
+    newRow.find('td:nth-child(3)').text(rowData.sap || '');
+    // Set new column value
+    newRow.find('td:nth-child(4)').text(rowData.newColumn || '');
+    newRow.find('td:nth-child(5)').text(rowData.article || '');
+    newRow.find('td:nth-child(6)').text(rowData.stueck || '0');
+    newRow.find('td:nth-child(7)').text(rowData.ek || '0,00');
+    newRow.find('td:nth-child(8)').text(rowData.netto || '0,00');
+    newRow.find('td:nth-child(9)').text(rowData.brutto || '0,00');
+    
     // For integer-only fields
     newRow.find('.verkauft').val(rowData.verkauft !== undefined ? rowData.verkauft : '0');
     newRow.find('.schwund').val(rowData.schwund !== undefined ? rowData.schwund : '0');

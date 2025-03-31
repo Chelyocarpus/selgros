@@ -352,18 +352,23 @@ table.dataTable tbody td {
     min-width: 80px;
 }
 
-/* Specific column widths */
-table.dataTable tbody td:nth-child(2), /* SAP-Nr */
-table.dataTable tbody td:nth-child(4), /* Stück */
-table.dataTable tbody td:nth-child(5), /* EK */
-table.dataTable tbody td:nth-child(6), /* Netto */
-table.dataTable tbody td:nth-child(7), /* Spanne */
-table.dataTable tbody td:nth-child(8), /* Brutto */
-table.dataTable tbody td:nth-child(12), /* Rabatt Netto */
-table.dataTable tbody td:nth-child(13) { /* Rabatt Brutto */
-    width: 90px; /* Increased from 80px */
-    max-width: 90px;
-    min-width: 90px; /* Added to ensure consistent width */
+/* Specific column widths - adjust for the new column */
+table.dataTable tbody td:nth-child(4), /* Lieferanten-Artnr (new column) */
+table.dataTable thead th:nth-child(4) { /* New column header */
+    width: 100px !important;
+    max-width: 100px !important;
+    min-width: 100px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Article column width - make it wider */
+table.dataTable tbody td:nth-child(5), /* Article (moved to column 5) */
+table.dataTable thead th:nth-child(5) { /* Article header */
+    min-width: 250px !important;
+    max-width: 350px !important;
+    width: auto !important;
 }
 
 /* SAP-Nr column width fix - make it narrower to fit 6 digits */
@@ -383,16 +388,16 @@ table.dataTable tbody td:nth-child(3) {
     max-width: 80px !important; /* Override conflicting rule */
 }
 
-/* Article column width */
-table.dataTable thead th:nth-child(3),
-table.dataTable tbody td:nth-child(3) {
-    min-width: 250px;
-    max-width: 350px;
-}
-
-table.dataTable tbody td:nth-child(4) {
-    min-width: 200px;
-    max-width: none;
+/* Specific column widths */
+table.dataTable tbody td:nth-child(6), /* Stück */
+table.dataTable tbody td:nth-child(7), /* EK */
+table.dataTable tbody td:nth-child(8), /* Netto */
+table.dataTable tbody td:nth-child(9), /* Brutto */
+table.dataTable tbody td:nth-child(13), /* Rabatt Netto */
+table.dataTable tbody td:nth-child(14) { /* Rabatt Brutto */
+    width: 90px; /* Increased from 80px */
+    max-width: 90px;
+    min-width: 90px; /* Added to ensure consistent width */
 }
 
 /* Counter cell styling */
@@ -844,10 +849,10 @@ td.sumProfit {
 }
 
 /* Euro symbol for price cells and calculated columns */
-td:nth-child(6), /* EK */
-td:nth-child(7), /* Netto */
-td:nth-child(8), /* Brutto */
-td:nth-child(13), /* Rabatt Brutto */
+td:nth-child(7), /* EK */
+td:nth-child(8), /* Netto */
+td:nth-child(9), /* Brutto */
+td:nth-child(14), /* Rabatt Brutto */
 td.calculated,   /* All calculated fields */
 td.sumVerkauft,  /* Sum Verkauft column */
 td.sumRabbatiert, /* Sum Rabbatiert column */
@@ -857,10 +862,10 @@ td.sumProfit     /* Sum Profit column */ {
     padding-right: 24px !important;
 }
 
-td:nth-child(6)::after,
 td:nth-child(7)::after,
 td:nth-child(8)::after,
-td:nth-child(13)::after,
+td:nth-child(9)::after,
+td:nth-child(14)::after,
 td.calculated::after,
 td.sumVerkauft::after,
 td.sumRabbatiert::after,
@@ -1217,4 +1222,148 @@ tr.dt-rowReorder-moving .drag-handle {
 @keyframes pulse {
     from { opacity: 0.7; }
     to { opacity: 1; }
+}
+
+/* Button container layout - improved spacing and organization */
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1em 0;
+    padding: 0.5em 0;
+    border-bottom: 1px solid rgba(0,0,0,.1);
+    flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+    gap: 8px; /* Add consistent spacing between buttons */
+}
+
+/* Left side buttons */
+.left-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 10px;
+}
+
+/* DataTables buttons container - improved layout */
+.dt-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px; /* Consistent spacing between buttons */
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Ensure buttons have consistent spacing */
+.dt-buttons .ui.button {
+    margin: 0 !important;
+    white-space: nowrap; /* Prevent button text from wrapping */
+}
+
+/* Increase contrast for important buttons */
+.ui.primary.button {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Make import buttons more distinctive */
+.supplier-import-btn, .pdf-import-btn {
+    margin-right: 8px !important;
+}
+
+/* Group related buttons together */
+.backup-btn, .restore-btn, .delete-all-button {
+    margin-left: 10px !important;
+}
+
+/* Add visual separation for report buttons */
+.nr-report-btn, .marketing-report-btn {
+    margin-left: 10px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Updated button layout styles */
+.all-button-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 10px 0;
+    width: 100%;
+}
+
+.button-group-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border: 1px solid #eaeaea;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #fafafa;
+    min-width: 220px;
+}
+
+.group-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: bold;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 2px;
+}
+
+.button-container {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+/* Ensure buttons are consistent size */
+.button-container .ui.button {
+    margin: 0 !important;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
+    min-width: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px 10px;
+}
+
+/* Ensure the buttons have equal height */
+.button-container .ui.button,
+.button-container label.ui.button {
+    height: 36px;
+    box-sizing: border-box;
+}
+
+/* Make button icons consistent */
+.button-container .ui.button i.icon {
+    margin-right: 5px !important;
+    margin-left: 0 !important;
+}
+
+/* Fix file input buttons to match other buttons */
+.pdf-import-btn, 
+.supplier-import-btn,
+.restore-btn {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.supplier-import-btn {
+   width: 230px !important;
+}
+
+/* Fix the button spacing in DataTables container */
+.dt-buttons {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Remove old button container margin/padding to prevent conflicts */
+.button-container {
+    border-bottom: none;
+    margin: 0;
+    padding: 0;
 }

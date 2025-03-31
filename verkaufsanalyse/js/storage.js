@@ -23,15 +23,16 @@ function extractRowData($row) {
         console.warn('Invalid row position found:', rowPositionRaw, 'Using default 0');
     }
     
-    console.log(`Extracted row position ${rowPosition} for article: ${$row.find('td:nth-child(4)').text().trim()}`);
+    console.log(`Extracted row position ${rowPosition} for article: ${$row.find('td:nth-child(5)').text().trim()}`);
 
     return {
         sap: $row.find('td:nth-child(3)').text(),
-        article: $row.find('td:nth-child(4)').text(),
-        stueck: $row.find('td:nth-child(5)').text(),
-        ek: $row.find('td:nth-child(6)').text(),
-        netto: $row.find('td:nth-child(7)').text(),
-        brutto: $row.find('td:nth-child(8)').text(),
+        newColumn: $row.find('td:nth-child(4)').text(), // Add new column
+        article: $row.find('td:nth-child(5)').text(), // Updated index
+        stueck: $row.find('td:nth-child(6)').text(), // Updated index
+        ek: $row.find('td:nth-child(7)').text(), // Updated index
+        netto: $row.find('td:nth-child(8)').text(), // Updated index
+        brutto: $row.find('td:nth-child(9)').text(), // Updated index
         verkauft: verkauft,
         schwund: schwund,
         rabbatiert: rabbatiert,
