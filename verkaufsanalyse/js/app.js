@@ -60,9 +60,53 @@ function setupButtons(table) {
         saveTableData: window.storage.saveTableData 
     });
     
-    // Add backup buttons to DataTables buttons
-    const buttons = table.buttons();
-    buttons.container().prepend(`
+    // Add button container for better organization
+    const buttonsContainer = table.buttons().container();
+    
+    // Clear existing buttons before adding new structure
+    buttonsContainer.empty();
+    
+    // Create a wrapper div for all button groups
+    const buttonGroupsWrapper = $('<div class="all-button-groups"></div>');
+    buttonsContainer.append(buttonGroupsWrapper);
+    
+    // Create button groups with consistent class naming
+    const importGroup = $('<div class="button-group-container"></div>');
+    const dataGroup = $('<div class="button-group-container"></div>');
+    const reportGroup = $('<div class="button-group-container"></div>');
+    const exportGroup = $('<div class="button-group-container"></div>');
+    
+    // Add group headers for clearer organization
+    importGroup.append('<div class="group-label">Import</div>');
+    dataGroup.append('<div class="group-label">Data</div>');
+    reportGroup.append('<div class="group-label">Reports</div>');
+    exportGroup.append('<div class="group-label">Export</div>');
+    
+    // Create button containers inside each group
+    const importButtons = $('<div class="button-container"></div>').appendTo(importGroup);
+    const dataButtons = $('<div class="button-container"></div>').appendTo(dataGroup);
+    const reportButtons = $('<div class="button-container"></div>').appendTo(reportGroup);
+    const exportButtons = $('<div class="button-container"></div>').appendTo(exportGroup);
+    
+    // Add Import buttons
+    if (window.pdfImport) {
+        importButtons.append(`
+            <label class="ui primary button pdf-import-btn">
+                <i class="file pdf outline icon"></i> PDF
+                <input type="file" accept=".pdf" style="display: none;">
+            </label>
+        `);
+    }
+    
+    importButtons.append(`
+        <label class="ui orange button supplier-import-btn">
+            <i class="file alternate outline icon"></i> Lieferantenartikelnr.
+            <input type="file" accept=".mhtml,.htm,.html" style="display: none;">
+        </label>
+    `);
+    
+    // Add Data management buttons
+    dataButtons.append(`
         <button class="ui button backup-btn">
             <i class="download icon"></i> Backup
         </button>
@@ -71,35 +115,63 @@ function setupButtons(table) {
             <input type="file" accept=".json" style="display: none;">
         </label>
         <button class="ui negative button delete-all-button">
-            <i class="trash icon"></i> Delete All
+            <i class="trash icon"></i> Delete
         </button>
     `);
-
-    // Initialize PDF Import if available
+    
+    // Add Report buttons
+    reportButtons.append(`
+        <button class="ui teal button nr-report-btn">
+            <i class="file alternate outline icon"></i> NR Report
+        </button>
+        <button class="ui blue button marketing-report-btn">
+            <i class="chart bar outline icon"></i> Marketing
+        </button>
+    `);
+    
+    // Add Export buttons
+    exportButtons.append(`
+        <button class="ui button copy-btn">
+            <i class="copy icon"></i> Copy
+        </button>
+        <button class="ui button excel-btn">
+            <i class="file excel outline icon"></i> Excel
+        </button>
+        <button class="ui button print-btn">
+            <i class="print icon"></i> Print
+        </button>
+    `);
+    
+    // Add all groups to the wrapper
+    buttonGroupsWrapper.append(importGroup);
+    buttonGroupsWrapper.append(dataGroup);
+    buttonGroupsWrapper.append(reportGroup);
+    buttonGroupsWrapper.append(exportGroup);
+    
+    // Add PDF import button handler
     if (window.pdfImport) {
-        // Add PDF import button
-        buttons.container().prepend(`
-            <label class="ui primary button pdf-import-btn">
-                <i class="file pdf outline icon"></i> Import PDF
-                <input type="file" accept=".pdf" style="display: none;">
-            </label>
-        `);
-        
-        // Add PDF import button handler with robust error handling
         $('.pdf-import-btn input').on('change', function(e) {
             if (e.target.files.length > 0) {
                 try {
                     const file = e.target.files[0];
                     $(this).val(''); // Reset file input immediately
                     
+                    // Clear any existing notifications first
+                    $('.ui.message[style*="position: fixed"]').remove();
+                    $('.pdf-import-status').remove();
+                    
                     showNotification(`Processing PDF: ${file.name}`, 'info');
                     
-                    const pdfImporter = window.pdfImport.initializePdfImport(table);
-                    
+                    // Check if PDF.js is loaded
                     if (!window.pdfjsLib) {
-                        showNotification('Loading PDF.js library, please wait...', 'info');
+                        showNotification('PDF.js library not loaded. Please refresh the page.', 'error');
+                        return;
                     }
                     
+                    // Initialize PDF importer with current table
+                    const pdfImporter = window.pdfImport.initializePdfImport(table);
+                    
+                    // Handle the file
                     pdfImporter.handlePdfFileSelect(file);
                 } catch (error) {
                     console.error('PDF import error:', error);
@@ -108,6 +180,27 @@ function setupButtons(table) {
             }
         });
     }
+    
+    // Add Supplier Import button handler
+    $('.supplier-import-btn input').on('change', function(e) {
+        if (e.target.files.length > 0) {
+            try {
+                const file = e.target.files[0];
+                $(this).val(''); // Reset file input immediately
+                
+                showNotification(`Processing supplier file: ${file.name}`, 'info');
+                
+                if (window.supplierMapper) {
+                    window.supplierMapper.handleSupplierFileImport(file, table);
+                } else {
+                    showNotification('Supplier mapper module not loaded.', 'error');
+                }
+            } catch (error) {
+                console.error('Supplier import error:', error);
+                showNotification(`Supplier import error: ${error.message}. Please try again.`, 'error');
+            }
+        }
+    });
 
     // Add backup button handler
     $('.backup-btn').on('click', backup.downloadBackup);
@@ -132,28 +225,27 @@ function setupButtons(table) {
         }
     });
 
+    // Connect export buttons to DataTables buttons
+    $('.copy-btn').on('click', function() {
+        table.button('copy').trigger();
+    });
+    
+    $('.excel-btn').on('click', function() {
+        table.button('excel').trigger();
+    });
+    
+    $('.print-btn').on('click', function() {
+        table.button('print').trigger();
+    });
+
     // Initialize reports
     const reports = initializeReports($('#sapTable'));
-    
-    // Add NR Report button
-    buttons.container().append(`
-        <button class="ui teal button nr-report-btn">
-            <i class="file alternate outline icon"></i> Duni NR Report
-        </button>
-    `);
     
     // Add NR Report button handler
     $('.nr-report-btn').on('click', reports.generateNRReport);
     
     // Initialize marketing reports
     const marketing = initializeMarketing($('#sapTable'));
-    
-    // Add Marketing Report button
-    buttons.container().append(`
-        <button class="ui blue button marketing-report-btn">
-            <i class="chart bar outline icon"></i> Marketing Report
-        </button>
-    `);
     
     // Add Marketing Report button handler
     $('.marketing-report-btn').on('click', marketing.generateMarketingReport);
@@ -184,60 +276,75 @@ function handleRestore(file, table) {
                 throw new Error('Backup data must be an array');
             }
 
-            // Clean the data and fix German number format - preserve rabatt values
-            const cleanedData = parsedData.map(row => {
-                // Handle various formats of rabattNetto and rabattBrutto
-                let rabattNetto = row.rabattNetto;
-                let rabattBrutto = row.rabattBrutto;
-                
-                // Ensure rabattNetto is properly formatted
-                if (typeof rabattNetto === 'string') {
-                    // Convert to numeric value for storage
-                    rabattNetto = window.utils.parseGermanNumber(rabattNetto);
-                }
-                
-                // Ensure rabattBrutto is properly formatted
-                if (typeof rabattBrutto === 'string') {
-                    // Convert to numeric value for storage
-                    rabattBrutto = window.utils.parseGermanNumber(rabattBrutto);
-                }
-                
-                return {
-                    ...row,
-                    ek: row.ek.toString().replace(',', '.'),
-                    netto: row.netto.toString().replace(',', '.'),
-                    spanne: row.spanne ? row.spanne.toString().replace(',', '.') : '',
-                    brutto: row.brutto.toString().replace(',', '.'),
-                    rabattNetto: rabattNetto,
-                    rabattBrutto: rabattBrutto
-                };
-            });
+            // Clear existing table data
+            table.clear();
 
-            // Sort rows by index/counter if present to maintain order
-            cleanedData.sort((a, b) => {
-                const indexA = parseInt(a.index || '0');
-                const indexB = parseInt(b.index || '0');
-                return indexA - indexB;
+            // Add rows from backup - rebuild each row fully with proper input initialization
+            parsedData.forEach(rowData => {
+                // Create a new row with our template
+                const newRow = $(window.tableModule.getNewRowHtml());
+                
+                // Set basic text fields
+                newRow.find('td.counter-cell').text(rowData.index || rowData.position || '');
+                newRow.find('td:nth-child(3)').text(rowData.sap || '');
+                newRow.find('td:nth-child(4)').text(rowData.newColumn || '');
+                newRow.find('td:nth-child(5)').text(rowData.article || '');
+                newRow.find('td:nth-child(6)').text(rowData.stueck || '0');
+                newRow.find('td:nth-child(7)').text(rowData.ek || '0,00');
+                newRow.find('td:nth-child(8)').text(rowData.netto || '0,00');
+                newRow.find('td:nth-child(9)').text(rowData.brutto || '0,00');
+                
+                // Set number input values - ensure they're parsed as integers
+                newRow.find('.verkauft').val(parseInt(rowData.verkauft) || 0);
+                newRow.find('.schwund').val(parseInt(rowData.schwund) || 0);
+                newRow.find('.rabbatiert').val(parseInt(rowData.rabbatiert) || 0);
+                
+                // Handle rabattNetto properly - could be number or string
+                let rabattNettoValue;
+                if (typeof rowData.rabattNetto === 'number') {
+                    rabattNettoValue = window.utils.formatGermanNumber(rowData.rabattNetto);
+                } else if (typeof rowData.rabattNetto === 'string') {
+                    // Try to parse as number and then format
+                    const parsed = window.utils.parseGermanNumber(rowData.rabattNetto);
+                    rabattNettoValue = window.utils.formatGermanNumber(parsed);
+                } else {
+                    rabattNettoValue = '0,00';
+                }
+                newRow.find('.rabatt-netto').val(rabattNettoValue);
+                
+                // Set the calculated rabattBrutto based on rabattNetto
+                const rabattNetto = window.utils.parseGermanNumber(rabattNettoValue);
+                const rabattBrutto = rabattNetto * 1.19;
+                newRow.find('.rabatt-brutto').text(window.utils.formatGermanNumber(rabattBrutto));
+                
+                // Set calculated fields - ensure German formatting
+                newRow.find('.sumVerkauft').text(rowData.sumVerkauft || '0,00');
+                newRow.find('.sumRabbatiert').text(rowData.sumRabbatiert || '0,00');
+                newRow.find('.sumGesamt').text(rowData.sumGesamt || '0,00');
+                newRow.find('.sumProfit').text(rowData.sumProfit || '0,00');
+                
+                // Add the row to the table
+                table.row.add(newRow);
             });
-
-            // Store and load the cleaned data
-            localStorage.setItem('tableData', JSON.stringify(cleanedData));
-            table.clear().draw();
             
-            setTimeout(() => {
-                window.events.loadTableData(table);
-                window.calculations.initializeAllCalculations();
-                window.stats.updateStats();
-            }, 100);
+            // Draw the table once after all rows are added
+            table.draw();
             
+            // Recalculate all rows and update stats
+            window.calculations.initializeAllCalculations();
+            window.stats.updateStats();
+            window.tableModule.updateRowCounters(table);
+            window.storage.saveTableData();
+            
+            showNotification('Backup restored successfully!', 'success');
         } catch (error) {
-            console.error('Error restoring data:', error);
-            alert('Error restoring backup file: ' + error.message);
+            console.error('Error restoring backup:', error);
+            showNotification(`Error restoring backup: ${error.message}`, 'error');
         }
     };
     
     reader.onerror = function() {
-        alert('Error reading backup file');
+        showNotification('Error reading backup file', 'error');
     };
     
     reader.readAsText(file);
@@ -265,6 +372,10 @@ function initializeKeyboardShortcuts() {
 
 // Helper function to show notifications
 function showNotification(message, type) {
+    // Remove any existing notifications to prevent duplicates
+    $('.ui.message[style*="position: fixed"]').remove();
+    $('.pdf-import-status').remove();
+    
     const colors = {
         info: 'blue',
         error: 'red',

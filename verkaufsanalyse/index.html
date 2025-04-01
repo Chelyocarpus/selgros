@@ -34,7 +34,10 @@
     <script>
         // Set PDF.js worker
         if (window.pdfjsLib) {
+            console.log('PDF.js loaded successfully');
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.111/pdf.worker.min.js';
+        } else {
+            console.error('PDF.js library failed to load');
         }
     </script>
     
@@ -55,6 +58,7 @@
     <script src="js/backup.js"></script>
     <script src="js/marketing.js"></script>
     <script src="js/report.js"></script>
+    <script src="js/supplierMapper.js"></script>
     
     <!-- PDF Import module -->
     <script src="js/pdfImport.js"></script>
@@ -127,6 +131,7 @@
                     <th class="actions-column">Actions</th>
                     <th>#</th>
                     <th>SAP-Nr</th>
+                    <th>Lieferantenartikelnr.</th>
                     <th>Article</th>
                     <th>Stück</th>
                     <th>EK</th>

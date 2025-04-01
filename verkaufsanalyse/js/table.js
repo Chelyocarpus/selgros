@@ -13,6 +13,7 @@ function getNewRowHtml() {
             </td>
             <td class="counter-cell"></td>
             <td>000000</td>
+            <td></td>
             <td>New Article</td>
             <td>0</td>
             <td>0,00</td>
@@ -94,7 +95,7 @@ function initializeDataTable() {
         columnDefs: [
             { orderable: false, targets: 0 },
             { orderable: false, targets: 1 },
-            { type: 'num', targets: [4,5,6,7,8,9,10,11,12,13,14] }
+            { type: 'num', targets: [5,6,7,8,9,10,11,12,13,14,15] } // Updated indices
         ],
         // Enable row reordering
         rowReorder: {
@@ -238,7 +239,7 @@ function initializeNewRow(row, autoEdit = false) {
                 
                 // Focus on the article field (most likely to be edited first)
                 setTimeout(() => {
-                    const articleInput = row.find('td:nth-child(4) input');
+                    const articleInput = row.find('td:nth-child(5) input'); // Updated index
                     if (articleInput.length) {
                         articleInput.focus().select();
                     }

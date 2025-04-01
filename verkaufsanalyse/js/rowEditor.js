@@ -7,7 +7,7 @@ function setupRowForEditing(row) {
         if (!cells.length) return;
 
         // Skip action and counter columns
-        for (let i = 2; i < 8; i++) {
+        for (let i = 2; i < 9; i++) { // Extend to include through brutto at position 9
             if (i < cells.length) {
                 setupCellForEditing(cells.eq(i), i, cells);
             }
@@ -46,13 +46,13 @@ function setupRowForEditing(row) {
 function setupCellForEditing(cell, index, allCells) {
     let currentValue = cell.text();
     
-    // Parse value if it's a number field
-    if (index === 5 || index === 6 || index === 7 || index === 11 || index === 12) { // EK, Netto, Brutto, Rabatt Netto, Rabatt Brutto
+    // Parse value if it's a number field - Only parse Price fields (not Stück)
+    if (index === 6 || index === 7 || index === 8 || index === 13 || index === 14) { // EK, Netto, Brutto, Rabatt Netto, Rabatt Brutto
         currentValue = window.utils.parseGermanNumber(currentValue);
     }
     
     // Skip creating input for Brutto - just show text
-    if (index === 7) { // Brutto
+    if (index === 8) { // Brutto
         cell.html(`<span class="calculated-field">${currentValue}</span>`);
         return;
     }
@@ -82,12 +82,11 @@ function createInputForCell(cell, index, value, allCells) {
              .attr('type', 'text')   // Changed from 'number' to 'text' to allow leading zeros
              .css('width', '60px');  // Width appropriate for 6 digits
         return input;
-    } else if (index === 4) { // Stück
+    } else if (index === 5) { // Stück - index 5 is now column 6 in the table
         input.attr('type', 'number').attr('min', '0');
         return input;
-    } else if (index === 5 || index === 6) { // EK, Netto
-        input.attr('type', 'text')
-             .attr('inputmode', 'decimal')
+    } else if (index === 6 || index === 7) { // EK, Netto
+        input.attr('type', 'text').attr('inputmode', 'decimal')
              .css('text-align', 'right')  // Ensure right alignment
              .addClass('cell-currency-input');
         
@@ -101,7 +100,7 @@ function createInputForCell(cell, index, value, allCells) {
 // Handle cell input change
 function handleCellInputChange(input, index, cells) {
     // Format decimal inputs properly
-    if (index === 5 || index === 6) { // EK or Netto
+    if (index === 6 || index === 7) { // EK or Netto
         const value = input.val();
         
         // Allow typing, but handle formatting on blur
@@ -117,12 +116,12 @@ function handleCellInputChange(input, index, cells) {
         });
         
         // Only proceed if we have a valid number
-        const netto = window.utils.parseGermanNumber(cells.eq(6).find('input').val());
+        const netto = window.utils.parseGermanNumber(cells.eq(7).find('input').val());
         
         // Update Brutto text immediately when Netto changes
-        if (index === 6 && !isNaN(netto)) { // Only when Netto field changes
+        if (index === 7 && !isNaN(netto)) { // Only when Netto field changes
             const brutto = window.utils.calculateBrutto(netto);
-            cells.eq(7).find('.calculated-field').text(window.utils.formatGermanNumber(brutto));
+            cells.eq(8).find('.calculated-field').text(window.utils.formatGermanNumber(brutto));
         }
 
         // Trigger recalculation of sales and profits
@@ -141,11 +140,11 @@ function saveRowChanges(row) {
         if (!cells.length) return;
         
         // Save input values back to cells
-        for (let i = 2; i < 8 && i < cells.length; i++) {
+        for (let i = 2; i < 9 && i < cells.length; i++) {
             let cell = $(cells[i]);
             
             // Handle calculated fields differently
-            if (i === 7) { // Brutto
+            if (i === 8) { // Brutto
                 let calculatedField = cell.find('.calculated-field');
                 if (calculatedField.length) {
                     let value = calculatedField.text();
@@ -159,8 +158,8 @@ function saveRowChanges(row) {
             
             let value = input.val();
             
-            // Format numbers with German number format
-            if (i === 5 || i === 6) { // EK, Netto
+            // Format numbers with German number format - only for price fields
+            if (i === 6 || i === 7) { // EK, Netto
                 value = window.utils.formatGermanNumber(window.utils.parseGermanNumber(value));
             }
             
@@ -184,7 +183,6 @@ function saveRowChanges(row) {
         const manualBrutto = row.data('manual-brutto') || false;
         
         const rabattBruttoInput = row.find('.rabatt-brutto');
-        
         if (rabattBruttoInput.length) {
             rabattBruttoInput.val(rabattBruttoValue);
         }
@@ -199,9 +197,9 @@ function saveRowChanges(row) {
         }
         
         // Update Brutto after saving Netto
-        if (cells.length > 7) {
-            const nettoCell = cells.eq(6);
-            const bruttoCell = cells.eq(7);
+        if (cells.length > 8) {
+            const nettoCell = cells.eq(7);
+            const bruttoCell = cells.eq(8);
             if (nettoCell.length && bruttoCell.length) {
                 const netto = window.utils.parseGermanNumber(nettoCell.text());
                 bruttoCell.text(window.utils.formatGermanNumber(window.utils.calculateBrutto(netto))); // Brutto

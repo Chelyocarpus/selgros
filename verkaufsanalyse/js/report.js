@@ -46,8 +46,9 @@ function initializeReports(tableElement) {
                     const indexNumber = $row.find('td.counter-cell').text().trim();
                     const sapNr = $row.find('td:eq(2)').text().trim();
                     const article = $row.find('td:eq(3)').text().trim();
+                    const lieferantenArtNr = $row.find('td:eq(4)').text().trim(); // New addition
                     
-                    debugMessage = `Row ${rowIdx}: Index: ${indexNumber}, SAP: ${sapNr}, Article: ${article}`;
+                    debugMessage = `Row ${rowIdx}: Index: ${indexNumber}, SAP: ${sapNr}, Article: ${article}, Lieferantenartikelnr: ${lieferantenArtNr}`;
                     
                     // Get the rabatt-brutto cell - this is the discounted price
                     const rabattBruttoText = $row.find('td.rabatt-brutto').text().trim();
@@ -71,6 +72,7 @@ function initializeReports(tableElement) {
                         indexNumber: indexNumber,
                         sapNr: sapNr,
                         article: article,
+                        lieferantenArtNr: lieferantenArtNr, // Added supplier article number
                         rabbatiertCount: rabbatiertCount,
                         bruttoPrice: rabattBruttoPrice,
                         brutto: window.utils.formatGermanNumber(rabattBruttoPrice) + ' €',
@@ -168,11 +170,12 @@ function initializeReports(tableElement) {
                     {
                         table: {
                             headerRows: 1,
-                            widths: ['auto', 'auto', '*', 'auto', 'auto', 'auto'],
+                            widths: ['auto', 'auto', '*', 'auto', 'auto', 'auto', 'auto'], // Added new column for Lieferantenartikelnr
                             body: [
                                 [
                                     { text: 'Nr.', style: 'tableHeader', alignment: 'center' },
                                     { text: 'SAP-Nr.', style: 'tableHeader', alignment: 'center' },
+                                    { text: 'Lieferanten-Artnr.', style: 'tableHeader', alignment: 'center' }, // New column header
                                     { text: 'Artikelbezeichnung', style: 'tableHeader' },
                                     { text: 'Menge', style: 'tableHeader', alignment: 'center' },
                                     { text: 'Rabattpreis/Stück', style: 'tableHeader', alignment: 'right' },
@@ -182,6 +185,7 @@ function initializeReports(tableElement) {
                                     { text: item.indexNumber, alignment: 'center' },
                                     { text: item.sapNr, alignment: 'center' },
                                     { text: item.article },
+                                    { text: item.lieferantenArtNr, alignment: 'center' }, // New column data
                                     { text: item.rabbatiertCount, alignment: 'center' },
                                     { text: item.brutto, alignment: 'right' },
                                     { text: item.sumRabbatiert, alignment: 'right' }
@@ -197,7 +201,7 @@ function initializeReports(tableElement) {
                     },
                     {
                         text: [
-                            '\nErklärung: Die aufgeführten Artikel wurden mit 50% Rabatt verkauft ',
+                            '\nErklärung: Die aufgeführten Artikel werden mit 50% Rabatt verkauft ',
                             'und sind somit für die 25% Naturalrabatt-Vergütung qualifiziert.\n'
                         ],
                         margin: [0, 20, 0, 10],

@@ -318,15 +318,18 @@ function importItemsToTable(items) {
         // Create a new row
         const newRow = $(window.tableModule.getNewRowHtml());
         
-        // Set the data in the correct columns in order:
+        // Set the data in the correct columns, accounting for the new Lieferanten-Artnr column:
         // Column 3: SAP-Nr (using itemNumber)
         newRow.find('td:eq(2)').text(item.itemNumber);
         
-        // Column 4: Article
-        newRow.find('td:eq(3)').text(item.article);
+        // Column 4: Lieferanten-Artnr (leave empty by default)
+        newRow.find('td:eq(3)').text('');
         
-        // Column 5: Stück (Quantity)
-        newRow.find('td:eq(4)').text(item.quantity || 0);
+        // Column 5: Article (moved from column 4)
+        newRow.find('td:eq(4)').text(item.article);
+        
+        // Column 6: Stück (Quantity)
+        newRow.find('td:eq(5)').text(item.quantity || 0);
         
         table.row.add(newRow);
         importedCount++;
@@ -370,6 +373,10 @@ function highlightImportedRows() {
 
 // Helper function for import notifications
 function showImportNotification(message, type = 'success') {
+    // First remove any existing notifications to prevent duplicates
+    $('.ui.message[style*="position: fixed"]').remove();
+    $('.pdf-import-status').remove();
+    
     const colors = {
         success: '#21ba45',
         warning: '#fbbd08',

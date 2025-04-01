@@ -11,18 +11,19 @@ function initializeBackup(tableElement, { saveTableData }) {
             // Get position from the counter cell
             const position = parseInt($row.find('td.counter-cell').text()) || 0;
             
-            // Get netto and brutto values
-            const nettoValue = $row.find('td:nth-child(7)').text().trim() || '0,00';
-            const bruttoValue = $row.find('td:nth-child(8)').text().trim() || 
+            // Get netto and brutto values - update column indices
+            const nettoValue = $row.find('td:nth-child(8)').text().trim() || '0,00'; // Updated index
+            const bruttoValue = $row.find('td:nth-child(9)').text().trim() || // Updated index
                 window.utils.formatGermanNumber(window.utils.parseGermanNumber(nettoValue) * 1.19);
 
             const rowData = {
                 index: position,
                 position: position, // Add explicit position field
                 sap: $row.find('td:nth-child(3)').text(),
-                article: $row.find('td:nth-child(4)').text(),
-                stueck: $row.find('td:nth-child(5)').text(),
-                ek: $row.find('td:nth-child(6)').text(),
+                newColumn: $row.find('td:nth-child(4)').text(), // Add new column
+                article: $row.find('td:nth-child(5)').text(), // Updated index
+                stueck: $row.find('td:nth-child(6)').text(), // Updated index
+                ek: $row.find('td:nth-child(7)').text(), // Updated index
                 netto: nettoValue,
                 brutto: bruttoValue,
                 verkauft: $row.find('.verkauft').val(),
@@ -97,6 +98,8 @@ function initializeBackup(tableElement, { saveTableData }) {
                             rowData.rabattBrutto.toString().replace('.', ',')) : 
                         '0,00';
 
+                    const newColumnVal = rowData.newColumn || '';
+
                     const newRow = $(`
                         <tr>
                             <td class="actions-column">
@@ -107,6 +110,7 @@ function initializeBackup(tableElement, { saveTableData }) {
                             </td>
                             <td class="counter-cell">${rowData.index || ''}</td>
                             <td>${rowData.sap || ''}</td>
+                            <td>${newColumnVal}</td>
                             <td>${rowData.article || ''}</td>
                             <td>${rowData.stueck || '0'}</td>
                             <td>${rowData.ek || '0,00'}</td>
