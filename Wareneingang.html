@@ -27,14 +27,14 @@
       </div>
     </div>
 
-    <!-- Add notification banner -->
+    <!-- Notification banner with improved structure -->
     <div id="notificationBanner" class="hidden mb-4 rounded relative" role="alert">
-        <div class="flex items-center justify-between p-4">
-            <div class="flex items-center">
-                <span id="notificationIcon" class="mr-2"></span>
-                <span id="notificationMessage"></span>
+        <div class="flex items-center p-4">
+            <span id="notificationIcon" class="mr-3 text-xl"></span>
+            <div class="flex-1">
+                <span id="notificationMessage" class="text-sm"></span>
             </div>
-            <button onclick="hideNotification()" class="ml-4">
+            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                 </svg>
@@ -156,23 +156,23 @@
     const NOTIFICATION_CONFIGS = {
         [NOTIFICATION_TYPES.INFO]: {
             icon: 'ℹ️',
-            classes: 'bg-blue-100 border border-blue-400 text-blue-700'
+            classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
         },
         [NOTIFICATION_TYPES.SUCCESS]: {
             icon: '✅',
-            classes: 'bg-green-100 border border-green-400 text-green-700'
+            classes: 'bg-green-100 border border-2 border-green-400 text-green-700'
         },
         [NOTIFICATION_TYPES.WARNING]: {
             icon: '⚠️',
-            classes: 'bg-yellow-100 border border-yellow-400 text-yellow-700'
+            classes: 'bg-yellow-100 border border-2 border-yellow-400 text-yellow-700'
         },
         [NOTIFICATION_TYPES.ERROR]: {
             icon: '⚠️',
-            classes: 'bg-red-100 border border-red-400 text-red-700'
+            classes: 'bg-red-100 border border-2 border-red-400 text-red-700'
         },
         [NOTIFICATION_TYPES.PROCESSING]: {
             icon: '🔄',
-            classes: 'bg-blue-100 border border-blue-400 text-blue-700'
+            classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
         }
     };
 
@@ -181,28 +181,33 @@
         const icon = document.getElementById('notificationIcon');
         const messageElement = document.getElementById('notificationMessage');
         
-        // Clear previous classes
-        banner.className = 'hidden mb-4 rounded relative';
+        // Hide any existing notifications first
+        banner.classList.add('hidden');
         
-        // Add type-specific styling
-        if (type === NOTIFICATION_TYPES.SUCCESS) {
-            banner.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
-        } else if (type === NOTIFICATION_TYPES.WARNING) {
-            banner.classList.add('bg-yellow-100', 'border-yellow-400', 'text-yellow-700');
-        } else if (type === NOTIFICATION_TYPES.ERROR) {
-            banner.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
-        } else if (type === NOTIFICATION_TYPES.PROCESSING) {
-            banner.classList.add('bg-blue-100', 'border-blue-400', 'text-blue-700');
-        } else { // INFO
-            banner.classList.add('bg-blue-100', 'border-blue-400', 'text-blue-700');
-        }
-
+        // Clear previous classes and set new ones
+        banner.className = 'mb-4 rounded relative';
+        
+        // Get config for notification type
+        const config = NOTIFICATION_CONFIGS[type] || NOTIFICATION_CONFIGS[NOTIFICATION_TYPES.INFO];
+        
+        // Apply styling from config
+        banner.classList.add(...config.classes.split(' '));
+        
+        // Set icon and message
+        icon.textContent = config.icon || 'ℹ️';
+        icon.className = 'mr-3 text-xl';
         messageElement.textContent = message;
+        
+        // Show the banner
         banner.classList.remove('hidden');
 
         // Auto-hide if duration is specified
         if (duration > 0) {
-            setTimeout(hideNotification, duration);
+            // Clear any existing timeout
+            if (window.notificationTimeout) {
+                clearTimeout(window.notificationTimeout);
+            }
+            window.notificationTimeout = setTimeout(hideNotification, duration);
         }
     }
 
@@ -580,6 +585,113 @@
         document.title = status ? `${baseTitle} (${status})` : baseTitle;
     }
 
+    // New function to generate validation summary
+    function generateValidationSummary({totalRows, zeroRows, negativeRows, invalidValues, columnName}) {
+        return `
+            <div class="mb-2">
+                <h3 class="font-bold text-lg">Validation Summary</h3>
+                <div class="grid grid-cols-4 gap-4 mt-2">
+                    <div class="bg-gray-100 p-2 rounded">
+                        <div class="text-sm text-gray-500">Total Rows</div>
+                        <div class="text-xl font-bold">${totalRows}</div>
+                    </div>
+                    <div class="bg-blue-100 p-2 rounded">
+                        <div class="text-sm text-blue-500">Zero Quantities</div>
+                        <div class="text-xl font-bold">${zeroRows}</div>
+                    </div>
+                    <div class="bg-red-100 p-2 rounded">
+                        <div class="text-sm text-red-500">Negative Quantities</div>
+                        <div class="text-xl font-bold">${negativeRows}</div>
+                    </div>
+                    <div class="bg-yellow-100 p-2 rounded">
+                        <div class="text-sm text-yellow-500">Invalid Values</div>
+                        <div class="text-xl font-bold">${invalidValues}</div>
+                    </div>
+                </div>
+            </div>
+            ${invalidValues > 0 ? 
+                `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 text-yellow-700">
+                    <p>Warning: ${invalidValues} invalid numeric values found in '${columnName}' column</p>
+                </div>` : ''
+            }
+            ${zeroRows === 0 && negativeRows === 0 ? 
+                `<div class="bg-green-50 border-l-4 border-green-400 p-2 text-green-700 mt-2">
+                    <p>No zero or negative quantities found in '${columnName}' column</p>
+                </div>` : ''
+            }
+        `;
+    }
+
+    // New function to create table header
+    function createTableHeader(headers) {
+        const fragment = document.createDocumentFragment();
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'bg-gray-200';
+        
+        // Add empty header for dot column
+        const emptyHeader = document.createElement('th');
+        emptyHeader.className = 'border border-gray-400 px-2 py-1';
+        headerRow.appendChild(emptyHeader);
+        
+        // Add regular headers
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.className = 'border border-gray-400 px-2 py-1';
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
+        
+        thead.appendChild(headerRow);
+        fragment.appendChild(thead);
+        return fragment;
+    }
+    
+    // New function to create table body
+    function createTableBody(filteredData, headers, gelieferteMengeIndex) {
+        const fragment = document.createDocumentFragment();
+        const tbody = document.createElement('tbody');
+        
+        filteredData.forEach(rowData => {
+            const tr = document.createElement('tr');
+            
+            // Add dot at the start of each row
+            const dotTd = document.createElement('td');
+            if (rowData.type === 'zero') {
+                tr.className = 'bg-blue-50 hover:bg-blue-100 transition-colors';
+                dotTd.innerHTML = '<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2"></span>';
+            } else {
+                tr.className = 'bg-red-50 hover:bg-red-100 transition-colors';
+                dotTd.innerHTML = '<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2"></span>';
+            }
+            dotTd.className = 'pl-3 py-1';
+            tr.appendChild(dotTd);
+            
+            rowData.cells.forEach((cell, index) => {
+                const td = document.createElement('td');
+                const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+                let cellClass = `border border-gray-300 px-2 py-1 ${isNumber ? 'text-right' : 'text-left'}`;
+                
+                // Highlight the quantity column
+                if (index === gelieferteMengeIndex) {
+                    if (rowData.type === 'zero') {
+                        cellClass += ' font-bold text-blue-700';
+                    } else {
+                        cellClass += ' font-bold text-red-700';
+                    }
+                }
+                
+                td.className = cellClass;
+                td.textContent = cell;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        
+        fragment.appendChild(tbody);
+        return fragment;
+    }
+    
     // Modified processFile function with HTML content validation
     async function processFile(rawData) {
         showNotification('Processing file...', NOTIFICATION_TYPES.PROCESSING, 0);
@@ -666,41 +778,15 @@
                 .filter(row => row !== null);
 
             // Update validation summary
-            summaryDiv.innerHTML = `
-                <div class="mb-2">
-                    <h3 class="font-bold text-lg">Validation Summary</h3>
-                    <div class="grid grid-cols-4 gap-4 mt-2">
-                        <div class="bg-gray-100 p-2 rounded">
-                            <div class="text-sm text-gray-500">Total Rows</div>
-                            <div class="text-xl font-bold">${totalRows}</div>
-                        </div>
-                        <div class="bg-blue-100 p-2 rounded">
-                            <div class="text-sm text-blue-500">Zero Quantities</div>
-                            <div class="text-xl font-bold">${zeroRows}</div>
-                        </div>
-                        <div class="bg-red-100 p-2 rounded">
-                            <div class="text-sm text-red-500">Negative Quantities</div>
-                            <div class="text-xl font-bold">${negativeRows}</div>
-                        </div>
-                        <div class="bg-yellow-100 p-2 rounded">
-                            <div class="text-sm text-yellow-500">Invalid Values</div>
-                            <div class="text-xl font-bold">${invalidValues}</div>
-                        </div>
-                    </div>
-                </div>
-                ${invalidValues > 0 ? 
-                    `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 text-yellow-700">
-                        <p>Warning: ${invalidValues} invalid numeric values found in '${DELIVERED_QUANTITY_COLUMN}' column</p>
-                    </div>` : ''
-                }
-            `;
+            summaryDiv.innerHTML = generateValidationSummary({
+                totalRows,
+                zeroRows,
+                negativeRows,
+                invalidValues,
+                columnName: DELIVERED_QUANTITY_COLUMN
+            });
             
             if (zeroRows === 0 && negativeRows === 0) {
-                summaryDiv.innerHTML += `
-                    <div class="bg-green-50 border-l-4 border-green-400 p-2 text-green-700 mt-2">
-                        <p>No zero or negative quantities found in '${DELIVERED_QUANTITY_COLUMN}' column</p>
-                    </div>
-                `;
                 showNotification('No zero or negative quantities found', NOTIFICATION_TYPES.INFO);
                 return;
             }
@@ -709,64 +795,9 @@
             const table = document.createElement('table');
             table.className = 'table-auto border-collapse border border-gray-400 w-full text-sm';
             
-            // Create headers with empty first column for dots
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-            headerRow.className = 'bg-gray-200';
+            table.appendChild(createTableHeader(headers));
+            table.appendChild(createTableBody(filteredData, headers, gelieferteMengeIndex));
             
-            // Add empty header for dot column
-            const emptyHeader = document.createElement('th');
-            emptyHeader.className = 'border border-gray-400 px-2 py-1';
-            headerRow.appendChild(emptyHeader);
-            
-            // Add regular headers
-            headers.forEach(header => {
-                const th = document.createElement('th');
-                th.className = 'border border-gray-400 px-2 py-1';
-                th.textContent = header;
-                headerRow.appendChild(th);
-            });
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-            
-            // Create body with enhanced styling
-            const tbody = document.createElement('tbody');
-            filteredData.forEach(rowData => {
-                const tr = document.createElement('tr');
-                
-                // Add dot at the start of each row
-                const dotTd = document.createElement('td');
-                if (rowData.type === 'zero') {
-                    tr.className = 'bg-blue-50 hover:bg-blue-100 transition-colors';
-                    dotTd.innerHTML = '<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2"></span>';
-                } else {
-                    tr.className = 'bg-red-50 hover:bg-red-100 transition-colors';
-                    dotTd.innerHTML = '<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2"></span>';
-                }
-                dotTd.className = 'pl-3 py-1';
-                tr.appendChild(dotTd);
-                
-                rowData.cells.forEach((cell, index) => {
-                    const td = document.createElement('td');
-                    const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
-                    let cellClass = `border border-gray-300 px-2 py-1 ${isNumber ? 'text-right' : 'text-left'}`;
-                    
-                    // Highlight the quantity column
-                    if (index === gelieferteMengeIndex) {
-                        if (rowData.type === 'zero') {
-                            cellClass += ' font-bold text-blue-700';
-                        } else {
-                            cellClass += ' font-bold text-red-700';
-                        }
-                    }
-                    
-                    td.className = cellClass;
-                    td.textContent = cell;
-                    tr.appendChild(td);
-                });
-                tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
             output.appendChild(table);
             
             showNotification(`Found ${zeroRows} zero and ${negativeRows} negative quantities`, NOTIFICATION_TYPES.SUCCESS);
