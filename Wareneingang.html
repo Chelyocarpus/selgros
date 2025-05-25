@@ -7,75 +7,112 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Add DOMPurify -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+  <style>
+    /* Custom focus ring for accessibility */
+    .focus-ring:focus {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+    /* Visually hidden for screen readers */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 p-5">
-  <div class="container mx-auto">
-    <div id="browserWarning" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+<body class="min-h-screen bg-gradient-to-br from-gray-100 via-blue-50 to-gray-200 p-2 sm:p-5">
+  <a href="#mainContent" class="sr-only focus:not-sr-only focus:ring-2 focus:ring-blue-600 bg-white text-blue-700 px-3 py-2 rounded shadow z-50 absolute left-2 top-2">Skip to main content</a>
+  <main id="mainContent" class="container mx-auto max-w-3xl bg-white rounded-xl shadow-lg p-4 sm:p-8 mt-4 sm:mt-10">
+    <header class="flex items-center mb-6">
+      <svg class="w-10 h-10 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+      </svg>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Wareneingang</h1>
+    </header>
+
+    <div id="browserWarning" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert" aria-live="assertive">
       <strong class="font-bold">Unsupported Browser! </strong>
       <span class="block sm:inline">This application requires Chrome, Edge, or Opera. Please use a supported browser for full functionality.</span>
     </div>
 
     <!-- Add restore state banner -->
-    <div id="restoreStateBanner" class="hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4 flex justify-between items-center" role="alert">
+    <div id="restoreStateBanner" class="hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center" role="alert" aria-live="polite">
       <div>
         <strong class="font-bold">Previous session found! </strong>
         <span class="block sm:inline" id="restoreStateMessage"></span>
       </div>
-      <div>
-        <button id="restoreStateButton" class="bg-blue-500 text-white px-4 py-2 rounded mr-2">Restore</button>
-        <button id="clearStateButton" class="bg-gray-500 text-white px-4 py-2 rounded">Dismiss</button>
+      <div class="mt-2 sm:mt-0 flex gap-2">
+        <button id="restoreStateButton" class="bg-blue-500 text-white px-4 py-2 rounded focus-ring" aria-label="Restore previous session" type="button">Restore</button>
+        <button id="clearStateButton" class="bg-gray-500 text-white px-4 py-2 rounded focus-ring" aria-label="Dismiss restore session banner" type="button">Dismiss</button>
       </div>
     </div>
 
     <!-- Notification banner with improved structure -->
-    <div id="notificationBanner" class="hidden mb-4 rounded relative" role="alert">
+    <div id="notificationBanner" class="hidden mb-4 rounded relative" role="alert" aria-live="polite">
         <div class="flex items-center p-4">
-            <span id="notificationIcon" class="mr-3 text-xl"></span>
+            <span id="notificationIcon" class="mr-3 text-xl" aria-hidden="true"></span>
             <div class="flex-1">
                 <span id="notificationMessage" class="text-sm"></span>
             </div>
-            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100 focus-ring" aria-label="Close notification" tabindex="0" type="button">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                 </svg>
+                <span class="sr-only">Close notification</span>
             </button>
         </div>
     </div>
 
-    <h1 class="text-2xl font-bold mb-5">Negative Gelieferte Menge</h1>
-    
-    <div class="flex items-center gap-4 mb-3">
-      <!-- Replace file input with custom button -->
-      <div class="flex-grow">
-        <button id="selectFileButton" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-          <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-          </svg>
-          Select TXT File
-        </button>
-        <div id="fileInfo" class="mt-2 text-sm text-gray-600 hidden">
-          <div class="flex items-center">
-            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+    <section class="mb-5">
+      <h2 class="text-xl font-semibold mb-3">Negative Gelieferte Menge</h2>
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-3">
+        <div class="flex-grow">
+          <button id="selectFileButton" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-ring w-full sm:w-auto" aria-label="Select TXT File" type="button">
+            <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
             </svg>
-            <span id="fileName">No file selected</span>
+            Select TXT File
+          </button>
+          <div id="fileInfo" class="mt-2 text-sm text-gray-600 hidden">
+            <div class="flex items-center">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+              </svg>
+              <span id="fileName">No file selected</span>
+            </div>
+            <div id="fileDetails" class="ml-5 mt-1 text-xs text-gray-500"></div>
           </div>
-          <div id="fileDetails" class="ml-5 mt-1 text-xs text-gray-500"></div>
+        </div>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+          <label class="inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="autoReload" class="form-checkbox focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" aria-label="Enable auto-reload">
+            <span class="ml-2">Auto-reload</span>
+          </label>
+          <span id="monitorStatus" class="ml-2 px-2 py-1 rounded text-sm" aria-live="polite">⚪ Idle</span>
+          <span id="lastChecked" class="text-xs text-gray-500 hidden">Last checked: <span id="lastCheckedTime"></span></span>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <label class="inline-flex items-center">
-          <input type="checkbox" id="autoReload" class="form-checkbox">
-          <span class="ml-2">Auto-reload</span>
-        </label>
-        <span id="monitorStatus" class="ml-2 px-2 py-1 rounded text-sm">⚪ Idle</span>
-      </div>
-    </div>
-    
-    <button id="processFileButton" class="bg-blue-500 text-white px-4 py-2 rounded">Process File</button>
+      <button id="processFileButton" class="bg-blue-500 text-white px-4 py-2 rounded focus-ring w-full sm:w-auto" aria-label="Process File" type="button">Process File</button>
+    </section>
+  </main>
 
-    <h2 class="text-xl font-bold mt-5">Filtered Data</h2>
-    <div id="output" class="mt-3"></div>
+  <!-- Validation Summary wrapper - new separate section -->
+  <div id="validationWrapper" class="container mx-auto max-w-4xl px-2 sm:px-6 mt-6 mb-4">
+    <div id="validationSummary" class="w-full bg-white rounded-lg shadow border border-gray-200 p-4"></div>
+  </div>
+
+  <!-- Table wrapper outside of main for full width -->
+  <div id="tableWrapper" class="w-full max-w-full px-2 sm:px-6 lg:px-12 mx-auto mt-2 mb-8">
+    <div class="w-full overflow-x-auto rounded-lg shadow bg-white border border-gray-200">
+      <div id="output" class="w-full"></div>
+    </div>
   </div>
 
   <script>
@@ -339,7 +376,7 @@
                             // ... existing monitoring restoration code ...
                             lastModified = file.lastModified;
                             document.getElementById('output').innerHTML = 
-                                `<p class="text-gray-500">File selected: ${file.name}<br>Last modified: ${new Date(lastModified).toLocaleString()}</p>`;
+                                DOMPurify.sanitize(`<p class="text-gray-500">File selected: ${file.name}<br>Last modified: ${new Date(lastModified).toLocaleString()}</p>`);
                             
                             document.getElementById('autoReload').checked = true;
                             const status = document.getElementById('monitorStatus');
@@ -445,47 +482,57 @@
 
     // Add helper function for cleaning up monitoring state
     function cleanupMonitoringState() {
+        clearInterval(monitorInterval);
+        monitorInterval = null;
+
+        // Reset UI state
+        document.getElementById('monitorStatus').textContent = '⚪ Idle';
+        document.getElementById('lastChecked').classList.add('hidden');
+
+        const autoReload = document.getElementById('autoReload');
+        autoReload.checked = false;
+
+        const fileInfo = document.getElementById('fileInfo');
+        fileInfo.classList.add('hidden');
+
+        document.getElementById('fileName').textContent = 'No file selected';
+        document.getElementById('fileDetails').textContent = '';
+
+        // Clear output
+        const output = document.getElementById('output');
+        output.textContent = '';
+
+        // Reset interval
+        checkInterval = 5000;
+
+        // Reset file-related state
         fileHandle = null;
         lastModified = null;
         fileChanged = false;
-        checkInterval = 5000; // Reset to initial interval
-        if (monitorInterval) {
-            clearInterval(monitorInterval);
-            monitorInterval = null;
-        }
-        
-        // Reset UI state
-        const autoReload = document.getElementById('autoReload');
-        autoReload.checked = false;
-        
-        const fileInfo = document.getElementById('fileInfo');
-        fileInfo.classList.add('hidden');
-        
-        document.getElementById('fileName').textContent = 'No file selected';
-        document.getElementById('fileDetails').textContent = '';
-        
-        // Clear any existing data
-        const output = document.getElementById('output');
-        output.textContent = '';
     }
 
-    // Modified checkFileChanges function with complete error cleanup
     async function checkFileChanges() {
-        if (!fileHandle) return;
-        
         try {
+            if (!fileHandle) return;
+            
             const file = await fileHandle.getFile();
-            if (file.lastModified !== lastModified) {
+            
+            // Update last checked timestamp
+            document.getElementById('lastChecked').classList.remove('hidden');
+            document.getElementById('lastCheckedTime').textContent = new Date().toLocaleTimeString();
+            
+            if (file.lastModified > lastModified) {
                 fileChanged = true;
                 lastModified = file.lastModified;
                 const text = await file.text();
                 processFile(text.trim());
                 
-                // Visual feedback with title update
+                // Visual feedback
                 const status = document.getElementById('monitorStatus');
                 status.textContent = `🔄 Updated: ${new Date().toLocaleTimeString()}`;
                 status.className = 'ml-2 px-2 py-1 rounded text-sm bg-yellow-100';
                 updateTitle('🔄 Updated');
+                
                 setTimeout(() => {
                     status.textContent = '🟢 Monitoring';
                     status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
@@ -502,10 +549,36 @@
             status.textContent = '⚠️ Error';
             status.className = 'ml-2 px-2 py-1 rounded text-sm bg-red-100';
             updateTitle('⚠️ Error');
+            
+            throw error;
         }
     }
+    
+    function cleanupMonitoringState() {
+        clearInterval(monitorInterval);
+        monitorInterval = null;
+        
+        // Reset UI state
+        document.getElementById('monitorStatus').textContent = '⚪ Idle';
+        document.getElementById('lastChecked').classList.add('hidden');
+        
+        const autoReload = document.getElementById('autoReload');
+        autoReload.checked = false;
+        
+        const fileInfo = document.getElementById('fileInfo');
+        fileInfo.classList.add('hidden');
+        
+        document.getElementById('fileName').textContent = 'No file selected';
+        document.getElementById('fileDetails').textContent = '';
+        
+        // Clear output
+        const output = document.getElementById('output');
+        output.textContent = '';
+        
+        // Reset interval
+        checkInterval = 5000;
+    }
 
-    // New function to setup monitoring with exponential backoff
     function setupMonitoring() {
         if (monitorInterval) {
             clearInterval(monitorInterval);
@@ -585,32 +658,32 @@
         document.title = status ? `${baseTitle} (${status})` : baseTitle;
     }
 
-    // New function to generate validation summary
+    // Modified generateValidationSummary function for better responsiveness
     function generateValidationSummary({totalRows, zeroRows, negativeRows, invalidValues, columnName}) {
         return `
             <div class="mb-2">
                 <h3 class="font-bold text-lg">Validation Summary</h3>
-                <div class="grid grid-cols-4 gap-4 mt-2">
-                    <div class="bg-gray-100 p-2 rounded">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
+                    <div class="bg-gray-100 p-3 rounded shadow-sm">
                         <div class="text-sm text-gray-500">Total Rows</div>
                         <div class="text-xl font-bold">${totalRows}</div>
                     </div>
-                    <div class="bg-blue-100 p-2 rounded">
+                    <div class="bg-blue-100 p-3 rounded shadow-sm">
                         <div class="text-sm text-blue-500">Zero Quantities</div>
                         <div class="text-xl font-bold">${zeroRows}</div>
                     </div>
-                    <div class="bg-red-100 p-2 rounded">
+                    <div class="bg-red-100 p-3 rounded shadow-sm">
                         <div class="text-sm text-red-500">Negative Quantities</div>
                         <div class="text-xl font-bold">${negativeRows}</div>
                     </div>
-                    <div class="bg-yellow-100 p-2 rounded">
+                    <div class="bg-yellow-100 p-3 rounded shadow-sm">
                         <div class="text-sm text-yellow-500">Invalid Values</div>
                         <div class="text-xl font-bold">${invalidValues}</div>
                     </div>
                 </div>
             </div>
             ${invalidValues > 0 ? 
-                `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 text-yellow-700">
+                `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 text-yellow-700 mt-2">
                     <p>Warning: ${invalidValues} invalid numeric values found in '${columnName}' column</p>
                 </div>` : ''
             }
@@ -659,10 +732,10 @@
             const dotTd = document.createElement('td');
             if (rowData.type === 'zero') {
                 tr.className = 'bg-blue-50 hover:bg-blue-100 transition-colors';
-                dotTd.innerHTML = '<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2"></span>';
+                dotTd.innerHTML = DOMPurify.sanitize('<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2"></span>');
             } else {
                 tr.className = 'bg-red-50 hover:bg-red-100 transition-colors';
-                dotTd.innerHTML = '<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2"></span>';
+                dotTd.innerHTML = DOMPurify.sanitize('<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2"></span>');
             }
             dotTd.className = 'pl-3 py-1';
             tr.appendChild(dotTd);
@@ -701,10 +774,9 @@
             const output = document.getElementById('output');
             output.innerHTML = '';
             
-            // Create validation summary element
-            const summaryDiv = document.createElement('div');
-            summaryDiv.className = 'bg-white p-4 rounded shadow mb-4';
-            output.appendChild(summaryDiv);
+            // Get validation summary element
+            const validationSummary = document.getElementById('validationSummary');
+            validationSummary.innerHTML = '';
             
             // Find the HTML content section in MHTML
             const htmlStart = rawData.indexOf('<html');
@@ -742,7 +814,7 @@
             const gelieferteMengeIndex = headers.indexOf(DELIVERED_QUANTITY_COLUMN);
             if (gelieferteMengeIndex === -1) {
                 showNotification(`Required column '${DELIVERED_QUANTITY_COLUMN}' not found!`, NOTIFICATION_TYPES.ERROR);
-                summaryDiv.innerHTML = `<div class="text-red-600 font-bold">Error: Required column '${DELIVERED_QUANTITY_COLUMN}' not found in file</div>`;
+                validationSummary.innerHTML = `<div class="text-red-600 font-bold">Error: Required column '${DELIVERED_QUANTITY_COLUMN}' not found in file</div>`;
                 return;
             }
 
@@ -777,14 +849,14 @@
                 })
                 .filter(row => row !== null);
 
-            // Update validation summary
-            summaryDiv.innerHTML = generateValidationSummary({
+            // Update validation summary in its dedicated wrapper
+            validationSummary.innerHTML = DOMPurify.sanitize(generateValidationSummary({
                 totalRows,
                 zeroRows,
                 negativeRows,
                 invalidValues,
                 columnName: DELIVERED_QUANTITY_COLUMN
-            });
+            }));
             
             if (zeroRows === 0 && negativeRows === 0) {
                 showNotification('No zero or negative quantities found', NOTIFICATION_TYPES.INFO);
@@ -793,7 +865,7 @@
             
             // Generate table with filtered data
             const table = document.createElement('table');
-            table.className = 'table-auto border-collapse border border-gray-400 w-full text-sm';
+            table.className = 'min-w-full w-full border-collapse text-sm md:text-base bg-white';
             
             table.appendChild(createTableHeader(headers));
             table.appendChild(createTableBody(filteredData, headers, gelieferteMengeIndex));
@@ -803,6 +875,15 @@
             showNotification(`Found ${zeroRows} zero and ${negativeRows} negative quantities`, NOTIFICATION_TYPES.SUCCESS);
             
         } catch (error) {
+            // Update the validation summary to show the error
+            const validationSummary = document.getElementById('validationSummary');
+            validationSummary.innerHTML = DOMPurify.sanitize(`
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 text-red-700">
+                    <p class="font-bold">Error Processing File</p>
+                    <p>${error.message}</p>
+                </div>
+            `);
+            
             showNotification(`Error processing file: ${error.message}`, NOTIFICATION_TYPES.ERROR);
             throw error;
         }
