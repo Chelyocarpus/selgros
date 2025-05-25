@@ -49,8 +49,8 @@
         <span class="block sm:inline" id="restoreStateMessage"></span>
       </div>
       <div class="mt-2 sm:mt-0 flex gap-2">
-        <button id="restoreStateButton" class="bg-blue-500 text-white px-4 py-2 rounded focus-ring" aria-label="Restore previous session">Restore</button>
-        <button id="clearStateButton" class="bg-gray-500 text-white px-4 py-2 rounded focus-ring" aria-label="Dismiss restore session banner">Dismiss</button>
+        <button id="restoreStateButton" class="bg-blue-500 text-white px-4 py-2 rounded focus-ring" aria-label="Restore previous session" type="button">Restore</button>
+        <button id="clearStateButton" class="bg-gray-500 text-white px-4 py-2 rounded focus-ring" aria-label="Dismiss restore session banner" type="button">Dismiss</button>
       </div>
     </div>
 
@@ -61,7 +61,7 @@
             <div class="flex-1">
                 <span id="notificationMessage" class="text-sm"></span>
             </div>
-            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100 focus-ring" aria-label="Close notification" tabindex="0">
+            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100 focus-ring" aria-label="Close notification" tabindex="0" type="button">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                 </svg>
@@ -74,7 +74,7 @@
       <h2 class="text-xl font-semibold mb-3">Negative Gelieferte Menge</h2>
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-3">
         <div class="flex-grow">
-          <button id="selectFileButton" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-ring w-full sm:w-auto" aria-label="Select TXT File">
+          <button id="selectFileButton" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-ring w-full sm:w-auto" aria-label="Select TXT File" type="button">
             <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
             </svg>
@@ -99,10 +99,7 @@
           <span id="lastChecked" class="text-xs text-gray-500 hidden">Last checked: <span id="lastCheckedTime"></span></span>
         </div>
       </div>
-      <button id="processFileButton" class="bg-blue-500 text-white px-4 py-2 rounded focus-ring w-full sm:w-auto" aria-label="Process File">Process File</button>
-    </section>
-    <section>
-      <h2 class="text-xl font-bold mt-5 mb-2 text-center">Filtered Data</h2>
+      <button id="processFileButton" class="bg-blue-500 text-white px-4 py-2 rounded focus-ring w-full sm:w-auto" aria-label="Process File" type="button">Process File</button>
     </section>
   </main>
 
@@ -379,7 +376,7 @@
                             // ... existing monitoring restoration code ...
                             lastModified = file.lastModified;
                             document.getElementById('output').innerHTML = 
-                                `<p class="text-gray-500">File selected: ${file.name}<br>Last modified: ${new Date(lastModified).toLocaleString()}</p>`;
+                                DOMPurify.sanitize(`<p class="text-gray-500">File selected: ${file.name}<br>Last modified: ${new Date(lastModified).toLocaleString()}</p>`);
                             
                             document.getElementById('autoReload').checked = true;
                             const status = document.getElementById('monitorStatus');
@@ -487,9 +484,31 @@
     function cleanupMonitoringState() {
         clearInterval(monitorInterval);
         monitorInterval = null;
+
+        // Reset UI state
         document.getElementById('monitorStatus').textContent = '⚪ Idle';
         document.getElementById('lastChecked').classList.add('hidden');
-        checkInterval = 5000; // Reset to default interval
+
+        const autoReload = document.getElementById('autoReload');
+        autoReload.checked = false;
+
+        const fileInfo = document.getElementById('fileInfo');
+        fileInfo.classList.add('hidden');
+
+        document.getElementById('fileName').textContent = 'No file selected';
+        document.getElementById('fileDetails').textContent = '';
+
+        // Clear output
+        const output = document.getElementById('output');
+        output.textContent = '';
+
+        // Reset interval
+        checkInterval = 5000;
+
+        // Reset file-related state
+        fileHandle = null;
+        lastModified = null;
+        fileChanged = false;
     }
 
     async function checkFileChanges() {
@@ -713,10 +732,10 @@
             const dotTd = document.createElement('td');
             if (rowData.type === 'zero') {
                 tr.className = 'bg-blue-50 hover:bg-blue-100 transition-colors';
-                dotTd.innerHTML = '<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2"></span>';
+                dotTd.innerHTML = DOMPurify.sanitize('<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2"></span>');
             } else {
                 tr.className = 'bg-red-50 hover:bg-red-100 transition-colors';
-                dotTd.innerHTML = '<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2"></span>';
+                dotTd.innerHTML = DOMPurify.sanitize('<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2"></span>');
             }
             dotTd.className = 'pl-3 py-1';
             tr.appendChild(dotTd);
@@ -831,13 +850,13 @@
                 .filter(row => row !== null);
 
             // Update validation summary in its dedicated wrapper
-            validationSummary.innerHTML = generateValidationSummary({
+            validationSummary.innerHTML = DOMPurify.sanitize(generateValidationSummary({
                 totalRows,
                 zeroRows,
                 negativeRows,
                 invalidValues,
                 columnName: DELIVERED_QUANTITY_COLUMN
-            });
+            }));
             
             if (zeroRows === 0 && negativeRows === 0) {
                 showNotification('No zero or negative quantities found', NOTIFICATION_TYPES.INFO);
@@ -858,12 +877,12 @@
         } catch (error) {
             // Update the validation summary to show the error
             const validationSummary = document.getElementById('validationSummary');
-            validationSummary.innerHTML = `
+            validationSummary.innerHTML = DOMPurify.sanitize(`
                 <div class="bg-red-50 border-l-4 border-red-400 p-4 text-red-700">
                     <p class="font-bold">Error Processing File</p>
                     <p>${error.message}</p>
                 </div>
-            `;
+            `);
             
             showNotification(`Error processing file: ${error.message}`, NOTIFICATION_TYPES.ERROR);
             throw error;
