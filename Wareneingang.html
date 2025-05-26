@@ -664,19 +664,19 @@
             <div class="mb-2">
                 <h3 class="font-bold text-lg">Validation Summary</h3>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
-                    <div class="bg-gray-100 p-3 rounded shadow-sm">
+                    <div class="bg-gray-100 p-3 rounded shadow-sm border-l-4 border-gray-400">
                         <div class="text-sm text-gray-500">Total Rows</div>
                         <div class="text-xl font-bold">${totalRows}</div>
                     </div>
-                    <div class="bg-blue-100 p-3 rounded shadow-sm">
+                    <div class="bg-blue-100 p-3 rounded shadow-sm border-l-4 border-blue-500">
                         <div class="text-sm text-blue-500">Zero Quantities</div>
                         <div class="text-xl font-bold">${zeroRows}</div>
                     </div>
-                    <div class="bg-red-100 p-3 rounded shadow-sm">
+                    <div class="bg-red-100 p-3 rounded shadow-sm border-l-4 border-red-500">
                         <div class="text-sm text-red-500">Negative Quantities</div>
                         <div class="text-xl font-bold">${negativeRows}</div>
                     </div>
-                    <div class="bg-yellow-100 p-3 rounded shadow-sm">
+                    <div class="bg-yellow-100 p-3 rounded shadow-sm border-l-4 border-yellow-400">
                         <div class="text-sm text-yellow-500">Invalid Values</div>
                         <div class="text-xl font-bold">${invalidValues}</div>
                     </div>
@@ -702,12 +702,6 @@
         const headerRow = document.createElement('tr');
         headerRow.className = 'bg-gray-200';
         
-        // Add empty header for dot column
-        const emptyHeader = document.createElement('th');
-        emptyHeader.className = 'border border-gray-400 px-2 py-1';
-        headerRow.appendChild(emptyHeader);
-        
-        // Add regular headers
         headers.forEach(header => {
             const th = document.createElement('th');
             th.className = 'border border-gray-400 px-2 py-1';
@@ -727,18 +721,13 @@
         
         filteredData.forEach(rowData => {
             const tr = document.createElement('tr');
+            tr.dataset.rowType = rowData.type;
             
-            // Add dot at the start of each row
-            const dotTd = document.createElement('td');
             if (rowData.type === 'zero') {
-                tr.className = 'bg-blue-50 hover:bg-blue-100 transition-colors';
-                dotTd.innerHTML = DOMPurify.sanitize('<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2"></span>');
+                tr.className = 'bg-blue-100 hover:bg-blue-200 transition-colors border-l-4 border-blue-500';
             } else {
-                tr.className = 'bg-red-50 hover:bg-red-100 transition-colors';
-                dotTd.innerHTML = DOMPurify.sanitize('<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2"></span>');
+                tr.className = 'bg-red-100 hover:bg-red-200 transition-colors border-l-4 border-red-500';
             }
-            dotTd.className = 'pl-3 py-1';
-            tr.appendChild(dotTd);
             
             rowData.cells.forEach((cell, index) => {
                 const td = document.createElement('td');
@@ -863,14 +852,77 @@
                 return;
             }
             
+            // Create filter controls
+            const filterControls = document.createElement('div');
+            filterControls.className = 'flex flex-wrap gap-4 items-center mb-4 p-2 bg-gray-50 rounded-lg';
+            
+            const filterLabel = document.createElement('span');
+            filterLabel.className = 'font-medium text-gray-700';
+            filterLabel.textContent = 'Filter by:';
+            
+            const allFilter = document.createElement('button');
+            allFilter.className = 'px-3 py-1 rounded-md bg-gray-100 text-gray-700 border border-gray-200 focus-ring';
+            allFilter.textContent = 'All';
+            allFilter.dataset.filter = 'all';
+            
+            const zeroFilter = document.createElement('button');
+            zeroFilter.className = 'px-3 py-1 rounded-md bg-blue-100 text-blue-700 border border-blue-200 focus-ring';
+            zeroFilter.textContent = 'Zero Quantities';
+            zeroFilter.dataset.filter = 'zero';
+            
+            const negativeFilter = document.createElement('button');
+            negativeFilter.className = 'px-3 py-1 rounded-md bg-red-100 text-red-700 border border-red-200 focus-ring';
+            negativeFilter.textContent = 'Negative Quantities';
+            negativeFilter.dataset.filter = 'negative';
+            
+            filterControls.append(filterLabel, allFilter, zeroFilter, negativeFilter);
+            output.appendChild(filterControls);
+            
             // Generate table with filtered data
             const table = document.createElement('table');
             table.className = 'min-w-full w-full border-collapse text-sm md:text-base bg-white';
+            table.id = 'validationTable';
             
             table.appendChild(createTableHeader(headers));
             table.appendChild(createTableBody(filteredData, headers, gelieferteMengeIndex));
             
             output.appendChild(table);
+            
+            // Add filter event listeners
+            [allFilter, zeroFilter, negativeFilter].forEach(button => {
+                button.addEventListener('click', () => {
+                    const filterType = button.dataset.filter;
+                    
+                    // Update active button styles
+                    [allFilter, zeroFilter, negativeFilter].forEach(btn => {
+                        btn.classList.remove('bg-blue-500', 'text-white');
+                        btn.classList.add(btn.dataset.filter === 'all' ? 'bg-gray-100' : 
+                                         btn.dataset.filter === 'zero' ? 'bg-blue-100' : 'bg-red-100',
+                                         btn.dataset.filter === 'all' ? 'text-gray-700' : 
+                                         btn.dataset.filter === 'zero' ? 'text-blue-700' : 'text-red-700');
+                    });
+                    
+                    button.classList.remove(button.dataset.filter === 'all' ? 'bg-gray-100' : 
+                                          button.dataset.filter === 'zero' ? 'bg-blue-100' : 'bg-red-100',
+                                          button.dataset.filter === 'all' ? 'text-gray-700' : 
+                                          button.dataset.filter === 'zero' ? 'text-blue-700' : 'text-red-700');
+                    button.classList.add('bg-blue-500', 'text-white');
+                    
+                    // Filter table rows
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const rowType = row.dataset.rowType;
+                        if (filterType === 'all' || rowType === filterType) {
+                            row.classList.remove('hidden');
+                        } else {
+                            row.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+            
+            // Set default filter (all)
+            allFilter.click();
             
             showNotification(`Found ${zeroRows} zero and ${negativeRows} negative quantities`, NOTIFICATION_TYPES.SUCCESS);
             
