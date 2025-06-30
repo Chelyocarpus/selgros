@@ -42,17 +42,7 @@
       <span class="block sm:inline">This application requires Chrome, Edge, or Opera. Please use a supported browser for full functionality.</span>
     </div>
 
-    <!-- Add restore state banner -->
-    <div id="restoreStateBanner" class="hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center" role="alert" aria-live="polite">
-      <div>
-        <strong class="font-bold">Previous session found! </strong>
-        <span class="block sm:inline" id="restoreStateMessage"></span>
-      </div>
-      <div class="mt-2 sm:mt-0 flex gap-2">
-        <button id="restoreStateButton" class="bg-blue-500 text-white px-4 py-2 rounded focus-ring" aria-label="Restore previous session" type="button">Restore</button>
-        <button id="clearStateButton" class="bg-gray-500 text-white px-4 py-2 rounded focus-ring" aria-label="Dismiss restore session banner" type="button">Dismiss</button>
-      </div>
-    </div>
+
 
     <!-- Notification banner with improved structure -->
     <div id="notificationBanner" class="hidden mb-4 rounded relative" role="alert" aria-live="polite">
@@ -71,7 +61,7 @@
     </div>
 
     <section class="mb-5">
-      <h2 class="text-xl font-semibold mb-3">Negative Gelieferte Menge</h2>
+      <h2 class="text-xl font-semibold mb-3">Offene Menge L/A Anomalies</h2>
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-3">
         <div class="flex-grow">
           <button id="selectFileButton" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-ring w-full sm:w-auto" aria-label="Select TXT File" type="button">
@@ -116,107 +106,156 @@
   </div>
 
   <script>
-    // Add browser detection at the start
-    function isSupported() {
+    // Configuration object for better maintainability
+    const CONFIG = {
+      CHECK_INTERVAL: 5000,
+      MAX_INTERVAL: 30000,
+      BACKOFF_FACTOR: 1.5,
+      NOTIFICATION_DURATION: 5000,
+      DELIVERED_QUANTITY_COLUMN: 'Offene Menge L/A',
+      FILTER_DEBOUNCE_DELAY: 150,
+      LOG_LEVELS: {
+        DEBUG: 0,
+        INFO: 1,
+        WARN: 2,
+        ERROR: 3
+      },
+      CURRENT_LOG_LEVEL: 1 // INFO level by default
+    };
+
+    // Logging utility with configurable levels
+    const Logger = {
+      debug: (message, ...args) => {
+        if (CONFIG.CURRENT_LOG_LEVEL <= CONFIG.LOG_LEVELS.DEBUG) {
+          console.debug(`[DEBUG] ${message}`, ...args);
+        }
+      },
+      info: (message, ...args) => {
+        if (CONFIG.CURRENT_LOG_LEVEL <= CONFIG.LOG_LEVELS.INFO) {
+          console.info(`[INFO] ${message}`, ...args);
+        }
+      },
+      warn: (message, ...args) => {
+        if (CONFIG.CURRENT_LOG_LEVEL <= CONFIG.LOG_LEVELS.WARN) {
+          console.warn(`[WARN] ${message}`, ...args);
+        }
+      },
+      error: (message, ...args) => {
+        if (CONFIG.CURRENT_LOG_LEVEL <= CONFIG.LOG_LEVELS.ERROR) {
+          console.error(`[ERROR] ${message}`, ...args);
+        }
+      }
+    };
+
+    // Debounced function utility
+    const debounce = (func, wait) => {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    };
+
+    // Browser detection with improved accessibility
+    const isSupported = () => {
       return 'showOpenFilePicker' in window;
-    }
+    };
 
     // Show warning and disable functionality if unsupported
     if (!isSupported()) {
-      document.getElementById('browserWarning').classList.remove('hidden');
-      document.getElementById('fileInput').disabled = true;
-      document.getElementById('autoReload').disabled = true;
-      document.getElementById('processFileButton').disabled = true;
+      const browserWarning = document.getElementById('browserWarning');
+      const autoReload = document.getElementById('autoReload');
+      const processFileButton = document.getElementById('processFileButton');
+      
+      if (browserWarning) {
+        browserWarning.classList.remove('hidden');
+      }
+      if (autoReload) {
+        autoReload.disabled = true;
+      }
+      if (processFileButton) {
+        processFileButton.disabled = true;
+      }
+      Logger.error('Browser not supported - missing File System Access API');
     }
 
-    let fileHandle = null;
-    let monitorInterval = null;
-    let lastModified = null;
-    let fileChanged = false;
-    let checkInterval = 5000; // Start with 5 seconds
-    const maxInterval = 30000; // Max 30 seconds
-    const backoffFactor = 1.5;
-
-    // Add persistence handling
-    let persistenceGranted = false;
-
-    // Request persistence permission
-    async function requestPersistence() {
-        try {
-            if ('permissions' in navigator) {
-                const result = await navigator.permissions.query({ name: 'persistent-storage' });
-                if (result.state === 'granted') {
-                    persistenceGranted = true;
-                    return true;
-                }
-            }
-            
-            const granted = await navigator.storage?.persist();
-            persistenceGranted = granted;
-            return granted;
-        } catch (e) {
-            console.warn('Persistence not supported:', e);
-            return false;
-        }
-    }
-
-    // Add helper function to check localStorage availability
-    function isLocalStorageAvailable() {
-        try {
-            const test = '__storage_test__';
-            localStorage.setItem(test, test);
-            localStorage.removeItem(test);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    // Add error handling utilities at the top after constants
-    const ERROR_TYPES = {
-        FILE_ACCESS: 'FILE_ACCESS',
-        FILE_PROCESSING: 'FILE_PROCESSING',
-        STORAGE: 'STORAGE',
-        MONITORING: 'MONITORING',
-        BROWSER_SUPPORT: 'BROWSER_SUPPORT'
+    // Application state management
+    const AppState = {
+      fileHandle: null,
+      monitorInterval: null,
+      lastModified: null,
+      fileChanged: false,
+      checkInterval: CONFIG.CHECK_INTERVAL,
+      currentFilteredData: [],
+      currentHeaders: [],
+      currentTargetColumnIndex: -1
     };
 
-    // Add notification utilities after constants
+    // Error types configuration
+    const ERROR_TYPES = {
+      FILE_ACCESS: 'FILE_ACCESS',
+      FILE_PROCESSING: 'FILE_PROCESSING',
+      STORAGE: 'STORAGE',
+      MONITORING: 'MONITORING',
+      BROWSER_SUPPORT: 'BROWSER_SUPPORT'
+    };
+
+    // Notification types and configurations
     const NOTIFICATION_TYPES = {
-        INFO: 'INFO',
-        SUCCESS: 'SUCCESS',
-        WARNING: 'WARNING',
-        ERROR: 'ERROR',
-        PROCESSING: 'PROCESSING'
+      INFO: 'INFO',
+      SUCCESS: 'SUCCESS',
+      WARNING: 'WARNING',
+      ERROR: 'ERROR',
+      PROCESSING: 'PROCESSING'
     };
 
     const NOTIFICATION_CONFIGS = {
-        [NOTIFICATION_TYPES.INFO]: {
-            icon: 'ℹ️',
-            classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
-        },
-        [NOTIFICATION_TYPES.SUCCESS]: {
-            icon: '✅',
-            classes: 'bg-green-100 border border-2 border-green-400 text-green-700'
-        },
-        [NOTIFICATION_TYPES.WARNING]: {
-            icon: '⚠️',
-            classes: 'bg-yellow-100 border border-2 border-yellow-400 text-yellow-700'
-        },
-        [NOTIFICATION_TYPES.ERROR]: {
-            icon: '⚠️',
-            classes: 'bg-red-100 border border-2 border-red-400 text-red-700'
-        },
-        [NOTIFICATION_TYPES.PROCESSING]: {
-            icon: '🔄',
-            classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
-        }
+      [NOTIFICATION_TYPES.INFO]: {
+        icon: 'ℹ️',
+        classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
+      },
+      [NOTIFICATION_TYPES.SUCCESS]: {
+        icon: '✅',
+        classes: 'bg-green-100 border border-2 border-green-400 text-green-700'
+      },
+      [NOTIFICATION_TYPES.WARNING]: {
+        icon: '⚠️',
+        classes: 'bg-yellow-100 border border-2 border-yellow-400 text-yellow-700'
+      },
+      [NOTIFICATION_TYPES.ERROR]: {
+        icon: '⚠️',
+        classes: 'bg-red-100 border border-2 border-red-400 text-red-700'
+      },
+      [NOTIFICATION_TYPES.PROCESSING]: {
+        icon: '🔄',
+        classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
+      }
     };
 
-    function showNotification(message, type = NOTIFICATION_TYPES.INFO, duration = 5000) {
-        const banner = document.getElementById('notificationBanner');
-        const icon = document.getElementById('notificationIcon');
-        const messageElement = document.getElementById('notificationMessage');
+    // Storage utilities
+    const StorageUtils = {
+      isLocalStorageAvailable() {
+        try {
+          const test = '__storage_test__';
+          localStorage.setItem(test, test);
+          localStorage.removeItem(test);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+    };
+
+    // Notification system with improved UX
+    const NotificationManager = {
+      timeout: null,
+
+      show(message, type = NOTIFICATION_TYPES.INFO, duration = CONFIG.NOTIFICATION_DURATION) {
+        const { banner, icon, messageElement } = this.getElements();
         
         // Hide any existing notifications first
         banner.classList.add('hidden');
@@ -240,705 +279,924 @@
 
         // Auto-hide if duration is specified
         if (duration > 0) {
-            // Clear any existing timeout
-            if (window.notificationTimeout) {
-                clearTimeout(window.notificationTimeout);
-            }
-            window.notificationTimeout = setTimeout(hideNotification, duration);
+          this.clearTimeout();
+          this.timeout = setTimeout(() => this.hide(), duration);
         }
-    }
+      },
 
-    function hideNotification() {
-        document.getElementById('notificationBanner').classList.add('hidden');
-    }
+      hide() {
+        const { banner } = this.getElements();
+        banner.classList.add('hidden');
+        this.clearTimeout();
+      },
 
-    // Modify handleError to use notification system
-    function handleError(error, type, silent = false) {
-        // Always log to console
-        console.error(`[${type}]`, error);
+      clearTimeout() {
+        if (this.timeout) {
+          clearTimeout(this.timeout);
+          this.timeout = null;
+        }
+      },
+
+      getElements() {
+        return {
+          banner: document.getElementById('notificationBanner'),
+          icon: document.getElementById('notificationIcon'),
+          messageElement: document.getElementById('notificationMessage')
+        };
+      }
+    };
+
+    // Legacy function for backward compatibility
+    const showNotification = (message, type, duration) => NotificationManager.show(message, type, duration);
+    const hideNotification = () => NotificationManager.hide();
+
+    // Error handling with improved logging and user feedback
+    const ErrorHandler = {
+      handle(error, type, silent = false) {
+        // Always log to console with appropriate level
+        Logger.error(`[${type}]`, error);
 
         // Determine user-friendly message
         let userMessage = 'An unexpected error occurred.';
         if (error instanceof Error) {
-            switch (type) {
-                case ERROR_TYPES.FILE_ACCESS:
-                    userMessage = `Cannot access file: ${error.message}`;
-                    break;
-                case ERROR_TYPES.FILE_PROCESSING:
-                    userMessage = `Error processing file: ${error.message}`;
-                    break;
-                case ERROR_TYPES.STORAGE:
-                    userMessage = `Storage error: ${error.message}`;
-                    break;
-                case ERROR_TYPES.MONITORING:
-                    userMessage = `File monitoring error: ${error.message}`;
-                    break;
-                case ERROR_TYPES.BROWSER_SUPPORT:
-                    userMessage = `Browser compatibility error: ${error.message}`;
-                    break;
-            }
+          const { message } = error;
+          switch (type) {
+            case ERROR_TYPES.FILE_ACCESS:
+              userMessage = `Cannot access file: ${message}`;
+              break;
+            case ERROR_TYPES.FILE_PROCESSING:
+              userMessage = `Error processing file: ${message}`;
+              break;
+            case ERROR_TYPES.STORAGE:
+              userMessage = `Storage error: ${message}`;
+              break;
+            case ERROR_TYPES.MONITORING:
+              userMessage = `File monitoring error: ${message}`;
+              break;
+            case ERROR_TYPES.BROWSER_SUPPORT:
+              userMessage = `Browser compatibility error: ${message}`;
+              break;
+          }
         } else if (typeof error === 'string') {
-            userMessage = error;
+          userMessage = error;
         }
 
         // Show notification unless silent
         if (!silent) {
-            showNotification(userMessage, NOTIFICATION_TYPES.ERROR);
+          NotificationManager.show(userMessage, NOTIFICATION_TYPES.ERROR);
         }
 
         return { type, message: userMessage, error };
-    }
+      }
+    };
 
-    // Modified saveState function with standardized error handling
-    function saveState() {
-        if (!fileHandle || !isLocalStorageAvailable()) return;
+    // State management with improved error handling
+    const StateManager = {
+      save() {
+        if (!AppState.fileHandle || !StorageUtils.isLocalStorageAvailable()) {
+          return;
+        }
         
         const state = {
-            monitoring: !!monitorInterval,
-            lastModified: lastModified,
-            fileName: fileHandle.name,
-            filePath: fileHandle.name
+          monitoring: !!AppState.monitorInterval,
+          lastModified: AppState.lastModified,
+          fileName: AppState.fileHandle.name,
+          filePath: AppState.fileHandle.name
         };
 
         try {
-            localStorage.setItem('fileProcessor', JSON.stringify(state));
+          localStorage.setItem('fileProcessor', JSON.stringify(state));
+          Logger.debug('State saved successfully');
         } catch (e) {
-            const error = handleError(e, ERROR_TYPES.STORAGE, true);
-            
-            if (e.name === 'QuotaExceededError' || 
-                e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-                try {
-                    localStorage.removeItem('fileProcessor');
-                    localStorage.setItem('fileProcessor', JSON.stringify(state));
-                    return;
-                } catch (retryError) {
-                    handleError(retryError, ERROR_TYPES.STORAGE, true);
-                }
+          const error = ErrorHandler.handle(e, ERROR_TYPES.STORAGE, true);
+          
+          if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+            try {
+              localStorage.removeItem('fileProcessor');
+              localStorage.setItem('fileProcessor', JSON.stringify(state));
+              Logger.info('Storage cleared and state saved after quota exceeded');
+              return;
+            } catch (retryError) {
+              ErrorHandler.handle(retryError, ERROR_TYPES.STORAGE, true);
             }
+          }
 
-            // Show error in status
-            const status = document.getElementById('monitorStatus');
-            status.textContent = '⚠️ Storage Error';
-            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-red-100';
-            setTimeout(() => {
-                if (monitorInterval) {
-                    status.textContent = '🟢 Monitoring';
-                    status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
-                } else {
-                    status.textContent = '⚪ Idle';
-                    status.className = 'ml-2 px-2 py-1 rounded text-sm';
-                }
-            }, 3000);
-        }
-    }
-
-    // Modified loadState function with path suggestion
-    async function loadState() {
-        const saved = localStorage.getItem('fileProcessor');
-        if (!saved) return;
-
-        const state = JSON.parse(saved);
-        
-        if (state.monitoring || state.filePath) {
-            const banner = document.getElementById('restoreStateBanner');
-            const message = document.getElementById('restoreStateMessage');
-            const safeMessage = state.monitoring ? 
-                `Resume monitoring "${DOMPurify.sanitize(state.filePath)}"?` :
-                `Last used file: "${DOMPurify.sanitize(state.filePath)}"`;
-            message.textContent = '';
-            const span = document.createElement('span');
-            span.className = 'font-mono text-xs bg-gray-100 px-1';
-            span.textContent = state.filePath;
-            message.appendChild(document.createTextNode(state.monitoring ? 'Resume monitoring "' : 'Last used file: "'));
-            message.appendChild(span);
-            message.appendChild(document.createTextNode('"'));
-
-            banner.classList.remove('hidden');
-
-            document.getElementById('restoreStateButton').onclick = async () => {
-                try {
-                    const handles = await window.showOpenFilePicker({
-                        types: [{
-                            description: 'MHTML Files',
-                            accept: {
-                                'multipart/related': ['.mhtml', '.MHTML']
-                            }
-                        }],
-                        multiple: false,
-                        startIn: 'downloads' // Try to start in downloads folder
-                    });
-                    
-                    fileHandle = handles[0];
-                    const file = await fileHandle.getFile();
-                    
-                    if (state.monitoring) {
-                        if (file.name === state.fileName) {
-                            // ... existing monitoring restoration code ...
-                            lastModified = file.lastModified;
-                            document.getElementById('output').innerHTML = 
-                                DOMPurify.sanitize(`<p class="text-gray-500">File selected: ${file.name}<br>Last modified: ${new Date(lastModified).toLocaleString()}</p>`);
-                            
-                            document.getElementById('autoReload').checked = true;
-                            const status = document.getElementById('monitorStatus');
-                            status.innerHTML = '🟢 Monitoring';
-                            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
-                            updateTitle('🟢 Monitoring');
-                            monitorInterval = setInterval(checkFileChanges, 1000);
-                            
-                            const text = await file.text();
-                            processFile(text.trim());
-                            banner.classList.add('hidden');
-                        } else {
-                            showNotification('Different file selected. Monitoring not resumed.', NOTIFICATION_TYPES.WARNING);
-                            // But still save the new file as current
-                            await handleSelectedFile(file);
-                        }
-                    } else {
-                        await handleSelectedFile(file);
-                    }
-                    banner.classList.add('hidden');
-                    
-                } catch (err) {
-                    console.error('Error restoring state:', err);
-                    showNotification('Failed to restore state', NOTIFICATION_TYPES.ERROR);
-                    localStorage.removeItem('fileProcessor');
-                    banner.classList.add('hidden');
-                }
-            };
-
-            // Update restore button text based on state
-            document.getElementById('restoreStateButton').textContent = 
-                state.monitoring ? 'Restore Monitoring' : 'Open Last File';
-
-            document.getElementById('clearStateButton').onclick = () => {
-                localStorage.removeItem('fileProcessor');
-                banner.classList.add('hidden');
-            };
-        }
-    }
-
-    // New helper function to handle selected file
-    async function handleSelectedFile(file) {
-        lastModified = file.lastModified;
-        
-        // Update file info display safely
-        document.getElementById('fileInfo').classList.remove('hidden');
-        document.getElementById('fileName').textContent = file.name;
-        const details = document.getElementById('fileDetails');
-        details.textContent = '';
-        
-        const lastMod = document.createElement('div');
-        lastMod.textContent = `Last modified: ${new Date(lastModified).toLocaleString()}`;
-        const size = document.createElement('div');
-        size.textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
-        
-        details.appendChild(lastMod);
-        details.appendChild(size);
-        
-        const text = await file.text();
-        processFile(text.trim());
-        saveState();
-    }
-
-    // Modified initialization
-    async function initialize() {
-        if (isSupported()) {
-            const granted = await requestPersistence();
-            console.log('Persistence granted:', granted);
-            await loadState();
-        } else {
-            // ...existing browser warning code...
-        }
-    }
-    
-    // Run initialization
-    initialize();
-
-    // Update file picker handler to use handleSelectedFile
-    document.getElementById('selectFileButton').addEventListener('click', async function () {
-        try {
-            const handles = await window.showOpenFilePicker({
-                types: [{
-                    description: 'MHTML Files',
-                    accept: {
-                        'application/x-mimearchive': ['.mhtml', '.mht'],
-                        'message/rfc822': ['.mhtml', '.mht']
-                    }
-                }],
-                multiple: false,
-                startIn: 'downloads' // Try to start in downloads folder
-            });
-            
-            fileHandle = handles[0];
-            const file = await fileHandle.getFile();
-            await handleSelectedFile(file);
-            
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                handleError(err, ERROR_TYPES.FILE_ACCESS);
-            }
-        }
-    });
-
-    // Add helper function for cleaning up monitoring state
-    function cleanupMonitoringState() {
-        clearInterval(monitorInterval);
-        monitorInterval = null;
-
-        // Reset UI state
-        document.getElementById('monitorStatus').textContent = '⚪ Idle';
-        document.getElementById('lastChecked').classList.add('hidden');
-
-        const autoReload = document.getElementById('autoReload');
-        autoReload.checked = false;
-
-        const fileInfo = document.getElementById('fileInfo');
-        fileInfo.classList.add('hidden');
-
-        document.getElementById('fileName').textContent = 'No file selected';
-        document.getElementById('fileDetails').textContent = '';
-
-        // Clear output
-        const output = document.getElementById('output');
-        output.textContent = '';
-
-        // Reset interval
-        checkInterval = 5000;
-
-        // Reset file-related state
-        fileHandle = null;
-        lastModified = null;
-        fileChanged = false;
-    }
-
-    async function checkFileChanges() {
-        try {
-            if (!fileHandle) return;
-            
-            const file = await fileHandle.getFile();
-            
-            // Update last checked timestamp
-            document.getElementById('lastChecked').classList.remove('hidden');
-            document.getElementById('lastCheckedTime').textContent = new Date().toLocaleTimeString();
-            
-            if (file.lastModified > lastModified) {
-                fileChanged = true;
-                lastModified = file.lastModified;
-                const text = await file.text();
-                processFile(text.trim());
-                
-                // Visual feedback
-                const status = document.getElementById('monitorStatus');
-                status.textContent = `🔄 Updated: ${new Date().toLocaleTimeString()}`;
-                status.className = 'ml-2 px-2 py-1 rounded text-sm bg-yellow-100';
-                updateTitle('🔄 Updated');
-                
-                setTimeout(() => {
-                    status.textContent = '🟢 Monitoring';
-                    status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
-                    updateTitle('🟢 Monitoring');
-                }, 1000);
+          // Show error in status
+          UIHelpers.updateMonitorStatus('⚠️ Storage Error', 'bg-red-100');
+          setTimeout(() => {
+            if (AppState.monitorInterval) {
+              UIHelpers.updateMonitorStatus('🟢 Monitoring', 'bg-green-100');
             } else {
-                fileChanged = false;
+              UIHelpers.updateMonitorStatus('⚪ Idle');
             }
-        } catch (err) {
-            const error = handleError(err, ERROR_TYPES.MONITORING);
-            cleanupMonitoringState();
-            
-            const status = document.getElementById('monitorStatus');
-            status.textContent = '⚠️ Error';
-            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-red-100';
-            updateTitle('⚠️ Error');
-            
-            throw error;
+          }, 3000);
         }
-    }
-    
-    function cleanupMonitoringState() {
-        clearInterval(monitorInterval);
-        monitorInterval = null;
-        
-        // Reset UI state
-        document.getElementById('monitorStatus').textContent = '⚪ Idle';
-        document.getElementById('lastChecked').classList.add('hidden');
-        
-        const autoReload = document.getElementById('autoReload');
-        autoReload.checked = false;
-        
-        const fileInfo = document.getElementById('fileInfo');
-        fileInfo.classList.add('hidden');
-        
-        document.getElementById('fileName').textContent = 'No file selected';
-        document.getElementById('fileDetails').textContent = '';
-        
-        // Clear output
-        const output = document.getElementById('output');
-        output.textContent = '';
-        
-        // Reset interval
-        checkInterval = 5000;
-    }
+      }
+    };
 
-    function setupMonitoring() {
-        if (monitorInterval) {
-            clearInterval(monitorInterval);
-        }
-
-        monitorInterval = setInterval(() => {
-            checkFileChanges();
-            // Increase interval up to maxInterval if no changes detected
-            if (!fileChanged) {
-                checkInterval = Math.min(checkInterval * backoffFactor, maxInterval);
-                clearInterval(monitorInterval);
-                monitorInterval = setInterval(arguments.callee, checkInterval);
-            } else {
-                // Reset interval to 5 seconds when changes are detected
-                checkInterval = 5000;
-                clearInterval(monitorInterval);
-                monitorInterval = setInterval(arguments.callee, checkInterval);
-            }
-        }, checkInterval);
-    }
-
-    // Update process file button
-    document.getElementById('processFileButton').addEventListener('click', async function () {
-        if (!fileHandle) {
-            showNotification('Please select a file first!', NOTIFICATION_TYPES.WARNING);
-            return;
-        }
-
-        try {
-            const file = await fileHandle.getFile();
-            const text = await file.text();
-            processFile(text.trim());
-        } catch (err) {
-            handleError(err, ERROR_TYPES.FILE_ACCESS);
-        }
-    });
-
-    // Modified auto-reload toggle
-    document.getElementById('autoReload').addEventListener('change', function(e) {
+    // UI Helpers for cleaner code and reusability
+    const UIHelpers = {
+      updateMonitorStatus(text, bgClass = '') {
         const status = document.getElementById('monitorStatus');
-        if (e.target.checked) {
-            if (!fileHandle) {
-                showNotification('Please select a file first!', NOTIFICATION_TYPES.WARNING);
-                e.target.checked = false;
-                return;
-            }
-            status.innerHTML = '🟢 Monitoring';
-            status.className = 'ml-2 px-2 py-1 rounded text-sm bg-green-100';
-            updateTitle('🟢 Monitoring');
-            checkInterval = 5000; // Reset interval when starting monitoring
-            setupMonitoring();
-            saveState();
-        } else {
-            status.innerHTML = '⚪ Idle';
-            status.className = 'ml-2 px-2 py-1 rounded text-sm';
-            updateTitle();
-            if (monitorInterval) {
-                clearInterval(monitorInterval);
-            }
-            saveState();
+        if (status) {
+          status.textContent = text;
+          status.className = `ml-2 px-2 py-1 rounded text-sm ${bgClass}`;
         }
-    });
+      },
 
-    // Add beforeunload handler
-    window.addEventListener('beforeunload', () => {
-        if (monitorInterval) {
-            saveState();
+      updateFileInfo(file) {
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const details = document.getElementById('fileDetails');
+        
+        if (fileInfo && fileName && details) {
+          fileInfo.classList.remove('hidden');
+          fileName.textContent = file.name;
+          details.textContent = '';
+          
+          const lastMod = document.createElement('div');
+          lastMod.textContent = `Last modified: ${new Date(file.lastModified).toLocaleString()}`;
+          const size = document.createElement('div');
+          size.textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+          
+          details.appendChild(lastMod);
+          details.appendChild(size);
         }
-    });
+      },
 
-    // Replace complex column configuration with just the required filter column
-    const DELIVERED_QUANTITY_COLUMN = 'Gelieferte Menge';
-
-    // New function to update title
-    function updateTitle(status) {
+      updateTitle(status) {
         const baseTitle = 'Wareneingang';
         document.title = status ? `${baseTitle} (${status})` : baseTitle;
-    }
+      },
 
-    // Modified generateValidationSummary function for better responsiveness
-    function generateValidationSummary({totalRows, zeroRows, negativeRows, invalidValues, columnName}) {
+      updateLastChecked() {
+        const lastChecked = document.getElementById('lastChecked');
+        const lastCheckedTime = document.getElementById('lastCheckedTime');
+        
+        if (lastChecked && lastCheckedTime) {
+          lastChecked.classList.remove('hidden');
+          lastCheckedTime.textContent = new Date().toLocaleTimeString();
+        }
+      }
+    };
+
+    // File handling with improved structure
+    const FileHandler = {
+      async handleSelectedFile(file) {
+        try {
+          AppState.lastModified = file.lastModified;
+          
+          UIHelpers.updateFileInfo(file);
+          
+          const text = await file.text();
+          await FileProcessor.processFile(text.trim());
+          StateManager.save();
+          
+          Logger.info('File processed successfully:', file.name);
+        } catch (error) {
+          ErrorHandler.handle(error, ERROR_TYPES.FILE_PROCESSING);
+        }
+      }
+    };
+
+    // Application initialization with improved structure
+    const AppInitializer = {
+      async init() {
+        if (isSupported()) {
+          Logger.info('Browser supported for File System Access API');
+          // Manual file selection only - no state loading
+        } else {
+          Logger.error('Browser not supported');
+          // Browser warning already handled in HTML
+        }
+      }
+    };
+    
+    // Initialize application
+    AppInitializer.init();
+
+    // Event handlers with improved structure and error handling
+    const EventHandlers = {
+      async handleFileSelection() {
+        try {
+          const handles = await window.showOpenFilePicker({
+            types: [{
+              description: 'MHTML Files',
+              accept: {
+                'application/x-mimearchive': ['.mhtml', '.mht'],
+                'message/rfc822': ['.mhtml', '.mht']
+              }
+            }],
+            multiple: false,
+            startIn: 'downloads'
+          });
+          
+          AppState.fileHandle = handles[0];
+          const file = await AppState.fileHandle.getFile();
+          await FileHandler.handleSelectedFile(file);
+          
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            ErrorHandler.handle(err, ERROR_TYPES.FILE_ACCESS);
+          }
+        }
+      },
+
+      async handleProcessFile() {
+        if (!AppState.fileHandle) {
+          NotificationManager.show('Please select a file first!', NOTIFICATION_TYPES.WARNING);
+          return;
+        }
+
+        try {
+          const file = await AppState.fileHandle.getFile();
+          const text = await file.text();
+          await FileProcessor.processFile(text.trim());
+        } catch (err) {
+          ErrorHandler.handle(err, ERROR_TYPES.FILE_ACCESS);
+        }
+      },
+
+      handleAutoReloadToggle(e) {
+        if (e.target.checked) {
+          if (!AppState.fileHandle) {
+            NotificationManager.show('Please select a file first!', NOTIFICATION_TYPES.WARNING);
+            e.target.checked = false;
+            return;
+          }
+          UIHelpers.updateMonitorStatus('🟢 Monitoring', 'bg-green-100');
+          UIHelpers.updateTitle('🟢 Monitoring');
+          AppState.checkInterval = CONFIG.CHECK_INTERVAL;
+          MonitoringService.setup();
+          StateManager.save();
+        } else {
+          UIHelpers.updateMonitorStatus('⚪ Idle');
+          UIHelpers.updateTitle();
+          MonitoringService.cleanup();
+          StateManager.save();
+        }
+      },
+
+      handleBeforeUnload() {
+        if (AppState.monitorInterval) {
+          StateManager.save();
+        }
+      }
+    };
+
+    // Monitoring service with improved error handling
+    const MonitoringService = {
+      async checkFileChanges() {
+        try {
+          if (!AppState.fileHandle) {
+            return;
+          }
+          
+          const file = await AppState.fileHandle.getFile();
+          
+          UIHelpers.updateLastChecked();
+          
+          if (file.lastModified > AppState.lastModified) {
+            AppState.fileChanged = true;
+            AppState.lastModified = file.lastModified;
+            const text = await file.text();
+            await FileProcessor.processFile(text.trim());
+            
+            // Visual feedback
+            UIHelpers.updateMonitorStatus(`🔄 Updated: ${new Date().toLocaleTimeString()}`, 'bg-yellow-100');
+            UIHelpers.updateTitle('🔄 Updated');
+            
+            setTimeout(() => {
+              UIHelpers.updateMonitorStatus('🟢 Monitoring', 'bg-green-100');
+              UIHelpers.updateTitle('🟢 Monitoring');
+            }, 1000);
+          } else {
+            AppState.fileChanged = false;
+          }
+        } catch (err) {
+          const error = ErrorHandler.handle(err, ERROR_TYPES.MONITORING);
+          this.cleanup();
+          
+          UIHelpers.updateMonitorStatus('⚠️ Error', 'bg-red-100');
+          UIHelpers.updateTitle('⚠️ Error');
+          
+          throw error;
+        }
+      },
+
+      setup() {
+        if (AppState.monitorInterval) {
+          clearInterval(AppState.monitorInterval);
+        }
+
+        AppState.monitorInterval = setInterval(() => {
+          this.checkFileChanges();
+          // Increase interval up to maxInterval if no changes detected
+          if (!AppState.fileChanged) {
+            AppState.checkInterval = Math.min(AppState.checkInterval * CONFIG.BACKOFF_FACTOR, CONFIG.MAX_INTERVAL);
+            clearInterval(AppState.monitorInterval);
+            AppState.monitorInterval = setInterval(() => this.checkFileChanges(), AppState.checkInterval);
+          } else {
+            // Reset interval to default when changes are detected
+            AppState.checkInterval = CONFIG.CHECK_INTERVAL;
+            clearInterval(AppState.monitorInterval);
+            AppState.monitorInterval = setInterval(() => this.checkFileChanges(), AppState.checkInterval);
+          }
+        }, AppState.checkInterval);
+      },
+
+      cleanup() {
+        clearInterval(AppState.monitorInterval);
+        AppState.monitorInterval = null;
+        
+        // Reset UI state
+        UIHelpers.updateMonitorStatus('⚪ Idle');
+        const lastChecked = document.getElementById('lastChecked');
+        if (lastChecked) {
+          lastChecked.classList.add('hidden');
+        }
+        
+        const autoReload = document.getElementById('autoReload');
+        if (autoReload) {
+          autoReload.checked = false;
+        }
+        
+        const fileInfo = document.getElementById('fileInfo');
+        if (fileInfo) {
+          fileInfo.classList.add('hidden');
+        }
+        
+        const fileName = document.getElementById('fileName');
+        if (fileName) {
+          fileName.textContent = 'No file selected';
+        }
+        
+        const fileDetails = document.getElementById('fileDetails');
+        if (fileDetails) {
+          fileDetails.textContent = '';
+        }
+        
+        // Clear output
+        const output = document.getElementById('output');
+        if (output) {
+          output.textContent = '';
+        }
+        
+        // Reset interval
+        AppState.checkInterval = CONFIG.CHECK_INTERVAL;
+        
+        // Reset file-related state
+        AppState.fileHandle = null;
+        AppState.lastModified = null;
+        AppState.fileChanged = false;
+      }
+    };
+
+    // Filtering system with improved performance
+    const FilterManager = {
+      toggleFilter(filterId) {
+        const checkbox = document.getElementById(filterId);
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          this.applyFilters();
+        }
+      },
+
+      applyFilters() {
+        // Use debounce with proper context binding
+        if (!this._debouncedApply) {
+          this._debouncedApply = debounce(() => {
+            const { showZero, showNegative, showPositive } = this.getFilterStates();
+
+            const filteredData = AppState.currentFilteredData.filter(rowData => {
+              switch (rowData.type) {
+                case 'zero': return showZero;
+                case 'negative': return showNegative;
+                case 'positive': return showPositive;
+                default: return false;
+              }
+            });
+
+            // Update visible count
+            const visibleCountElement = document.getElementById('visibleCount');
+            if (visibleCountElement) {
+              visibleCountElement.textContent = filteredData.length;
+            }
+
+            // Re-render table
+            TableRenderer.render(filteredData, AppState.currentHeaders, AppState.currentTargetColumnIndex);
+          }, CONFIG.FILTER_DEBOUNCE_DELAY);
+        }
+        this._debouncedApply();
+      },
+
+      getFilterStates() {
+        const showZero = document.getElementById('showZero')?.checked ?? true;
+        const showNegative = document.getElementById('showNegative')?.checked ?? true;
+        const showPositive = document.getElementById('showPositive')?.checked ?? true;
+        
+        return { showZero, showNegative, showPositive };
+      },
+
+      initialize() {
+        const showZero = document.getElementById('showZero');
+        const showNegative = document.getElementById('showNegative');
+        const showPositive = document.getElementById('showPositive');
+        
+        if (showZero) {
+          showZero.addEventListener('change', () => this.applyFilters());
+        }
+        if (showNegative) {
+          showNegative.addEventListener('change', () => this.applyFilters());
+        }
+        if (showPositive) {
+          showPositive.addEventListener('change', () => this.applyFilters());
+        }
+      }
+    };
+
+    // Validation summary generator with improved template handling
+    const ValidationSummaryGenerator = {
+      generate({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, columnName }) {
+        const hasAnomalies = negativeRows > 0 || positiveRows > 0;
+        const hasData = zeroRows > 0 || negativeRows > 0 || positiveRows > 0;
+        
         return `
-            <div class="mb-2">
-                <h3 class="font-bold text-lg">Validation Summary</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
-                    <div class="bg-gray-100 p-3 rounded shadow-sm border-l-4 border-gray-400">
-                        <div class="text-sm text-gray-500">Total Rows</div>
-                        <div class="text-xl font-bold">${totalRows}</div>
-                    </div>
-                    <div class="bg-blue-100 p-3 rounded shadow-sm border-l-4 border-blue-500">
-                        <div class="text-sm text-blue-500">Zero Quantities</div>
-                        <div class="text-xl font-bold">${zeroRows}</div>
-                    </div>
-                    <div class="bg-red-100 p-3 rounded shadow-sm border-l-4 border-red-500">
-                        <div class="text-sm text-red-500">Negative Quantities</div>
-                        <div class="text-xl font-bold">${negativeRows}</div>
-                    </div>
-                    <div class="bg-yellow-100 p-3 rounded shadow-sm border-l-4 border-yellow-400">
-                        <div class="text-sm text-yellow-500">Invalid Values</div>
-                        <div class="text-xl font-bold">${invalidValues}</div>
-                    </div>
-                </div>
-            </div>
-            ${invalidValues > 0 ? 
-                `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 text-yellow-700 mt-2">
-                    <p>Warning: ${invalidValues} invalid numeric values found in '${columnName}' column</p>
-                </div>` : ''
-            }
-            ${zeroRows === 0 && negativeRows === 0 ? 
-                `<div class="bg-green-50 border-l-4 border-green-400 p-2 text-green-700 mt-2">
-                    <p>No zero or negative quantities found in '${columnName}' column</p>
-                </div>` : ''
-            }
+          <div class="mb-4">
+            <h3 class="font-bold text-lg mb-3">Validation Summary</h3>
+            ${this.generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues })}
+            ${hasData ? this.generateFilterSection({ zeroRows, negativeRows, positiveRows }) : ''}
+          </div>
+          ${this.generateWarningsAndMessages({ invalidValues, hasAnomalies, columnName })}
         `;
-    }
+      },
 
-    // New function to create table header
-    function createTableHeader(headers) {
-        const fragment = document.createDocumentFragment();
+      generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues }) {
+        return `
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+            <div class="bg-gray-100 p-3 rounded shadow-sm">
+              <div class="text-sm text-gray-500">Total Rows</div>
+              <div class="text-xl font-bold">${totalRows}</div>
+            </div>
+            <div class="bg-blue-100 p-3 rounded shadow-sm cursor-pointer" onclick="FilterManager.toggleFilter('showZero')" role="button" tabindex="0" aria-label="Toggle zero values filter">
+              <div class="text-sm text-blue-500">Normal</div>
+              <div class="text-xl font-bold">${zeroRows}</div>
+            </div>
+            <div class="bg-red-100 p-3 rounded shadow-sm cursor-pointer" onclick="FilterManager.toggleFilter('showNegative')" role="button" tabindex="0" aria-label="Toggle negative values filter">
+              <div class="text-sm text-red-500">Falschbuchungen</div>
+              <div class="text-xl font-bold">${negativeRows}</div>
+            </div>
+            <div class="bg-green-100 p-3 rounded shadow-sm cursor-pointer" onclick="FilterManager.toggleFilter('showPositive')" role="button" tabindex="0" aria-label="Toggle positive values filter">
+              <div class="text-sm text-green-500">Genullt</div>
+              <div class="text-xl font-bold">${positiveRows}</div>
+            </div>
+            <div class="bg-yellow-100 p-3 rounded shadow-sm">
+              <div class="text-sm text-yellow-500">Invalid Values</div>
+              <div class="text-xl font-bold">${invalidValues}</div>
+            </div>
+          </div>
+        `;
+      },
+
+      generateFilterSection({ zeroRows, negativeRows, positiveRows }) {
+        return `
+          <div class="border-t pt-4">
+            <h4 class="font-semibold mb-3">Filter Values</h4>
+            <div class="flex flex-wrap gap-4 items-center">
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="showZero" class="form-checkbox text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" checked aria-label="Show zero values">
+                <span class="ml-2 flex items-center">
+                  <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                  Normal (${zeroRows})
+                </span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="showNegative" class="form-checkbox text-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2" checked aria-label="Show negative values">
+                <span class="ml-2 flex items-center">
+                  <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                  Falschbuchungen (${negativeRows})
+                </span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="showPositive" class="form-checkbox text-green-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-2" checked aria-label="Show positive values">
+                <span class="ml-2 flex items-center">
+                  <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                  Genullt (${positiveRows})
+                </span>
+              </label>
+              <div class="ml-auto text-sm text-gray-600">
+                Showing <span id="visibleCount">${zeroRows + negativeRows + positiveRows}</span> of <span id="totalCount">${zeroRows + negativeRows + positiveRows}</span> values
+              </div>
+            </div>
+          </div>
+        `;
+      },
+
+      generateWarningsAndMessages({ invalidValues, hasAnomalies, columnName }) {
+        let html = '';
+        
+        if (invalidValues > 0) {
+          html += `
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 text-yellow-700 mt-2">
+              <p>Warning: ${invalidValues} invalid numeric values found in '${columnName}' column</p>
+            </div>
+          `;
+        }
+        
+        if (!hasAnomalies) {
+          html += `
+            <div class="bg-green-50 border-l-4 border-green-400 p-2 text-green-700 mt-2">
+              <p>No Falschbuchungen or Genullt found in '${columnName}' column. All values are normal.</p>
+            </div>
+          `;
+        }
+        
+        return html;
+      }
+    };
+
+    // Table rendering with improved performance and accessibility
+    const TableRenderer = {
+      render(filteredData, headers, targetColumnIndex) {
+        const output = document.getElementById('output');
+        if (!output) {
+          return;
+        }
+
+        output.innerHTML = '';
+
+        if (filteredData.length === 0) {
+          output.innerHTML = '<p class="text-gray-500 p-4 text-center">No anomalies match the current filter settings.</p>';
+          return;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'min-w-full w-full border-collapse text-sm md:text-base bg-white';
+        table.setAttribute('role', 'table');
+        table.setAttribute('aria-label', 'Anomaly data table');
+        
+        table.appendChild(this.createHeader(headers));
+        table.appendChild(this.createBody(filteredData, headers, targetColumnIndex));
+        
+        output.appendChild(table);
+      },
+
+      createHeader(headers) {
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
         headerRow.className = 'bg-gray-200';
+        headerRow.setAttribute('role', 'row');
         
+        // Add empty header for dot column
+        const emptyHeader = document.createElement('th');
+        emptyHeader.className = 'border border-gray-400 px-2 py-1';
+        emptyHeader.setAttribute('scope', 'col');
+        emptyHeader.setAttribute('aria-label', 'Row indicator');
+        headerRow.appendChild(emptyHeader);
+        
+        // Add regular headers
         headers.forEach(header => {
-            const th = document.createElement('th');
-            th.className = 'border border-gray-400 px-2 py-1';
-            th.textContent = header;
-            headerRow.appendChild(th);
+          const th = document.createElement('th');
+          th.className = 'border border-gray-400 px-2 py-1';
+          th.textContent = header;
+          th.setAttribute('scope', 'col');
+          headerRow.appendChild(th);
         });
         
         thead.appendChild(headerRow);
-        fragment.appendChild(thead);
-        return fragment;
-    }
-    
-    // New function to create table body
-    function createTableBody(filteredData, headers, gelieferteMengeIndex) {
-        const fragment = document.createDocumentFragment();
+        return thead;
+      },
+
+      createBody(filteredData, headers, targetColumnIndex) {
         const tbody = document.createElement('tbody');
         
-        filteredData.forEach(rowData => {
-            const tr = document.createElement('tr');
-            tr.dataset.rowType = rowData.type;
+        filteredData.forEach((rowData, rowIndex) => {
+          const tr = document.createElement('tr');
+          tr.setAttribute('role', 'row');
+          
+          // Add dot at the start of each row
+          const dotTd = document.createElement('td');
+          const { className, dotHtml } = this.getRowStyle(rowData.type);
+          
+          tr.className = className;
+          dotTd.innerHTML = DOMPurify.sanitize(dotHtml);
+          dotTd.className = 'pl-3 py-1';
+          dotTd.setAttribute('role', 'cell');
+          tr.appendChild(dotTd);
+          
+          rowData.cells.forEach((cell, index) => {
+            const td = document.createElement('td');
+            const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+            let cellClass = `border border-gray-300 px-2 py-1 ${isNumber ? 'text-right' : 'text-left'}`;
             
-            if (rowData.type === 'zero') {
-                tr.className = 'bg-blue-100 hover:bg-blue-200 transition-colors border-l-4 border-blue-500';
-            } else {
-                tr.className = 'bg-red-100 hover:bg-red-200 transition-colors border-l-4 border-red-500';
+            // Highlight the quantity column
+            if (index === targetColumnIndex) {
+              cellClass += this.getHighlightClass(rowData.type);
             }
             
-            rowData.cells.forEach((cell, index) => {
-                const td = document.createElement('td');
-                const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
-                let cellClass = `border border-gray-300 px-2 py-1 ${isNumber ? 'text-right' : 'text-left'}`;
-                
-                // Highlight the quantity column
-                if (index === gelieferteMengeIndex) {
-                    if (rowData.type === 'zero') {
-                        cellClass += ' font-bold text-blue-700';
-                    } else {
-                        cellClass += ' font-bold text-red-700';
-                    }
-                }
-                
-                td.className = cellClass;
-                td.textContent = cell;
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
+            td.className = cellClass;
+            td.textContent = cell;
+            td.setAttribute('role', 'cell');
+            if (index === targetColumnIndex) {
+              td.setAttribute('aria-label', `${headers[index]}: ${cell}`);
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
         });
         
-        fragment.appendChild(tbody);
-        return fragment;
-    }
+        return tbody;
+      },
+
+      getRowStyle(type) {
+        switch (type) {
+          case 'zero':
+            return {
+              className: 'bg-blue-50 hover:bg-blue-100 transition-colors',
+              dotHtml: '<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2" aria-label="Zero value"></span>'
+            };
+          case 'negative':
+            return {
+              className: 'bg-red-50 hover:bg-red-100 transition-colors',
+              dotHtml: '<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2" aria-label="Negative value"></span>'
+            };
+          case 'positive':
+            return {
+              className: 'bg-green-50 hover:bg-green-100 transition-colors',
+              dotHtml: '<span class="inline-block w-4 h-4 rounded-full bg-green-500 mr-2" aria-label="Positive value"></span>'
+            };
+          default:
+            return {
+              className: '',
+              dotHtml: '<span class="inline-block w-4 h-4 rounded-full bg-gray-500 mr-2"></span>'
+            };
+        }
+      },
+
+      getHighlightClass(type) {
+        switch (type) {
+          case 'zero': return ' font-bold text-blue-700';
+          case 'negative': return ' font-bold text-red-700';
+          case 'positive': return ' font-bold text-green-700';
+          default: return '';
+        }
+      }
+    };
     
-    // Modified processFile function with HTML content validation
-    async function processFile(rawData) {
-        showNotification('Processing file...', NOTIFICATION_TYPES.PROCESSING, 0);
+    // File processor with improved error handling and performance
+    const FileProcessor = {
+      async processFile(rawData) {
+        NotificationManager.show('Processing file...', NOTIFICATION_TYPES.PROCESSING, 0);
         
         try {
-            // Clear previous results
-            const output = document.getElementById('output');
-            output.innerHTML = '';
-            
-            // Get validation summary element
-            const validationSummary = document.getElementById('validationSummary');
-            validationSummary.innerHTML = '';
-            
-            // Find the HTML content section in MHTML
-            const htmlStart = rawData.indexOf('<html');
-            
-            if (htmlStart === -1) {
-                throw new Error('No HTML content found in file. Please ensure this is a valid MHTML file.');
-            }
-            
-            const htmlContent = rawData.substring(htmlStart);
-            
-            // Sanitize and parse the HTML content
-            const sanitizedHtml = DOMPurify.sanitize(htmlContent, {
-                WHOLE_DOCUMENT: true,
-                RETURN_DOM: false,
-                USE_PROFILES: { html: true, svg: false, svgFilters: false }
-            });
-            
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(sanitizedHtml, 'text/html');
-            
-            if (!doc.querySelector('table') && !doc.querySelector('tr')) {
-                throw new Error('Invalid file format: No table data found after sanitization');
-            }
-
-            // Find the table rows
-            const rows = doc.querySelectorAll('tr');
-            if (!rows.length) {
-                throw new Error('No table data found');
-            }
-
-            // Extract headers
-            const headers = Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
-            
-            // Find required column
-            const gelieferteMengeIndex = headers.indexOf(DELIVERED_QUANTITY_COLUMN);
-            if (gelieferteMengeIndex === -1) {
-                showNotification(`Required column '${DELIVERED_QUANTITY_COLUMN}' not found!`, NOTIFICATION_TYPES.ERROR);
-                validationSummary.innerHTML = `<div class="text-red-600 font-bold">Error: Required column '${DELIVERED_QUANTITY_COLUMN}' not found in file</div>`;
-                return;
-            }
-
-            // Process data rows and collect stats
-            let totalRows = 0;
-            let zeroRows = 0;
-            let negativeRows = 0;
-            let invalidValues = 0;
-            
-            const filteredData = Array.from(rows)
-                .slice(1)
-                .map(row => {
-                    totalRows++;
-                    const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
-                    if (!cells[gelieferteMengeIndex]) return null;
-                    
-                    const value = parseFloat(cells[gelieferteMengeIndex].replace(',', '.'));
-                    if (isNaN(value)) {
-                        invalidValues++;
-                        return null;
-                    }
-                    
-                    if (value === 0) {
-                        zeroRows++;
-                        return {cells, type: 'zero'};
-                    } else if (value < 0) {
-                        negativeRows++;
-                        return {cells, type: 'negative'};
-                    }
-                    
-                    return null;
-                })
-                .filter(row => row !== null);
-
-            // Update validation summary in its dedicated wrapper
-            validationSummary.innerHTML = DOMPurify.sanitize(generateValidationSummary({
-                totalRows,
-                zeroRows,
-                negativeRows,
-                invalidValues,
-                columnName: DELIVERED_QUANTITY_COLUMN
-            }));
-            
-            if (zeroRows === 0 && negativeRows === 0) {
-                showNotification('No zero or negative quantities found', NOTIFICATION_TYPES.INFO);
-                return;
-            }
-            
-            // Create filter controls
-            const filterControls = document.createElement('div');
-            filterControls.className = 'flex flex-wrap gap-4 items-center mb-4 p-2 bg-gray-50 rounded-lg';
-            
-            const filterLabel = document.createElement('span');
-            filterLabel.className = 'font-medium text-gray-700';
-            filterLabel.textContent = 'Filter by:';
-            
-            const allFilter = document.createElement('button');
-            allFilter.className = 'px-3 py-1 rounded-md bg-gray-100 text-gray-700 border border-gray-200 focus-ring';
-            allFilter.textContent = 'All';
-            allFilter.dataset.filter = 'all';
-            
-            const zeroFilter = document.createElement('button');
-            zeroFilter.className = 'px-3 py-1 rounded-md bg-blue-100 text-blue-700 border border-blue-200 focus-ring';
-            zeroFilter.textContent = 'Zero Quantities';
-            zeroFilter.dataset.filter = 'zero';
-            
-            const negativeFilter = document.createElement('button');
-            negativeFilter.className = 'px-3 py-1 rounded-md bg-red-100 text-red-700 border border-red-200 focus-ring';
-            negativeFilter.textContent = 'Negative Quantities';
-            negativeFilter.dataset.filter = 'negative';
-            
-            filterControls.append(filterLabel, allFilter, zeroFilter, negativeFilter);
-            output.appendChild(filterControls);
-            
-            // Generate table with filtered data
-            const table = document.createElement('table');
-            table.className = 'min-w-full w-full border-collapse text-sm md:text-base bg-white';
-            table.id = 'validationTable';
-            
-            table.appendChild(createTableHeader(headers));
-            table.appendChild(createTableBody(filteredData, headers, gelieferteMengeIndex));
-            
-            output.appendChild(table);
-            
-            // Add filter event listeners
-            [allFilter, zeroFilter, negativeFilter].forEach(button => {
-                button.addEventListener('click', () => {
-                    const filterType = button.dataset.filter;
-                    
-                    // Update active button styles
-                    [allFilter, zeroFilter, negativeFilter].forEach(btn => {
-                        btn.classList.remove('bg-blue-500', 'text-white');
-                        btn.classList.add(btn.dataset.filter === 'all' ? 'bg-gray-100' : 
-                                         btn.dataset.filter === 'zero' ? 'bg-blue-100' : 'bg-red-100',
-                                         btn.dataset.filter === 'all' ? 'text-gray-700' : 
-                                         btn.dataset.filter === 'zero' ? 'text-blue-700' : 'text-red-700');
-                    });
-                    
-                    button.classList.remove(button.dataset.filter === 'all' ? 'bg-gray-100' : 
-                                          button.dataset.filter === 'zero' ? 'bg-blue-100' : 'bg-red-100',
-                                          button.dataset.filter === 'all' ? 'text-gray-700' : 
-                                          button.dataset.filter === 'zero' ? 'text-blue-700' : 'text-red-700');
-                    button.classList.add('bg-blue-500', 'text-white');
-                    
-                    // Filter table rows
-                    const rows = table.querySelectorAll('tbody tr');
-                    rows.forEach(row => {
-                        const rowType = row.dataset.rowType;
-                        if (filterType === 'all' || rowType === filterType) {
-                            row.classList.remove('hidden');
-                        } else {
-                            row.classList.add('hidden');
-                        }
-                    });
-                });
-            });
-            
-            // Set default filter (all)
-            allFilter.click();
-            
-            showNotification(`Found ${zeroRows} zero and ${negativeRows} negative quantities`, NOTIFICATION_TYPES.SUCCESS);
-            
+          // Clear previous results
+          this.clearResults();
+          
+          // Parse and validate HTML content
+          const doc = await this.parseAndValidateHtml(rawData);
+          
+          // Extract and process table data
+          const { headers, targetColumnIndex, stats, filteredData } = this.processTableData(doc);
+          
+          // Update state
+          this.updateApplicationState(filteredData, headers, targetColumnIndex);
+          
+          // Update UI
+          this.updateValidationSummary(stats);
+          
+          if (stats.negativeRows === 0 && stats.positiveRows === 0) {
+            NotificationManager.show('No Falschbuchungen or Genullt found (all values are normal)', NOTIFICATION_TYPES.INFO);
+            return;
+          }
+          
+          // Initialize filters and apply them
+          FilterManager.initialize();
+          FilterManager.applyFilters();
+          
+          NotificationManager.show(
+            `Found ${stats.negativeRows} Falschbuchungen and ${stats.positiveRows} Genullt (${stats.zeroRows} normal values)`,
+            NOTIFICATION_TYPES.SUCCESS
+          );
+          
         } catch (error) {
-            // Update the validation summary to show the error
-            const validationSummary = document.getElementById('validationSummary');
-            validationSummary.innerHTML = DOMPurify.sanitize(`
-                <div class="bg-red-50 border-l-4 border-red-400 p-4 text-red-700">
-                    <p class="font-bold">Error Processing File</p>
-                    <p>${error.message}</p>
-                </div>
-            `);
-            
-            showNotification(`Error processing file: ${error.message}`, NOTIFICATION_TYPES.ERROR);
-            throw error;
+          this.handleProcessingError(error);
+          throw error;
         }
+      },
+
+      clearResults() {
+        const output = document.getElementById('output');
+        const validationSummary = document.getElementById('validationSummary');
+        
+        if (output) {
+          output.innerHTML = '';
+        }
+        if (validationSummary) {
+          validationSummary.innerHTML = '';
+        }
+      },
+
+      async parseAndValidateHtml(rawData) {
+        // Find the HTML content section in MHTML
+        const htmlStart = rawData.indexOf('<html');
+        
+        if (htmlStart === -1) {
+          throw new Error('No HTML content found in file. Please ensure this is a valid MHTML file.');
+        }
+        
+        const htmlContent = rawData.substring(htmlStart);
+        
+        // Sanitize and parse the HTML content
+        const sanitizedHtml = DOMPurify.sanitize(htmlContent, {
+          WHOLE_DOCUMENT: true,
+          RETURN_DOM: false,
+          USE_PROFILES: { html: true, svg: false, svgFilters: false }
+        });
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(sanitizedHtml, 'text/html');
+        
+        if (!doc.querySelector('table') && !doc.querySelector('tr')) {
+          throw new Error('Invalid file format: No table data found after sanitization');
+        }
+
+        return doc;
+      },
+
+      processTableData(doc) {
+        const rows = doc.querySelectorAll('tr');
+        if (!rows.length) {
+          throw new Error('No table data found');
+        }
+
+        // Extract and validate headers
+        const headerCells = rows[0].querySelectorAll('td, th');
+        if (!headerCells.length) {
+          throw new Error('No header cells found in the first row');
+        }
+
+        const headers = Array.from(headerCells).map(cell => cell.textContent.trim());
+        
+        // Validate headers are not empty
+        const validHeaders = headers.filter(header => header.length > 0);
+        if (validHeaders.length === 0) {
+          throw new Error('No valid headers found - all header cells are empty');
+        }
+        
+        if (validHeaders.length !== headers.length) {
+          Logger.warn(`Found ${headers.length - validHeaders.length} empty header cells`);
+        }
+        
+        // Find required column with better error messaging
+        const targetColumnIndex = headers.indexOf(CONFIG.DELIVERED_QUANTITY_COLUMN);
+        if (targetColumnIndex === -1) {
+          const availableColumns = headers.filter(h => h.length > 0).join(', ');
+          throw new Error(`Required column '${CONFIG.DELIVERED_QUANTITY_COLUMN}' not found in file. Available columns: ${availableColumns}`);
+        }
+
+        // Validate we have data rows beyond the header
+        if (rows.length < 2) {
+          throw new Error('No data rows found - file contains only headers');
+        }
+
+        // Process data rows and collect stats
+        const stats = { totalRows: 0, zeroRows: 0, negativeRows: 0, positiveRows: 0, invalidValues: 0 };
+        
+        const filteredData = Array.from(rows)
+          .slice(1)
+          .map((row, rowIndex) => {
+            stats.totalRows++;
+            const dataCells = row.querySelectorAll('td, th');
+            
+            // Validate row has enough cells
+            if (dataCells.length <= targetColumnIndex) {
+              Logger.warn(`Row ${rowIndex + 2} has insufficient columns (${dataCells.length} vs expected ${targetColumnIndex + 1})`);
+              return null;
+            }
+            
+            const cells = Array.from(dataCells).map(cell => cell.textContent.trim());
+            
+            if (!cells[targetColumnIndex]) {
+              return null;
+            }
+            
+            const value = parseFloat(cells[targetColumnIndex].replace(',', '.'));
+            if (isNaN(value)) {
+              stats.invalidValues++;
+              return null;
+            }
+            
+            if (value === 0) {
+              stats.zeroRows++;
+              return { cells, type: 'zero' }; // Include zero values for filtering
+            } else if (value < 0) {
+              stats.negativeRows++;
+              return { cells, type: 'negative' };
+            } else if (value > 0) {
+              stats.positiveRows++;
+              return { cells, type: 'positive' };
+            }
+            
+            return null;
+          })
+          .filter(row => row !== null);
+
+        return { headers, targetColumnIndex, stats, filteredData };
+      },
+
+      updateApplicationState(filteredData, headers, targetColumnIndex) {
+        AppState.currentFilteredData = filteredData;
+        AppState.currentHeaders = headers;
+        AppState.currentTargetColumnIndex = targetColumnIndex;
+      },
+
+      updateValidationSummary(stats) {
+        const validationSummary = document.getElementById('validationSummary');
+        if (validationSummary) {
+          validationSummary.innerHTML = DOMPurify.sanitize(
+            ValidationSummaryGenerator.generate({
+              ...stats,
+              columnName: CONFIG.DELIVERED_QUANTITY_COLUMN
+            })
+          );
+        }
+      },
+
+      handleProcessingError(error) {
+        const validationSummary = document.getElementById('validationSummary');
+        if (validationSummary) {
+          validationSummary.innerHTML = DOMPurify.sanitize(`
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 text-red-700">
+              <p class="font-bold">Error Processing File</p>
+              <p>${error.message}</p>
+            </div>
+          `);
+        }
+        
+        NotificationManager.show(`Error processing file: ${error.message}`, NOTIFICATION_TYPES.ERROR);
+      }
+    };
+    // Event listeners setup with improved organization
+    const EventListenerSetup = {
+      init() {
+        this.setupFileSelection();
+        this.setupProcessFile();
+        this.setupAutoReload();
+        this.setupBeforeUnload();
+        this.setupKeyboardAccessibility();
+      },
+
+      setupFileSelection() {
+        const selectFileButton = document.getElementById('selectFileButton');
+        if (selectFileButton) {
+          selectFileButton.addEventListener('click', EventHandlers.handleFileSelection);
+        }
+      },
+
+      setupProcessFile() {
+        const processFileButton = document.getElementById('processFileButton');
+        if (processFileButton) {
+          processFileButton.addEventListener('click', EventHandlers.handleProcessFile);
+        }
+      },
+
+      setupAutoReload() {
+        const autoReload = document.getElementById('autoReload');
+        if (autoReload) {
+          autoReload.addEventListener('change', EventHandlers.handleAutoReloadToggle);
+        }
+      },
+
+      setupBeforeUnload() {
+        window.addEventListener('beforeunload', EventHandlers.handleBeforeUnload);
+      },
+
+      setupKeyboardAccessibility() {
+        // Add keyboard support for clickable elements
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            const target = e.target;
+            if (target.getAttribute('role') === 'button' && target.hasAttribute('tabindex')) {
+              e.preventDefault();
+              target.click();
+            }
+          }
+        });
+      }
+    };
+
+    // Legacy function support for backward compatibility
+    const toggleFilter = (filterId) => FilterManager.toggleFilter(filterId);
+
+    // Initialize everything when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        EventListenerSetup.init();
+        Logger.info('Application initialized successfully');
+      });
+    } else {
+      EventListenerSetup.init();
+      Logger.info('Application initialized successfully');
     }
   </script>
 </body>
