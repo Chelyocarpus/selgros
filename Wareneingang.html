@@ -10,7 +10,7 @@
   <style>
     /* Custom focus ring for accessibility */
     .focus-ring:focus {
-      outline: 2px solid #2563eb;
+      outline: 2px solid #1f2937;
       outline-offset: 2px;
     }
     /* Visually hidden for screen readers */
@@ -25,33 +25,160 @@
       white-space: nowrap;
       border: 0;
     }
+    /* Professional styling overrides */
+    .professional-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .professional-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-bottom: 3px solid #0f172a;
+    }
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s ease-in-out;
+    }
+    .stat-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .professional-button {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border: 1px solid #0f172a;
+      transition: all 0.2s ease-in-out;
+    }
+    .professional-button:hover {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .professional-table {
+      border: 1px solid #d1d5db;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Enhanced filter card styles */
+    .filter-card {
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .filter-card:hover {
+      transform: translateY(-1px);
+    }
+    
+    .filter-checkbox:checked + .filter-card-content {
+      border-color: var(--border-checked);
+      background-color: var(--bg-checked);
+      box-shadow: 0 4px 12px -2px var(--shadow-checked);
+    }
+    
+    .filter-checkbox:checked + .filter-card-content .filter-checkmark {
+      background-color: var(--check-bg);
+      border-color: var(--check-bg);
+    }
+    
+    .filter-checkbox:checked + .filter-card-content .filter-checkmark svg {
+      opacity: 1;
+    }
+    
+    .filter-checkbox:focus + .filter-card-content {
+      box-shadow: 0 0 0 4px var(--ring-color);
+    }
+    
+    /* Color variables for different filter types */
+    .filter-emerald {
+      --border-checked: #10b981;
+      --bg-checked: #ecfdf5;
+      --shadow-checked: rgba(16, 185, 129, 0.25);
+      --check-bg: #10b981;
+      --ring-color: rgba(16, 185, 129, 0.3);
+    }
+    
+    .filter-red {
+      --border-checked: #ef4444;
+      --bg-checked: #fef2f2;
+      --shadow-checked: rgba(239, 68, 68, 0.25);
+      --check-bg: #ef4444;
+      --ring-color: rgba(239, 68, 68, 0.3);
+    }
+    
+    .filter-blue {
+      --border-checked: #3b82f6;
+      --bg-checked: #eff6ff;
+      --shadow-checked: rgba(59, 130, 246, 0.25);
+      --check-bg: #3b82f6;
+      --ring-color: rgba(59, 130, 246, 0.3);
+    }
+    
+    /* Table optimization */
+    .table-fixed {
+      table-layout: fixed;
+    }
+    
+    .truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    /* Better table spacing */
+    table {
+      table-layout: auto;
+      width: 100%;
+    }
+    
+    table th:first-child,
+    table td:first-child {
+      min-width: 120px;
+    }
+    
+    table th:last-child,
+    table td:last-child {
+      min-width: 80px;
+      max-width: 120px;
+    }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-gray-100 via-blue-50 to-gray-200 p-2 sm:p-5">
-  <a href="#mainContent" class="sr-only focus:not-sr-only focus:ring-2 focus:ring-blue-600 bg-white text-blue-700 px-3 py-2 rounded shadow z-50 absolute left-2 top-2">Skip to main content</a>
-  <main id="mainContent" class="container mx-auto max-w-3xl bg-white rounded-xl shadow-lg p-4 sm:p-8 mt-4 sm:mt-10">
-    <header class="flex items-center mb-6">
-      <svg class="w-10 h-10 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-      </svg>
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Wareneingang</h1>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-2 sm:p-6">
+  <a href="#mainContent" class="sr-only focus:not-sr-only focus:ring-2 focus:ring-slate-600 bg-white text-slate-700 px-3 py-2 rounded shadow z-50 absolute left-2 top-2">Skip to main content</a>
+  <main id="mainContent" class="container mx-auto max-w-4xl professional-card rounded-lg p-6 sm:p-8 mt-4 sm:mt-8">
+    <header class="professional-header text-white rounded-t-lg -mx-6 -mt-6 sm:-mx-8 sm:-mt-8 px-6 py-6 sm:px-8 sm:py-8 mb-8">
+      <div class="flex items-center">
+        <div class="bg-white bg-opacity-20 p-3 rounded-lg mr-4">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold">Wareneingang</h1>
+          <p class="text-slate-200 mt-1">Anomaly Detection & Analysis</p>
+        </div>
+      </div>
     </header>
 
-    <div id="browserWarning" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert" aria-live="assertive">
-      <strong class="font-bold">Unsupported Browser! </strong>
-      <span class="block sm:inline">This application requires Chrome, Edge, or Opera. Please use a supported browser for full functionality.</span>
+    <div id="browserWarning" class="hidden bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 rounded-r relative mb-6" role="alert" aria-live="assertive">
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+          <strong class="font-semibold">Browser Compatibility Issue</strong>
+          <p class="mt-1">This application requires Chrome, Edge, or Opera for full functionality.</p>
+        </div>
+      </div>
     </div>
 
-
-
     <!-- Notification banner with improved structure -->
-    <div id="notificationBanner" class="hidden mb-4 rounded relative" role="alert" aria-live="polite">
+    <div id="notificationBanner" class="hidden mb-6 rounded-lg relative" role="alert" aria-live="polite">
         <div class="flex items-center p-4">
             <span id="notificationIcon" class="mr-3 text-xl" aria-hidden="true"></span>
             <div class="flex-1">
-                <span id="notificationMessage" class="text-sm"></span>
+                <span id="notificationMessage" class="text-sm font-medium"></span>
             </div>
-            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100 focus-ring" aria-label="Close notification" tabindex="0" type="button">
+            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100 focus-ring rounded p-1" aria-label="Close notification" tabindex="0" type="button">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
                 </svg>
@@ -60,60 +187,62 @@
         </div>
     </div>
 
-    <section class="mb-5">
-      <h2 class="text-xl font-semibold mb-3">Offene Menge L/A Anomalies</h2>
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-3">
-        <div class="flex-grow">
-          <button id="selectFileButton" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-ring w-full sm:w-auto" aria-label="Select TXT File" type="button">
-            <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-            </svg>
-            Select TXT File
-          </button>
-          <div id="fileInfo" class="mt-2 text-sm text-gray-600 hidden">
-            <div class="flex items-center">
-              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+    <section class="mb-8">
+      <h2 class="text-xl font-semibold text-slate-800 mb-4">File Processing</h2>
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div class="flex-1">
+          <label for="fileInput" class="block text-sm font-medium text-slate-700 mb-2">Select MHTML File</label>
+          <div class="relative">
+            <input type="file" id="fileInput" accept=".mhtml,.mht" class="hidden" />
+            <button id="selectFileButton" class="w-full bg-white border-2 border-dashed border-slate-300 rounded-lg px-6 py-8 text-center hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors" type="button">
+              <svg class="mx-auto h-12 w-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 48 48" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" />
+              </svg>
+              <span class="block text-sm font-medium text-slate-900">Click to select MHTML file</span>
+              <span class="block text-xs text-slate-500 mt-1">or drag and drop here</span>
+            </button>
+            <div id="selectedFileName" class="hidden mt-2 text-sm text-slate-600 bg-slate-50 px-3 py-2 rounded border">
+              <svg class="inline w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
               <span id="fileName">No file selected</span>
             </div>
-            <div id="fileDetails" class="ml-5 mt-1 text-xs text-gray-500"></div>
+            <div class="text-center mt-4">
+              <button id="processFileButton" class="professional-button text-white px-8 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Process File" type="button" disabled>
+                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                </svg>
+                Process File
+              </button>
+            </div>
           </div>
         </div>
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-          <label class="inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="autoReload" class="form-checkbox focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" aria-label="Enable auto-reload">
-            <span class="ml-2">Auto-reload</span>
-          </label>
-          <span id="monitorStatus" class="ml-2 px-2 py-1 rounded text-sm" aria-live="polite">⚪ Idle</span>
-          <span id="lastChecked" class="text-xs text-gray-500 hidden">Last checked: <span id="lastCheckedTime"></span></span>
-        </div>
       </div>
-      <button id="processFileButton" class="bg-blue-500 text-white px-4 py-2 rounded focus-ring w-full sm:w-auto" aria-label="Process File" type="button">Process File</button>
     </section>
   </main>
 
-  <!-- Validation Summary wrapper - new separate section -->
-  <div id="validationWrapper" class="container mx-auto max-w-4xl px-2 sm:px-6 mt-6 mb-4">
-    <div id="validationSummary" class="w-full bg-white rounded-lg shadow border border-gray-200 p-4"></div>
+  <!-- Validation Summary wrapper - professional styling -->
+  <div id="validationWrapper" class="hidden w-full px-2 sm:px-4 lg:px-6 mx-auto mt-8 mb-6">
+    <div id="validationSummary" class="w-full professional-card rounded-lg p-6"></div>
   </div>
 
-  <!-- Table wrapper outside of main for full width -->
-  <div id="tableWrapper" class="w-full max-w-full px-2 sm:px-6 lg:px-12 mx-auto mt-2 mb-8">
-    <div class="w-full overflow-x-auto rounded-lg shadow bg-white border border-gray-200">
-      <div id="output" class="w-full"></div>
+  <!-- Table wrapper with professional styling -->
+  <div id="tableWrapper" class="hidden w-full px-2 sm:px-4 lg:px-6 mx-auto mt-6 mb-8">
+    <div class="w-full professional-table rounded-lg bg-white shadow-sm border border-gray-200">
+      <div id="output" class="w-full overflow-x-auto"></div>
     </div>
   </div>
 
   <script>
     // Configuration object for better maintainability
     const CONFIG = {
-      CHECK_INTERVAL: 5000,
-      MAX_INTERVAL: 30000,
-      BACKOFF_FACTOR: 1.5,
       NOTIFICATION_DURATION: 5000,
       DELIVERED_QUANTITY_COLUMN: 'Offene Menge L/A',
-      FILTER_DEBOUNCE_DELAY: 150,
+      // Lazy loading configuration
+      ROWS_PER_PAGE: 100,
+      INITIAL_LOAD: 200,
+      // Filter configuration
+      FILTER_OUT_UNITS: ['kg', 'KG', 'Kg'], // Units to filter out
       LOG_LEVELS: {
         DEBUG: 0,
         INFO: 1,
@@ -168,14 +297,10 @@
     // Show warning and disable functionality if unsupported
     if (!isSupported()) {
       const browserWarning = document.getElementById('browserWarning');
-      const autoReload = document.getElementById('autoReload');
       const processFileButton = document.getElementById('processFileButton');
       
       if (browserWarning) {
         browserWarning.classList.remove('hidden');
-      }
-      if (autoReload) {
-        autoReload.disabled = true;
       }
       if (processFileButton) {
         processFileButton.disabled = true;
@@ -186,21 +311,20 @@
     // Application state management
     const AppState = {
       fileHandle: null,
-      monitorInterval: null,
-      lastModified: null,
-      fileChanged: false,
-      checkInterval: CONFIG.CHECK_INTERVAL,
       currentFilteredData: [],
       currentHeaders: [],
-      currentTargetColumnIndex: -1
+      currentTargetColumnIndex: -1,
+      // Lazy loading state
+      displayedRows: 0,
+      totalFilteredRows: 0,
+      isLoading: false,
+      currentlyDisplayedData: []
     };
 
     // Error types configuration
     const ERROR_TYPES = {
       FILE_ACCESS: 'FILE_ACCESS',
       FILE_PROCESSING: 'FILE_PROCESSING',
-      STORAGE: 'STORAGE',
-      MONITORING: 'MONITORING',
       BROWSER_SUPPORT: 'BROWSER_SUPPORT'
     };
 
@@ -233,20 +357,6 @@
       [NOTIFICATION_TYPES.PROCESSING]: {
         icon: '🔄',
         classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
-      }
-    };
-
-    // Storage utilities
-    const StorageUtils = {
-      isLocalStorageAvailable() {
-        try {
-          const test = '__storage_test__';
-          localStorage.setItem(test, test);
-          localStorage.removeItem(test);
-          return true;
-        } catch (e) {
-          return false;
-        }
       }
     };
 
@@ -327,12 +437,6 @@
             case ERROR_TYPES.FILE_PROCESSING:
               userMessage = `Error processing file: ${message}`;
               break;
-            case ERROR_TYPES.STORAGE:
-              userMessage = `Storage error: ${message}`;
-              break;
-            case ERROR_TYPES.MONITORING:
-              userMessage = `File monitoring error: ${message}`;
-              break;
             case ERROR_TYPES.BROWSER_SUPPORT:
               userMessage = `Browser compatibility error: ${message}`;
               break;
@@ -350,107 +454,12 @@
       }
     };
 
-    // State management with improved error handling
-    const StateManager = {
-      save() {
-        if (!AppState.fileHandle || !StorageUtils.isLocalStorageAvailable()) {
-          return;
-        }
-        
-        const state = {
-          monitoring: !!AppState.monitorInterval,
-          lastModified: AppState.lastModified,
-          fileName: AppState.fileHandle.name,
-          filePath: AppState.fileHandle.name
-        };
-
-        try {
-          localStorage.setItem('fileProcessor', JSON.stringify(state));
-          Logger.debug('State saved successfully');
-        } catch (e) {
-          const error = ErrorHandler.handle(e, ERROR_TYPES.STORAGE, true);
-          
-          if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-            try {
-              localStorage.removeItem('fileProcessor');
-              localStorage.setItem('fileProcessor', JSON.stringify(state));
-              Logger.info('Storage cleared and state saved after quota exceeded');
-              return;
-            } catch (retryError) {
-              ErrorHandler.handle(retryError, ERROR_TYPES.STORAGE, true);
-            }
-          }
-
-          // Show error in status
-          UIHelpers.updateMonitorStatus('⚠️ Storage Error', 'bg-red-100');
-          setTimeout(() => {
-            if (AppState.monitorInterval) {
-              UIHelpers.updateMonitorStatus('🟢 Monitoring', 'bg-green-100');
-            } else {
-              UIHelpers.updateMonitorStatus('⚪ Idle');
-            }
-          }, 3000);
-        }
-      }
-    };
-
-    // UI Helpers for cleaner code and reusability
-    const UIHelpers = {
-      updateMonitorStatus(text, bgClass = '') {
-        const status = document.getElementById('monitorStatus');
-        if (status) {
-          status.textContent = text;
-          status.className = `ml-2 px-2 py-1 rounded text-sm ${bgClass}`;
-        }
-      },
-
-      updateFileInfo(file) {
-        const fileInfo = document.getElementById('fileInfo');
-        const fileName = document.getElementById('fileName');
-        const details = document.getElementById('fileDetails');
-        
-        if (fileInfo && fileName && details) {
-          fileInfo.classList.remove('hidden');
-          fileName.textContent = file.name;
-          details.textContent = '';
-          
-          const lastMod = document.createElement('div');
-          lastMod.textContent = `Last modified: ${new Date(file.lastModified).toLocaleString()}`;
-          const size = document.createElement('div');
-          size.textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
-          
-          details.appendChild(lastMod);
-          details.appendChild(size);
-        }
-      },
-
-      updateTitle(status) {
-        const baseTitle = 'Wareneingang';
-        document.title = status ? `${baseTitle} (${status})` : baseTitle;
-      },
-
-      updateLastChecked() {
-        const lastChecked = document.getElementById('lastChecked');
-        const lastCheckedTime = document.getElementById('lastCheckedTime');
-        
-        if (lastChecked && lastCheckedTime) {
-          lastChecked.classList.remove('hidden');
-          lastCheckedTime.textContent = new Date().toLocaleTimeString();
-        }
-      }
-    };
-
     // File handling with improved structure
     const FileHandler = {
       async handleSelectedFile(file) {
         try {
-          AppState.lastModified = file.lastModified;
-          
-          UIHelpers.updateFileInfo(file);
-          
           const text = await file.text();
           await FileProcessor.processFile(text.trim());
-          StateManager.save();
           
           Logger.info('File processed successfully:', file.name);
         } catch (error) {
@@ -464,10 +473,23 @@
       async init() {
         if (isSupported()) {
           Logger.info('Browser supported for File System Access API');
-          // Manual file selection only - no state loading
         } else {
           Logger.error('Browser not supported');
-          // Browser warning already handled in HTML
+        }
+        
+        // Hide empty elements on page load
+        this.hideEmptyElements();
+      },
+      
+      hideEmptyElements() {
+        const validationWrapper = document.getElementById('validationWrapper');
+        const tableWrapper = document.getElementById('tableWrapper');
+        
+        if (validationWrapper) {
+          validationWrapper.classList.add('hidden');
+        }
+        if (tableWrapper) {
+          tableWrapper.classList.add('hidden');
         }
       }
     };
@@ -493,12 +515,37 @@
           
           AppState.fileHandle = handles[0];
           const file = await AppState.fileHandle.getFile();
+          
+          // Update UI to show selected file
+          this.updateFileSelection(file.name);
+          
           await FileHandler.handleSelectedFile(file);
           
         } catch (err) {
           if (err.name !== 'AbortError') {
             ErrorHandler.handle(err, ERROR_TYPES.FILE_ACCESS);
           }
+        }
+      },
+
+      handleFileInputChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+          this.updateFileSelection(file.name);
+          FileHandler.handleSelectedFile(file);
+        }
+      },
+
+      updateFileSelection(fileName) {
+        const fileNameElement = document.getElementById('fileName');
+        const selectedFileNameDiv = document.getElementById('selectedFileName');
+        const processButton = document.getElementById('processFileButton');
+        
+        if (fileNameElement && selectedFileNameDiv && processButton) {
+          fileNameElement.textContent = fileName;
+          selectedFileNameDiv.classList.remove('hidden');
+          processButton.disabled = false;
+          processButton.classList.remove('opacity-50', 'cursor-not-allowed');
         }
       },
 
@@ -515,140 +562,6 @@
         } catch (err) {
           ErrorHandler.handle(err, ERROR_TYPES.FILE_ACCESS);
         }
-      },
-
-      handleAutoReloadToggle(e) {
-        if (e.target.checked) {
-          if (!AppState.fileHandle) {
-            NotificationManager.show('Please select a file first!', NOTIFICATION_TYPES.WARNING);
-            e.target.checked = false;
-            return;
-          }
-          UIHelpers.updateMonitorStatus('🟢 Monitoring', 'bg-green-100');
-          UIHelpers.updateTitle('🟢 Monitoring');
-          AppState.checkInterval = CONFIG.CHECK_INTERVAL;
-          MonitoringService.setup();
-          StateManager.save();
-        } else {
-          UIHelpers.updateMonitorStatus('⚪ Idle');
-          UIHelpers.updateTitle();
-          MonitoringService.cleanup();
-          StateManager.save();
-        }
-      },
-
-      handleBeforeUnload() {
-        if (AppState.monitorInterval) {
-          StateManager.save();
-        }
-      }
-    };
-
-    // Monitoring service with improved error handling
-    const MonitoringService = {
-      async checkFileChanges() {
-        try {
-          if (!AppState.fileHandle) {
-            return;
-          }
-          
-          const file = await AppState.fileHandle.getFile();
-          
-          UIHelpers.updateLastChecked();
-          
-          if (file.lastModified > AppState.lastModified) {
-            AppState.fileChanged = true;
-            AppState.lastModified = file.lastModified;
-            const text = await file.text();
-            await FileProcessor.processFile(text.trim());
-            
-            // Visual feedback
-            UIHelpers.updateMonitorStatus(`🔄 Updated: ${new Date().toLocaleTimeString()}`, 'bg-yellow-100');
-            UIHelpers.updateTitle('🔄 Updated');
-            
-            setTimeout(() => {
-              UIHelpers.updateMonitorStatus('🟢 Monitoring', 'bg-green-100');
-              UIHelpers.updateTitle('🟢 Monitoring');
-            }, 1000);
-          } else {
-            AppState.fileChanged = false;
-          }
-        } catch (err) {
-          const error = ErrorHandler.handle(err, ERROR_TYPES.MONITORING);
-          this.cleanup();
-          
-          UIHelpers.updateMonitorStatus('⚠️ Error', 'bg-red-100');
-          UIHelpers.updateTitle('⚠️ Error');
-          
-          throw error;
-        }
-      },
-
-      setup() {
-        if (AppState.monitorInterval) {
-          clearInterval(AppState.monitorInterval);
-        }
-
-        AppState.monitorInterval = setInterval(() => {
-          this.checkFileChanges();
-          // Increase interval up to maxInterval if no changes detected
-          if (!AppState.fileChanged) {
-            AppState.checkInterval = Math.min(AppState.checkInterval * CONFIG.BACKOFF_FACTOR, CONFIG.MAX_INTERVAL);
-            clearInterval(AppState.monitorInterval);
-            AppState.monitorInterval = setInterval(() => this.checkFileChanges(), AppState.checkInterval);
-          } else {
-            // Reset interval to default when changes are detected
-            AppState.checkInterval = CONFIG.CHECK_INTERVAL;
-            clearInterval(AppState.monitorInterval);
-            AppState.monitorInterval = setInterval(() => this.checkFileChanges(), AppState.checkInterval);
-          }
-        }, AppState.checkInterval);
-      },
-
-      cleanup() {
-        clearInterval(AppState.monitorInterval);
-        AppState.monitorInterval = null;
-        
-        // Reset UI state
-        UIHelpers.updateMonitorStatus('⚪ Idle');
-        const lastChecked = document.getElementById('lastChecked');
-        if (lastChecked) {
-          lastChecked.classList.add('hidden');
-        }
-        
-        const autoReload = document.getElementById('autoReload');
-        if (autoReload) {
-          autoReload.checked = false;
-        }
-        
-        const fileInfo = document.getElementById('fileInfo');
-        if (fileInfo) {
-          fileInfo.classList.add('hidden');
-        }
-        
-        const fileName = document.getElementById('fileName');
-        if (fileName) {
-          fileName.textContent = 'No file selected';
-        }
-        
-        const fileDetails = document.getElementById('fileDetails');
-        if (fileDetails) {
-          fileDetails.textContent = '';
-        }
-        
-        // Clear output
-        const output = document.getElementById('output');
-        if (output) {
-          output.textContent = '';
-        }
-        
-        // Reset interval
-        AppState.checkInterval = CONFIG.CHECK_INTERVAL;
-        
-        // Reset file-related state
-        AppState.fileHandle = null;
-        AppState.lastModified = null;
-        AppState.fileChanged = false;
       }
     };
 
@@ -666,6 +579,10 @@
         // Use debounce with proper context binding
         if (!this._debouncedApply) {
           this._debouncedApply = debounce(() => {
+            // Store current scroll position
+            const scrollY = window.scrollY;
+            const scrollX = window.scrollX;
+            
             const { showZero, showNegative, showPositive } = this.getFilterStates();
 
             const filteredData = AppState.currentFilteredData.filter(rowData => {
@@ -677,15 +594,25 @@
               }
             });
 
+            // Update state for lazy loading
+            AppState.totalFilteredRows = filteredData.length;
+            AppState.displayedRows = 0;
+            AppState.currentlyDisplayedData = filteredData;
+
             // Update visible count
             const visibleCountElement = document.getElementById('visibleCount');
             if (visibleCountElement) {
               visibleCountElement.textContent = filteredData.length;
             }
 
-            // Re-render table
-            TableRenderer.render(filteredData, AppState.currentHeaders, AppState.currentTargetColumnIndex);
-          }, CONFIG.FILTER_DEBOUNCE_DELAY);
+            // Re-render table with lazy loading
+            LazyTableRenderer.renderInitial(filteredData, AppState.currentHeaders, AppState.currentTargetColumnIndex);
+            
+            // Restore scroll position to prevent jumping
+            requestAnimationFrame(() => {
+              window.scrollTo(scrollX, scrollY);
+            });
+          }, 150);
         }
         this._debouncedApply();
       },
@@ -717,96 +644,174 @@
 
     // Validation summary generator with improved template handling
     const ValidationSummaryGenerator = {
-      generate({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, columnName }) {
+      generate({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, filteredOutKg, columnName }) {
         const hasAnomalies = negativeRows > 0 || positiveRows > 0;
         const hasData = zeroRows > 0 || negativeRows > 0 || positiveRows > 0;
         
         return `
-          <div class="mb-4">
-            <h3 class="font-bold text-lg mb-3">Validation Summary</h3>
-            ${this.generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues })}
-            ${hasData ? this.generateFilterSection({ zeroRows, negativeRows, positiveRows }) : ''}
+          <div class="mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+              <h3 class="font-bold text-lg text-slate-800">Validation Summary</h3>
+            </div>
+            ${this.generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, filteredOutKg })}
           </div>
-          ${this.generateWarningsAndMessages({ invalidValues, hasAnomalies, columnName })}
+          ${this.generateWarningsAndMessages({ invalidValues, filteredOutKg, hasAnomalies, columnName })}
         `;
       },
 
-      generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues }) {
+      generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, filteredOutKg }) {
         return `
-          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
-            <div class="bg-gray-100 p-3 rounded shadow-sm">
-              <div class="text-sm text-gray-500">Total Rows</div>
-              <div class="text-xl font-bold">${totalRows}</div>
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-4 mb-4">
+            <div class="stat-card p-4 rounded-lg">
+              <div class="text-sm font-medium text-slate-600 uppercase tracking-wide">Total Rows</div>
+              <div class="text-2xl font-bold text-slate-900 mt-1">${totalRows}</div>
             </div>
-            <div class="bg-blue-100 p-3 rounded shadow-sm cursor-pointer" onclick="FilterManager.toggleFilter('showZero')" role="button" tabindex="0" aria-label="Toggle zero values filter">
-              <div class="text-sm text-blue-500">Normal</div>
-              <div class="text-xl font-bold">${zeroRows}</div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-emerald-500">
+              <div class="text-sm font-medium text-emerald-600 uppercase tracking-wide">Normal</div>
+              <div class="text-2xl font-bold text-emerald-700 mt-1">${zeroRows}</div>
             </div>
-            <div class="bg-red-100 p-3 rounded shadow-sm cursor-pointer" onclick="FilterManager.toggleFilter('showNegative')" role="button" tabindex="0" aria-label="Toggle negative values filter">
-              <div class="text-sm text-red-500">Falschbuchungen</div>
-              <div class="text-xl font-bold">${negativeRows}</div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-red-500">
+              <div class="text-sm font-medium text-red-600 uppercase tracking-wide">Falschbuchungen</div>
+              <div class="text-2xl font-bold text-red-700 mt-1">${negativeRows}</div>
             </div>
-            <div class="bg-green-100 p-3 rounded shadow-sm cursor-pointer" onclick="FilterManager.toggleFilter('showPositive')" role="button" tabindex="0" aria-label="Toggle positive values filter">
-              <div class="text-sm text-green-500">Genullt</div>
-              <div class="text-xl font-bold">${positiveRows}</div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-blue-500">
+              <div class="text-sm font-medium text-blue-600 uppercase tracking-wide">Genullt</div>
+              <div class="text-2xl font-bold text-blue-700 mt-1">${positiveRows}</div>
             </div>
-            <div class="bg-yellow-100 p-3 rounded shadow-sm">
-              <div class="text-sm text-yellow-500">Invalid Values</div>
-              <div class="text-xl font-bold">${invalidValues}</div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-amber-500">
+              <div class="text-sm font-medium text-amber-600 uppercase tracking-wide">Invalid Values</div>
+              <div class="text-2xl font-bold text-amber-700 mt-1">${invalidValues}</div>
+            </div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-purple-500">
+              <div class="text-sm font-medium text-purple-600 uppercase tracking-wide">Filtered KG</div>
+              <div class="text-2xl font-bold text-purple-700 mt-1">${filteredOutKg}</div>
             </div>
           </div>
-        `;
-      },
-
-      generateFilterSection({ zeroRows, negativeRows, positiveRows }) {
-        return `
-          <div class="border-t pt-4">
-            <h4 class="font-semibold mb-3">Filter Values</h4>
-            <div class="flex flex-wrap gap-4 items-center">
-              <label class="inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="showZero" class="form-checkbox text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" checked aria-label="Show zero values">
-                <span class="ml-2 flex items-center">
-                  <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-                  Normal (${zeroRows})
-                </span>
-              </label>
-              <label class="inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="showNegative" class="form-checkbox text-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2" checked aria-label="Show negative values">
-                <span class="ml-2 flex items-center">
-                  <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                  Falschbuchungen (${negativeRows})
-                </span>
-              </label>
-              <label class="inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="showPositive" class="form-checkbox text-green-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-2" checked aria-label="Show positive values">
-                <span class="ml-2 flex items-center">
-                  <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-                  Genullt (${positiveRows})
-                </span>
-              </label>
-              <div class="ml-auto text-sm text-gray-600">
-                Showing <span id="visibleCount">${zeroRows + negativeRows + positiveRows}</span> of <span id="totalCount">${zeroRows + negativeRows + positiveRows}</span> values
+          <div class="bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-6 shadow-sm">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div class="flex-1">
+                <h4 class="text-sm font-semibold text-slate-700 mb-4 flex items-center">
+                  <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                  </svg>
+                  Filter Options
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <label class="filter-card filter-emerald">
+                    <input type="checkbox" id="showZero" class="filter-checkbox sr-only" checked aria-label="Show zero values">
+                    <div class="filter-card-content bg-white border-2 border-emerald-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-emerald-300 hover:shadow-md">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                          <div class="w-4 h-4 rounded-full bg-emerald-500 mr-3 shadow-sm"></div>
+                          <div>
+                            <div class="font-semibold text-slate-800">Normal</div>
+                            <div class="text-sm text-slate-500">${zeroRows} entries</div>
+                          </div>
+                        </div>
+                        <div class="filter-checkmark w-5 h-5 border-2 border-emerald-300 rounded flex items-center justify-center transition-all duration-200">
+                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="filter-card filter-red">
+                    <input type="checkbox" id="showNegative" class="filter-checkbox sr-only" checked aria-label="Show negative values">
+                    <div class="filter-card-content bg-white border-2 border-red-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-red-300 hover:shadow-md">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                          <div class="w-4 h-4 rounded-full bg-red-500 mr-3 shadow-sm"></div>
+                          <div>
+                            <div class="font-semibold text-slate-800">Falschbuchungen</div>
+                            <div class="text-sm text-slate-500">${negativeRows} entries</div>
+                          </div>
+                        </div>
+                        <div class="filter-checkmark w-5 h-5 border-2 border-red-300 rounded flex items-center justify-center transition-all duration-200">
+                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="filter-card filter-blue">
+                    <input type="checkbox" id="showPositive" class="filter-checkbox sr-only" checked aria-label="Show positive values">
+                    <div class="filter-card-content bg-white border-2 border-blue-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-blue-300 hover:shadow-md">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                          <div class="w-4 h-4 rounded-full bg-blue-500 mr-3 shadow-sm"></div>
+                          <div>
+                            <div class="font-semibold text-slate-800">Genullt</div>
+                            <div class="text-sm text-slate-500">${positiveRows} entries</div>
+                          </div>
+                        </div>
+                        <div class="filter-checkmark w-5 h-5 border-2 border-blue-300 rounded flex items-center justify-center transition-all duration-200">
+                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div class="lg:ml-6 flex-shrink-0">
+                <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 shadow-sm">
+                  <div class="text-center">
+                    <div class="text-sm font-medium text-slate-600 mb-1">Results</div>
+                    <div class="text-lg font-bold text-slate-900">
+                      <span id="visibleCount">${zeroRows + negativeRows + positiveRows}</span>
+                      <span class="text-sm font-normal text-slate-500">of</span>
+                      <span id="totalCount">${zeroRows + negativeRows + positiveRows}</span>
+                    </div>
+                    <div class="text-xs text-slate-500">records shown</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         `;
       },
 
-      generateWarningsAndMessages({ invalidValues, hasAnomalies, columnName }) {
+      generateWarningsAndMessages({ invalidValues, filteredOutKg, hasAnomalies, columnName }) {
         let html = '';
+        
+        if (filteredOutKg > 0) {
+          html += `
+            <div class="bg-purple-50 border-l-4 border-purple-500 p-4 text-purple-800 mt-4 rounded-r-lg">
+              <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <p class="font-medium">Information: ${filteredOutKg} rows with KG units were automatically filtered out (KG measurements typically have natural variations)</p>
+              </div>
+            </div>
+          `;
+        }
         
         if (invalidValues > 0) {
           html += `
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 text-yellow-700 mt-2">
-              <p>Warning: ${invalidValues} invalid numeric values found in '${columnName}' column</p>
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 text-amber-800 mt-4 rounded-r-lg">
+              <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <p class="font-medium">Warning: ${invalidValues} invalid numeric values found in '${columnName}' column</p>
+              </div>
             </div>
           `;
         }
         
         if (!hasAnomalies) {
           html += `
-            <div class="bg-green-50 border-l-4 border-green-400 p-2 text-green-700 mt-2">
-              <p>No Falschbuchungen or Genullt found in '${columnName}' column. All values are normal.</p>
+            <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 text-emerald-800 mt-4 rounded-r-lg">
+              <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <p class="font-medium">Success: No Falschbuchungen or Genullt found in '${columnName}' column. All values are normal.</p>
+              </div>
             </div>
           `;
         }
@@ -819,6 +824,7 @@
     const TableRenderer = {
       render(filteredData, headers, targetColumnIndex) {
         const output = document.getElementById('output');
+        const tableWrapper = document.getElementById('tableWrapper');
         if (!output) {
           return;
         }
@@ -827,11 +833,14 @@
 
         if (filteredData.length === 0) {
           output.innerHTML = '<p class="text-gray-500 p-4 text-center">No anomalies match the current filter settings.</p>';
+          if (tableWrapper) {
+            tableWrapper.classList.remove('hidden');
+          }
           return;
         }
 
         const table = document.createElement('table');
-        table.className = 'min-w-full w-full border-collapse text-sm md:text-base bg-white';
+        table.className = 'w-full border-collapse text-xs sm:text-sm bg-white';
         table.setAttribute('role', 'table');
         table.setAttribute('aria-label', 'Anomaly data table');
         
@@ -839,27 +848,26 @@
         table.appendChild(this.createBody(filteredData, headers, targetColumnIndex));
         
         output.appendChild(table);
+        
+        // Show the table wrapper when content is added
+        if (tableWrapper) {
+          tableWrapper.classList.remove('hidden');
+        }
       },
 
       createHeader(headers) {
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        headerRow.className = 'bg-gray-200';
+        headerRow.className = 'bg-slate-100 border-b-2 border-slate-300';
         headerRow.setAttribute('role', 'row');
         
-        // Add empty header for dot column
-        const emptyHeader = document.createElement('th');
-        emptyHeader.className = 'border border-gray-400 px-2 py-1';
-        emptyHeader.setAttribute('scope', 'col');
-        emptyHeader.setAttribute('aria-label', 'Row indicator');
-        headerRow.appendChild(emptyHeader);
-        
-        // Add regular headers
-        headers.forEach(header => {
+        // Add regular headers (no dot column)
+        headers.forEach((header, index) => {
           const th = document.createElement('th');
-          th.className = 'border border-gray-400 px-2 py-1';
+          th.className = 'border border-slate-300 px-1 py-1 text-left font-semibold text-slate-700 text-xs sm:text-sm';
           th.textContent = header;
           th.setAttribute('scope', 'col');
+          
           headerRow.appendChild(th);
         });
         
@@ -874,20 +882,14 @@
           const tr = document.createElement('tr');
           tr.setAttribute('role', 'row');
           
-          // Add dot at the start of each row
-          const dotTd = document.createElement('td');
-          const { className, dotHtml } = this.getRowStyle(rowData.type);
-          
+          // Apply row styling with border
+          const { className } = this.getRowStyle(rowData.type);
           tr.className = className;
-          dotTd.innerHTML = DOMPurify.sanitize(dotHtml);
-          dotTd.className = 'pl-3 py-1';
-          dotTd.setAttribute('role', 'cell');
-          tr.appendChild(dotTd);
           
           rowData.cells.forEach((cell, index) => {
             const td = document.createElement('td');
             const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
-            let cellClass = `border border-gray-300 px-2 py-1 ${isNumber ? 'text-right' : 'text-left'}`;
+            let cellClass = `border border-slate-200 px-3 py-2 text-xs sm:text-sm ${isNumber ? 'text-right' : 'text-left'} text-slate-700 truncate`;
             
             // Highlight the quantity column
             if (index === targetColumnIndex) {
@@ -897,6 +899,7 @@
             td.className = cellClass;
             td.textContent = cell;
             td.setAttribute('role', 'cell');
+            td.setAttribute('title', cell); // Add tooltip for truncated text
             if (index === targetColumnIndex) {
               td.setAttribute('aria-label', `${headers[index]}: ${cell}`);
             }
@@ -912,36 +915,232 @@
         switch (type) {
           case 'zero':
             return {
-              className: 'bg-blue-50 hover:bg-blue-100 transition-colors',
-              dotHtml: '<span class="inline-block w-4 h-4 rounded-full bg-blue-500 mr-2" aria-label="Zero value"></span>'
+              className: 'bg-emerald-50 hover:bg-emerald-100 transition-colors border-l-4 border-emerald-400'
             };
           case 'negative':
             return {
-              className: 'bg-red-50 hover:bg-red-100 transition-colors',
-              dotHtml: '<span class="inline-block w-4 h-4 rounded-full bg-red-500 mr-2" aria-label="Negative value"></span>'
+              className: 'bg-red-50 hover:bg-red-100 transition-colors border-l-4 border-red-400'
             };
           case 'positive':
             return {
-              className: 'bg-green-50 hover:bg-green-100 transition-colors',
-              dotHtml: '<span class="inline-block w-4 h-4 rounded-full bg-green-500 mr-2" aria-label="Positive value"></span>'
+              className: 'bg-blue-50 hover:bg-blue-100 transition-colors border-l-4 border-blue-400'
             };
           default:
             return {
-              className: '',
-              dotHtml: '<span class="inline-block w-4 h-4 rounded-full bg-gray-500 mr-2"></span>'
+              className: 'hover:bg-slate-50 transition-colors'
             };
         }
       },
 
       getHighlightClass(type) {
         switch (type) {
-          case 'zero': return ' font-bold text-blue-700';
-          case 'negative': return ' font-bold text-red-700';
-          case 'positive': return ' font-bold text-green-700';
+          case 'zero': return ' font-bold text-emerald-800 bg-emerald-100';
+          case 'negative': return ' font-bold text-red-800 bg-red-100';
+          case 'positive': return ' font-bold text-blue-800 bg-blue-100';
           default: return '';
         }
       }
     };
+
+    // Lazy Table Renderer for improved performance with large datasets
+    const LazyTableRenderer = {
+      table: null,
+      tbody: null,
+      headers: null,
+      targetColumnIndex: -1,
+      loadingIndicator: null,
+
+      renderInitial(filteredData, headers, targetColumnIndex) {
+        this.headers = headers;
+        this.targetColumnIndex = targetColumnIndex;
+        
+        const output = document.getElementById('output');
+        const tableWrapper = document.getElementById('tableWrapper');
+        if (!output) {
+          return;
+        }
+
+        output.innerHTML = '';
+
+        if (filteredData.length === 0) {
+          output.innerHTML = '<p class="text-gray-500 p-4 text-center">No anomalies match the current filter settings.</p>';
+          if (tableWrapper) {
+            tableWrapper.classList.remove('hidden');
+          }
+          return;
+        }
+
+        // Create table structure
+        this.table = document.createElement('table');
+        this.table.className = 'w-full border-collapse text-xs sm:text-sm bg-white';
+        this.table.setAttribute('role', 'table');
+        this.table.setAttribute('aria-label', 'Anomaly data table');
+        
+        this.table.appendChild(this.createHeader());
+        this.tbody = this.createBody();
+        this.table.appendChild(this.tbody);
+        
+        // Create loading indicator
+        this.createLoadingIndicator();
+        
+        output.appendChild(this.table);
+        output.appendChild(this.loadingIndicator);
+
+        // Show the table wrapper when content is added
+        if (tableWrapper) {
+          tableWrapper.classList.remove('hidden');
+        }
+
+        // Load initial rows
+        this.loadMoreRows(Math.min(CONFIG.INITIAL_LOAD, filteredData.length));
+
+        // Setup intersection observer for infinite scroll
+        this.setupIntersectionObserver();
+      },
+
+      createHeader() {
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'bg-slate-100 border-b-2 border-slate-300 sticky top-0 z-10';
+        headerRow.setAttribute('role', 'row');
+        
+        // Add regular headers (no dot column)
+        this.headers.forEach((header, index) => {
+          const th = document.createElement('th');
+          th.className = 'border border-slate-300 px-1 py-1 text-left font-semibold text-slate-700 text-xs sm:text-sm';
+          th.textContent = header;
+          th.setAttribute('scope', 'col');
+          
+          headerRow.appendChild(th);
+        });
+        
+        thead.appendChild(headerRow);
+        return thead;
+      },
+
+      createBody() {
+        const tbody = document.createElement('tbody');
+        tbody.id = 'lazyTableBody';
+        return tbody;
+      },
+
+      createLoadingIndicator() {
+        this.loadingIndicator = document.createElement('div');
+        this.loadingIndicator.id = 'loadingIndicator';
+        this.loadingIndicator.className = 'hidden text-center py-4';
+        this.loadingIndicator.innerHTML = `
+          <div class="flex items-center justify-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Loading more rows...
+          </div>
+        `;
+      },
+
+      loadMoreRows(count) {
+        if (AppState.isLoading || AppState.displayedRows >= AppState.totalFilteredRows) {
+          return;
+        }
+
+        AppState.isLoading = true;
+        this.showLoadingIndicator();
+
+        // Simulate async loading for better UX
+        setTimeout(() => {
+          const start = AppState.displayedRows;
+          const end = Math.min(start + count, AppState.totalFilteredRows);
+          const rowsToAdd = AppState.currentlyDisplayedData.slice(start, end);
+
+          rowsToAdd.forEach((rowData, index) => {
+            const tr = this.createRow(rowData, start + index);
+            this.tbody.appendChild(tr);
+          });
+
+          AppState.displayedRows = end;
+          AppState.isLoading = false;
+          this.hideLoadingIndicator();
+
+          // Update progress indicator
+          this.updateProgressIndicator();
+
+          Logger.debug(`Loaded rows ${start + 1}-${end} of ${AppState.totalFilteredRows}`);
+        }, 50); // Small delay for smooth UX
+      },
+
+      createRow(rowData, rowIndex) {
+        const tr = document.createElement('tr');
+        tr.setAttribute('role', 'row');
+        
+        // Apply row styling with border
+        const { className } = TableRenderer.getRowStyle(rowData.type);
+        tr.className = className;
+        
+        rowData.cells.forEach((cell, index) => {
+          const td = document.createElement('td');
+          const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+          let cellClass = `border border-slate-200 px-3 py-2 text-xs sm:text-sm ${isNumber ? 'text-right' : 'text-left'} text-slate-700 truncate`;
+          
+          // Highlight the quantity column
+          if (index === this.targetColumnIndex) {
+            cellClass += TableRenderer.getHighlightClass(rowData.type);
+          }
+          
+          td.className = cellClass;
+          td.textContent = cell;
+          td.setAttribute('role', 'cell');
+          td.setAttribute('title', cell); // Add tooltip for truncated text
+          if (index === this.targetColumnIndex) {
+            td.setAttribute('aria-label', `${this.headers[index]}: ${cell}`);
+          }
+          tr.appendChild(td);
+        });
+        
+        return tr;
+      },
+
+      setupIntersectionObserver() {
+        // Create a sentinel element to trigger loading
+        const sentinel = document.createElement('div');
+        sentinel.id = 'loadSentinel';
+        sentinel.className = 'h-1';
+        
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting && !AppState.isLoading && AppState.displayedRows < AppState.totalFilteredRows) {
+              this.loadMoreRows(CONFIG.ROWS_PER_PAGE);
+            }
+          });
+        }, {
+          rootMargin: '100px'
+        });
+
+        // Insert sentinel before loading indicator
+        this.loadingIndicator.parentNode.insertBefore(sentinel, this.loadingIndicator);
+        observer.observe(sentinel);
+      },
+
+      showLoadingIndicator() {
+        if (this.loadingIndicator) {
+          this.loadingIndicator.classList.remove('hidden');
+        }
+      },
+
+      hideLoadingIndicator() {
+        if (this.loadingIndicator) {
+          this.loadingIndicator.classList.add('hidden');
+        }
+      },
+
+      updateProgressIndicator() {
+        const visibleCountElement = document.getElementById('visibleCount');
+        if (visibleCountElement) {
+          visibleCountElement.textContent = `${AppState.displayedRows} of ${AppState.totalFilteredRows}`;
+        }
+      }
+    };
+    
     
     // File processor with improved error handling and performance
     const FileProcessor = {
@@ -969,8 +1168,7 @@
             return;
           }
           
-          // Initialize filters and apply them
-          FilterManager.initialize();
+          // Apply filters
           FilterManager.applyFilters();
           
           NotificationManager.show(
@@ -987,12 +1185,20 @@
       clearResults() {
         const output = document.getElementById('output');
         const validationSummary = document.getElementById('validationSummary');
+        const validationWrapper = document.getElementById('validationWrapper');
+        const tableWrapper = document.getElementById('tableWrapper');
         
         if (output) {
           output.innerHTML = '';
         }
         if (validationSummary) {
           validationSummary.innerHTML = '';
+        }
+        if (validationWrapper) {
+          validationWrapper.classList.add('hidden');
+        }
+        if (tableWrapper) {
+          tableWrapper.classList.add('hidden');
         }
       },
 
@@ -1029,55 +1235,41 @@
           throw new Error('No table data found');
         }
 
-        // Extract and validate headers
-        const headerCells = rows[0].querySelectorAll('td, th');
-        if (!headerCells.length) {
-          throw new Error('No header cells found in the first row');
-        }
-
-        const headers = Array.from(headerCells).map(cell => cell.textContent.trim());
+        // Extract headers and remove the last column
+        const allHeaders = Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
+        const headers = allHeaders.slice(0, -1); // Remove last column
         
-        // Validate headers are not empty
-        const validHeaders = headers.filter(header => header.length > 0);
-        if (validHeaders.length === 0) {
-          throw new Error('No valid headers found - all header cells are empty');
-        }
-        
-        if (validHeaders.length !== headers.length) {
-          Logger.warn(`Found ${headers.length - validHeaders.length} empty header cells`);
-        }
-        
-        // Find required column with better error messaging
+        // Find required columns
         const targetColumnIndex = headers.indexOf(CONFIG.DELIVERED_QUANTITY_COLUMN);
         if (targetColumnIndex === -1) {
-          const availableColumns = headers.filter(h => h.length > 0).join(', ');
-          throw new Error(`Required column '${CONFIG.DELIVERED_QUANTITY_COLUMN}' not found in file. Available columns: ${availableColumns}`);
+          throw new Error(`Required column '${CONFIG.DELIVERED_QUANTITY_COLUMN}' not found in file`);
         }
 
-        // Validate we have data rows beyond the header
-        if (rows.length < 2) {
-          throw new Error('No data rows found - file contains only headers');
+        // Find unit column for KG filtering
+        const unitColumnIndex = headers.indexOf('Einh. L/A');
+        if (unitColumnIndex !== -1) {
+          Logger.info(`Found unit column 'Einh. L/A' at index ${unitColumnIndex} - will filter out KG entries`);
         }
 
         // Process data rows and collect stats
-        const stats = { totalRows: 0, zeroRows: 0, negativeRows: 0, positiveRows: 0, invalidValues: 0 };
+        const stats = { totalRows: 0, zeroRows: 0, negativeRows: 0, positiveRows: 0, invalidValues: 0, filteredOutKg: 0 };
         
         const filteredData = Array.from(rows)
           .slice(1)
-          .map((row, rowIndex) => {
+          .map(row => {
             stats.totalRows++;
-            const dataCells = row.querySelectorAll('td, th');
-            
-            // Validate row has enough cells
-            if (dataCells.length <= targetColumnIndex) {
-              Logger.warn(`Row ${rowIndex + 2} has insufficient columns (${dataCells.length} vs expected ${targetColumnIndex + 1})`);
-              return null;
-            }
-            
-            const cells = Array.from(dataCells).map(cell => cell.textContent.trim());
+            const allCells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+            const cells = allCells.slice(0, -1); // Remove last column data
             
             if (!cells[targetColumnIndex]) {
               return null;
+            }
+            
+            // Check if this row contains KG units and should be filtered out
+            const containsKgUnit = this.shouldFilterOutKgRow(allCells, unitColumnIndex);
+            if (containsKgUnit) {
+              stats.filteredOutKg++;
+              return null; // Filter out KG rows
             }
             
             const value = parseFloat(cells[targetColumnIndex].replace(',', '.'));
@@ -1104,6 +1296,37 @@
         return { headers, targetColumnIndex, stats, filteredData };
       },
 
+      shouldFilterOutKgRow(cells, unitColumnIndex) {
+        // If we found the unit column, check it specifically
+        if (unitColumnIndex !== -1 && cells[unitColumnIndex]) {
+          const unitCell = cells[unitColumnIndex].toLowerCase().trim();
+          return CONFIG.FILTER_OUT_UNITS.some(unit => {
+            const unitLower = unit.toLowerCase();
+            return unitCell === unitLower || 
+                   unitCell.includes(unitLower) ||
+                   unitCell.startsWith(unitLower) ||
+                   unitCell.endsWith(unitLower);
+          });
+        }
+        
+        // Fallback: check all cells if unit column not found
+        return cells.some(cell => {
+          if (typeof cell !== 'string') return false;
+          const cellLower = cell.toLowerCase();
+          return CONFIG.FILTER_OUT_UNITS.some(unit => {
+            const unitLower = unit.toLowerCase();
+            // Check for unit at end of string (with optional space/punctuation)
+            return cellLower.endsWith(unitLower) || 
+                   cellLower.endsWith(` ${unitLower}`) ||
+                   cellLower.includes(`${unitLower} `) ||
+                   cellLower.includes(` ${unitLower}`) ||
+                   // Check for patterns like "5,2 kg" or "5.2kg"
+                   /[\d\s,\.]\s*kg\s*$/i.test(cell) ||
+                   /^kg\s*[\d\s,\.]/i.test(cell);
+          });
+        });
+      },
+
       updateApplicationState(filteredData, headers, targetColumnIndex) {
         AppState.currentFilteredData = filteredData;
         AppState.currentHeaders = headers;
@@ -1112,13 +1335,20 @@
 
       updateValidationSummary(stats) {
         const validationSummary = document.getElementById('validationSummary');
-        if (validationSummary) {
+        const validationWrapper = document.getElementById('validationWrapper');
+        if (validationSummary && validationWrapper) {
           validationSummary.innerHTML = DOMPurify.sanitize(
             ValidationSummaryGenerator.generate({
               ...stats,
               columnName: CONFIG.DELIVERED_QUANTITY_COLUMN
             })
           );
+          
+          // Show the validation wrapper when content is added
+          validationWrapper.classList.remove('hidden');
+          
+          // Initialize filters after the HTML is inserted
+          FilterManager.initialize();
         }
       },
 
@@ -1141,15 +1371,26 @@
       init() {
         this.setupFileSelection();
         this.setupProcessFile();
-        this.setupAutoReload();
-        this.setupBeforeUnload();
         this.setupKeyboardAccessibility();
+        this.setupDragAndDrop();
       },
 
       setupFileSelection() {
         const selectFileButton = document.getElementById('selectFileButton');
-        if (selectFileButton) {
-          selectFileButton.addEventListener('click', EventHandlers.handleFileSelection);
+        const fileInput = document.getElementById('fileInput');
+        
+        if (selectFileButton && fileInput) {
+          selectFileButton.addEventListener('click', () => {
+            if (isSupported()) {
+              EventHandlers.handleFileSelection();
+            } else {
+              fileInput.click();
+            }
+          });
+          
+          fileInput.addEventListener('change', (e) => {
+            EventHandlers.handleFileInputChange(e);
+          });
         }
       },
 
@@ -1160,15 +1401,30 @@
         }
       },
 
-      setupAutoReload() {
-        const autoReload = document.getElementById('autoReload');
-        if (autoReload) {
-          autoReload.addEventListener('change', EventHandlers.handleAutoReloadToggle);
+      setupDragAndDrop() {
+        const selectFileButton = document.getElementById('selectFileButton');
+        if (selectFileButton) {
+          selectFileButton.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            selectFileButton.classList.add('border-slate-500', 'bg-slate-50');
+          });
+          
+          selectFileButton.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            selectFileButton.classList.remove('border-slate-500', 'bg-slate-50');
+          });
+          
+          selectFileButton.addEventListener('drop', (e) => {
+            e.preventDefault();
+            selectFileButton.classList.remove('border-slate-500', 'bg-slate-50');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && (files[0].name.endsWith('.mhtml') || files[0].name.endsWith('.mht'))) {
+              EventHandlers.updateFileSelection(files[0].name);
+              FileHandler.handleSelectedFile(files[0]);
+            }
+          });
         }
-      },
-
-      setupBeforeUnload() {
-        window.addEventListener('beforeunload', EventHandlers.handleBeforeUnload);
       },
 
       setupKeyboardAccessibility() {
