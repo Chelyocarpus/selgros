@@ -165,8 +165,8 @@
           <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
         </svg>
         <div>
-          <strong class="font-semibold">Browser Compatibility Issue</strong>
-          <p class="mt-1">This application requires Chrome, Edge, or Opera for full functionality.</p>
+          <strong class="font-semibold">Unsupported Browser</strong>
+          <p class="mt-1">Please switch to Chrome, Edge, or Opera to use this application. Your current browser doesn't support the File System Access API required for file processing.</p>
         </div>
       </div>
     </div>
@@ -241,6 +241,15 @@
       // Lazy loading configuration
       ROWS_PER_PAGE: 100,
       INITIAL_LOAD: 200,
+      // Performance configuration
+      DEBOUNCE_DELAY: 100, // Reduced for better real-time feedback
+      LAZY_LOAD_DELAY: 0, // Removed artificial delay for better performance
+      // Intersection Observer configuration (responsive to viewport)
+      getIntersectionMargin() {
+        // Use smaller margin on mobile for better performance
+        const isMobile = window.innerWidth < 768;
+        return isMobile ? '50px' : '100px';
+      },
       // Filter configuration
       FILTER_OUT_UNITS: ['kg', 'KG', 'Kg'], // Units to filter out
       LOG_LEVELS: {
@@ -576,13 +585,9 @@
       },
 
       applyFilters() {
-        // Use debounce with proper context binding
+        // Use debounce with improved delay for better real-time feedback
         if (!this._debouncedApply) {
           this._debouncedApply = debounce(() => {
-            // Store current scroll position
-            const scrollY = window.scrollY;
-            const scrollX = window.scrollX;
-            
             const { showZero, showNegative, showPositive } = this.getFilterStates();
 
             const filteredData = AppState.currentFilteredData.filter(rowData => {
@@ -605,14 +610,9 @@
               visibleCountElement.textContent = filteredData.length;
             }
 
-            // Re-render table with lazy loading
+            // Re-render table with lazy loading (this will reset scroll position)
             LazyTableRenderer.renderInitial(filteredData, AppState.currentHeaders, AppState.currentTargetColumnIndex);
-            
-            // Restore scroll position to prevent jumping
-            requestAnimationFrame(() => {
-              window.scrollTo(scrollX, scrollY);
-            });
-          }, 150);
+          }, CONFIG.DEBOUNCE_DELAY);
         }
         this._debouncedApply();
       },
@@ -949,10 +949,15 @@
       headers: null,
       targetColumnIndex: -1,
       loadingIndicator: null,
+      intersectionObserver: null,
+      sentinel: null,
 
       renderInitial(filteredData, headers, targetColumnIndex) {
         this.headers = headers;
         this.targetColumnIndex = targetColumnIndex;
+        
+        // Reset lazy loading state for new data/filters
+        this.resetLazyLoader();
         
         const output = document.getElementById('output');
         const tableWrapper = document.getElementById('tableWrapper');
@@ -996,6 +1001,32 @@
 
         // Setup intersection observer for infinite scroll
         this.setupIntersectionObserver();
+      },
+
+      resetLazyLoader() {
+        // Disconnect existing observer to prevent memory leaks
+        if (this.intersectionObserver) {
+          this.intersectionObserver.disconnect();
+          this.intersectionObserver = null;
+        }
+        
+        // Remove existing sentinel
+        if (this.sentinel && this.sentinel.parentNode) {
+          this.sentinel.parentNode.removeChild(this.sentinel);
+          this.sentinel = null;
+        }
+        
+        // Reset scroll position to top to prevent missing/duplicate rows
+        window.scrollTo(0, 0);
+        
+        // Reset loading state
+        AppState.displayedRows = 0;
+        AppState.isLoading = false;
+        
+        // Clear any existing table body content
+        if (this.tbody) {
+          this.tbody.innerHTML = '';
+        }
       },
 
       createHeader() {
@@ -1047,26 +1078,34 @@
         AppState.isLoading = true;
         this.showLoadingIndicator();
 
-        // Simulate async loading for better UX
-        setTimeout(() => {
-          const start = AppState.displayedRows;
-          const end = Math.min(start + count, AppState.totalFilteredRows);
-          const rowsToAdd = AppState.currentlyDisplayedData.slice(start, end);
+        // Use configurable delay - removed artificial delay for better performance
+        const loadDelay = CONFIG.LAZY_LOAD_DELAY;
+        
+        if (loadDelay > 0) {
+          setTimeout(() => this.performRowLoading(count), loadDelay);
+        } else {
+          this.performRowLoading(count);
+        }
+      },
 
-          rowsToAdd.forEach((rowData, index) => {
-            const tr = this.createRow(rowData, start + index);
-            this.tbody.appendChild(tr);
-          });
+      performRowLoading(count) {
+        const start = AppState.displayedRows;
+        const end = Math.min(start + count, AppState.totalFilteredRows);
+        const rowsToAdd = AppState.currentlyDisplayedData.slice(start, end);
 
-          AppState.displayedRows = end;
-          AppState.isLoading = false;
-          this.hideLoadingIndicator();
+        rowsToAdd.forEach((rowData, index) => {
+          const tr = this.createRow(rowData, start + index);
+          this.tbody.appendChild(tr);
+        });
 
-          // Update progress indicator
-          this.updateProgressIndicator();
+        AppState.displayedRows = end;
+        AppState.isLoading = false;
+        this.hideLoadingIndicator();
 
-          Logger.debug(`Loaded rows ${start + 1}-${end} of ${AppState.totalFilteredRows}`);
-        }, 50); // Small delay for smooth UX
+        // Update progress indicator
+        this.updateProgressIndicator();
+
+        Logger.debug(`Loaded rows ${start + 1}-${end} of ${AppState.totalFilteredRows}`);
       },
 
       createRow(rowData, rowIndex) {
@@ -1101,24 +1140,36 @@
       },
 
       setupIntersectionObserver() {
-        // Create a sentinel element to trigger loading
-        const sentinel = document.createElement('div');
-        sentinel.id = 'loadSentinel';
-        sentinel.className = 'h-1';
+        // Disconnect existing observer to prevent memory leaks
+        if (this.intersectionObserver) {
+          this.intersectionObserver.disconnect();
+          this.intersectionObserver = null;
+        }
         
-        const observer = new IntersectionObserver((entries) => {
+        // Remove existing sentinel
+        if (this.sentinel && this.sentinel.parentNode) {
+          this.sentinel.parentNode.removeChild(this.sentinel);
+          this.sentinel = null;
+        }
+        
+        // Create a new sentinel element to trigger loading
+        this.sentinel = document.createElement('div');
+        this.sentinel.id = 'loadSentinel';
+        this.sentinel.className = 'h-1';
+        
+        this.intersectionObserver = new IntersectionObserver((entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting && !AppState.isLoading && AppState.displayedRows < AppState.totalFilteredRows) {
               this.loadMoreRows(CONFIG.ROWS_PER_PAGE);
             }
           });
         }, {
-          rootMargin: '100px'
+          rootMargin: CONFIG.getIntersectionMargin() // Responsive margin based on viewport
         });
 
         // Insert sentinel before loading indicator
-        this.loadingIndicator.parentNode.insertBefore(sentinel, this.loadingIndicator);
-        observer.observe(sentinel);
+        this.loadingIndicator.parentNode.insertBefore(this.sentinel, this.loadingIndicator);
+        this.intersectionObserver.observe(this.sentinel);
       },
 
       showLoadingIndicator() {
@@ -1137,6 +1188,19 @@
         const visibleCountElement = document.getElementById('visibleCount');
         if (visibleCountElement) {
           visibleCountElement.textContent = `${AppState.displayedRows} of ${AppState.totalFilteredRows}`;
+        }
+      },
+
+      cleanup() {
+        // Clean up observers and DOM elements when component is destroyed
+        if (this.intersectionObserver) {
+          this.intersectionObserver.disconnect();
+          this.intersectionObserver = null;
+        }
+        
+        if (this.sentinel && this.sentinel.parentNode) {
+          this.sentinel.parentNode.removeChild(this.sentinel);
+          this.sentinel = null;
         }
       }
     };
@@ -1187,6 +1251,9 @@
         const validationSummary = document.getElementById('validationSummary');
         const validationWrapper = document.getElementById('validationWrapper');
         const tableWrapper = document.getElementById('tableWrapper');
+        
+        // Clean up lazy table renderer
+        LazyTableRenderer.cleanup();
         
         if (output) {
           output.innerHTML = '';
@@ -1428,11 +1495,14 @@
       },
 
       setupKeyboardAccessibility() {
-        // Add keyboard support for clickable elements
+        // Add keyboard support for custom button-like elements only
         document.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             const target = e.target;
-            if (target.getAttribute('role') === 'button' && target.hasAttribute('tabindex')) {
+            // Only handle custom elements with role="button", exclude native interactive elements
+            if (target.getAttribute('role') === 'button' && 
+                target.hasAttribute('tabindex') &&
+                !['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A'].includes(target.tagName)) {
               e.preventDefault();
               target.click();
             }
