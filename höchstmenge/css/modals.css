@@ -1,0 +1,805 @@
+/* ===========================
+   MODAL STYLES
+   =========================== */
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Dark mode modal backdrop */
+body.dark-mode .modal {
+    background-color: rgba(0, 0, 0, 0.75);
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+}
+
+.modal-close:hover {
+    color: var(--text-color);
+}
+
+/* Keyboard Help Modal */
+.keyboard-help-modal {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.keyboard-help-modal h2 {
+    color: var(--text-color);
+    margin-bottom: 24px;
+    font-size: 1.8em;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.shortcuts-grid {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-color);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+}
+
+.shortcut-item:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateX(4px);
+}
+
+.shortcut-item:hover kbd {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.shortcut-item kbd {
+    background: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    font-weight: 600;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-width: 120px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.shortcut-item span {
+    flex: 1;
+    margin-left: 16px;
+    color: var(--text-color);
+}
+
+/* Dark mode adjustments */
+body.dark-mode .keyboard-help-modal {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .shortcut-item kbd {
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+/* High contrast adjustments */
+body.high-contrast .keyboard-help-modal {
+    border: 3px solid var(--text-color);
+}
+
+body.high-contrast .shortcut-item {
+    border-width: 2px;
+}
+
+body.high-contrast .shortcut-item kbd {
+    border-width: 3px;
+}
+
+/* Delete Confirmation Modal */
+.delete-modal-content {
+    max-width: 500px;
+}
+
+.delete-modal-content .modal-header {
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 15px;
+}
+
+.delete-modal-content .modal-header h2 {
+    color: var(--danger-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.delete-modal-content .modal-header i {
+    font-size: 1.2em;
+}
+
+.delete-modal-content .modal-body {
+    padding: 20px 0;
+}
+
+.delete-modal-content .modal-body p {
+    margin: 0 0 15px 0;
+    color: var(--text-color);
+    font-size: 1.05em;
+}
+
+.delete-warning {
+    background: var(--warning-bg);
+    border-left: 4px solid var(--warning-color);
+    padding: 12px 15px;
+    border-radius: 4px;
+    color: var(--warning-text);
+    font-weight: 500;
+    font-size: 0.95em !important;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    color: white;
+    transition: all 0.2s;
+}
+
+.btn-danger:hover {
+    background: var(--danger-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-secondary {
+    background: var(--text-secondary);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: var(--text-color);
+}
+
+/* Dark mode adjustments for delete modal */
+body.dark-mode .delete-warning {
+    background: rgba(255, 193, 7, 0.15);
+    border-left-color: var(--warning-color);
+    color: #ffc107;
+}
+
+/* High contrast adjustments */
+body.high-contrast .delete-modal-content .modal-header {
+    border-width: 3px;
+}
+
+body.high-contrast .modal-footer {
+    border-width: 2px;
+}
+
+body.high-contrast .btn-danger {
+    border: 2px solid var(--danger-color);
+}
+
+/* Clear All Confirmation Modal */
+.clear-all-modal-content {
+    max-width: 550px;
+}
+
+.clear-all-modal-content .modal-header {
+    border-bottom: 3px solid var(--danger-color);
+    padding-bottom: 15px;
+}
+
+.clear-all-modal-content .modal-header h2 {
+    color: var(--danger-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 1.5em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.clear-all-modal-content .modal-header i {
+    font-size: 1.3em;
+    animation: pulse-warning 2s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+.clear-all-modal-content .modal-body {
+    padding: 20px 0;
+}
+
+.clear-all-message {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--danger-color);
+    margin: 0 0 15px 0;
+}
+
+.clear-all-warning {
+    background: var(--danger-bg);
+    border-left: 4px solid var(--danger-color);
+    padding: 12px 15px;
+    border-radius: 4px;
+    color: var(--danger-color);
+    font-weight: 600;
+    font-size: 1em;
+    margin: 0 0 20px 0;
+    text-transform: uppercase;
+}
+
+.clear-all-input-group {
+    margin-top: 20px;
+}
+
+.clear-all-input-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.clear-all-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1em;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    transition: all 0.2s;
+}
+
+.clear-all-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.clear-all-input.error {
+    border-color: var(--danger-color);
+    background: var(--danger-bg);
+}
+
+.input-error {
+    color: var(--danger-color);
+    font-size: 0.9em;
+    margin-top: 8px;
+    display: none;
+    font-weight: 500;
+}
+
+.input-error.show {
+    display: block;
+    animation: shake 0.3s;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Dark mode adjustments for clear all modal */
+body.dark-mode .clear-all-warning {
+    background: rgba(220, 53, 69, 0.15);
+    border-left-color: var(--danger-color);
+}
+
+body.dark-mode .clear-all-input {
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+/* High contrast adjustments */
+body.high-contrast .clear-all-modal-content .modal-header {
+    border-width: 4px;
+}
+
+body.high-contrast .clear-all-input {
+    border-width: 3px;
+}
+
+/* ===========================
+   RESPONSIVE MODALS
+   =========================== */
+
+/* Tablet Breakpoint (768px - 1024px) */
+@media (max-width: 1024px) {
+    .modal-content {
+        max-width: 90%;
+        padding: 25px;
+        max-height: 85vh;
+    }
+
+    .keyboard-help-modal {
+        max-width: 90%;
+        padding: 28px;
+    }
+
+    .shortcuts-grid {
+        gap: 14px;
+    }
+
+    .shortcut-item {
+        padding: 10px 14px;
+    }
+}
+
+/* Mobile Breakpoint (max-width: 768px) */
+@media (max-width: 768px) {
+    /* Modal Overlay */
+    .modal {
+        padding: 10px;
+        align-items: flex-start;
+        overflow-y: auto;
+    }
+
+    /* Modal Content */
+    .modal-content {
+        max-width: 100%;
+        width: 100%;
+        padding: 20px;
+        max-height: none;
+        margin: 20px 0;
+        border-radius: 10px;
+    }
+
+    .modal-header {
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .modal-header h2 {
+        font-size: 1.3em;
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .modal-close {
+        font-size: 1.8em;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--bg-color);
+    }
+
+    .modal-close:hover {
+        background: var(--border-color);
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+        gap: 10px;
+    }
+
+    .modal-footer button {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    /* Keyboard Help Modal Mobile */
+    .keyboard-help-modal {
+        max-width: 100%;
+        width: 100%;
+        padding: 20px;
+        margin: 15px 0;
+        max-height: none;
+    }
+
+    .keyboard-help-modal h2 {
+        font-size: 1.4em;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+    }
+
+    .shortcuts-grid {
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .shortcut-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .shortcut-item:hover {
+        transform: none;
+    }
+
+    .shortcut-item kbd {
+        width: 100%;
+        min-width: auto;
+        font-size: 0.85em;
+        padding: 8px 10px;
+    }
+
+    .shortcut-item span {
+        margin-left: 0;
+        font-size: 0.95em;
+    }
+
+    /* Delete Modal Mobile */
+    .delete-modal-content {
+        max-width: 100%;
+    }
+
+    .delete-modal-content .modal-header h2 {
+        font-size: 1.2em;
+        gap: 8px;
+    }
+
+    .delete-modal-content .modal-header i {
+        font-size: 1.1em;
+    }
+
+    .delete-modal-content .modal-body {
+        padding: 16px 0;
+    }
+
+    .delete-modal-content .modal-body p {
+        font-size: 1em;
+        margin-bottom: 12px;
+    }
+
+    .delete-warning {
+        padding: 10px 12px;
+        font-size: 0.9em;
+    }
+
+    .modal-footer {
+        padding-top: 12px;
+    }
+
+    .modal-footer button {
+        padding: 12px 20px;
+        font-size: 0.95em;
+    }
+
+    /* Clear All Modal Mobile */
+    .clear-all-modal-content {
+        max-width: 100%;
+    }
+
+    .clear-all-modal-content .modal-header {
+        padding-bottom: 12px;
+    }
+
+    .clear-all-modal-content .modal-header h2 {
+        font-size: 1.2em;
+        gap: 8px;
+    }
+
+    .clear-all-modal-content .modal-header i {
+        font-size: 1.2em;
+    }
+
+    .clear-all-modal-content .modal-body {
+        padding: 16px 0;
+    }
+
+    .clear-all-message {
+        font-size: 1em;
+        margin-bottom: 12px;
+    }
+
+    .clear-all-warning {
+        padding: 10px 12px;
+        font-size: 0.9em;
+        margin-bottom: 16px;
+    }
+
+    .clear-all-input-group {
+        margin-top: 16px;
+    }
+
+    .clear-all-input-group label {
+        margin-bottom: 8px;
+        font-size: 0.95em;
+    }
+
+    .clear-all-input {
+        padding: 12px 14px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .input-error {
+        font-size: 0.85em;
+        margin-top: 6px;
+    }
+}
+
+/* Small Mobile Breakpoint (max-width: 480px) */
+@media (max-width: 480px) {
+    .modal {
+        padding: 5px;
+    }
+
+    .modal-content {
+        padding: 16px;
+        margin: 10px 0;
+        border-radius: 8px;
+    }
+
+    .modal-header {
+        margin-bottom: 14px;
+    }
+
+    .modal-header h2 {
+        font-size: 1.2em;
+    }
+
+    .modal-close {
+        font-size: 1.6em;
+        width: 40px;
+        height: 40px;
+    }
+
+    .modal-footer {
+        gap: 8px;
+        padding-top: 10px;
+    }
+
+    .modal-footer button {
+        min-height: 44px;
+        padding: 10px 16px;
+        font-size: 0.9em;
+    }
+
+    /* Keyboard Help Compact */
+    .keyboard-help-modal {
+        padding: 16px;
+        margin: 10px 0;
+    }
+
+    .keyboard-help-modal h2 {
+        font-size: 1.3em;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+    }
+
+    .shortcuts-grid {
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .shortcut-item {
+        padding: 10px 12px;
+    }
+
+    .shortcut-item kbd {
+        font-size: 0.8em;
+        padding: 6px 8px;
+    }
+
+    .shortcut-item span {
+        font-size: 0.9em;
+    }
+
+    /* Delete Modal Compact */
+    .delete-modal-content .modal-header h2 {
+        font-size: 1.1em;
+    }
+
+    .delete-modal-content .modal-body {
+        padding: 14px 0;
+    }
+
+    .delete-modal-content .modal-body p {
+        font-size: 0.95em;
+    }
+
+    .delete-warning {
+        padding: 8px 10px;
+        font-size: 0.85em;
+    }
+
+    /* Clear All Modal Compact */
+    .clear-all-modal-content .modal-header h2 {
+        font-size: 1.1em;
+    }
+
+    .clear-all-modal-content .modal-body {
+        padding: 14px 0;
+    }
+
+    .clear-all-message {
+        font-size: 0.95em;
+    }
+
+    .clear-all-warning {
+        padding: 8px 10px;
+        font-size: 0.85em;
+        margin-bottom: 14px;
+    }
+
+    .clear-all-input {
+        padding: 10px 12px;
+    }
+
+    .input-error {
+        font-size: 0.8em;
+    }
+}
+
+/* Touch-friendly modal improvements */
+@media (hover: none) and (pointer: coarse) {
+    /* Larger close button */
+    .modal-close {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1.8em;
+    }
+
+    /* All buttons touch-friendly */
+    .modal-footer button {
+        min-height: 48px;
+        padding: 14px 20px;
+    }
+
+    /* Larger input fields */
+    .clear-all-input {
+        min-height: 48px;
+        font-size: 16px;
+    }
+
+    /* Disable hover effects */
+    .modal-close:hover {
+        color: var(--text-secondary);
+    }
+
+    .shortcut-item:hover {
+        background: var(--bg-color);
+        color: var(--text-color);
+        border-color: var(--border-color);
+        transform: none;
+    }
+
+    .shortcut-item:hover kbd {
+        background: white;
+        color: var(--text-color);
+        border-color: var(--border-color);
+    }
+
+    body.dark-mode .shortcut-item:hover kbd {
+        background: var(--card-bg);
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .modal-content,
+    .keyboard-help-modal {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .shortcuts-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .shortcut-item {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .shortcut-item kbd {
+        width: auto;
+        min-width: 100px;
+    }
+
+    .shortcut-item span {
+        margin-left: 12px;
+    }
+}
+
+/* Dark mode modal improvements for mobile */
+body.dark-mode .modal-close {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-mode .modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* High contrast modal improvements for mobile */
+body.high-contrast .modal-content {
+    border: 3px solid var(--text-color);
+}
+
+body.high-contrast .modal-close {
+    background: #000000;
+    border: 2px solid #ffffff;
+}
+
+body.high-contrast .modal-close:hover {
+    background: #333333;
+    border-color: #ffff00;
+}
+
