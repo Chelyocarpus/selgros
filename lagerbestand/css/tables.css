@@ -1,0 +1,522 @@
+/* ===========================
+   TABLE STYLES
+   =========================== */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    background-color: var(--bg-color);
+    font-weight: 600;
+    color: var(--text-color);
+    position: sticky;
+    top: 0;
+}
+
+tbody tr:hover {
+    background-color: var(--bg-color);
+}
+
+.alert-row {
+    background-color: #fee2e2;
+}
+
+.alert-row:hover {
+    background-color: #fecaca;
+}
+
+/* Dark mode alert rows */
+body.dark-mode .alert-row {
+    background-color: rgba(239, 68, 68, 0.15);
+}
+
+body.dark-mode .alert-row:hover {
+    background-color: rgba(239, 68, 68, 0.25);
+}
+
+.alert-row.material-group-row {
+    background-color: #fef2f2 !important;
+}
+
+.alert-row.material-group-row:hover {
+    background-color: #fee2e2 !important;
+}
+
+/* Material Grouping - Modern Card Style */
+.material-group-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 0.95em;
+    position: relative;
+}
+
+/* Dark mode group header */
+body.dark-mode .material-group-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+}
+
+.material-group-header td {
+    padding: 14px 12px !important;
+    border: none !important;
+}
+
+.material-group-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.material-group-row {
+    background-color: #f8fafc;
+    position: relative;
+}
+
+.material-group-row td {
+    border-left: 3px solid #3b82f6 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.material-group-row td:first-child {
+    padding-left: 20px !important;
+}
+
+.material-group-row:hover {
+    background-color: #eff6ff !important;
+}
+
+/* Dark mode group row */
+body.dark-mode .material-group-row {
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+body.dark-mode .material-group-row:hover {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+body.dark-mode .material-group-row td {
+    border-left-color: #3b82f6 !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+.material-group-row:last-of-type td {
+    border-bottom: 3px solid #3b82f6 !important;
+}
+
+.material-group-separator {
+    height: 16px;
+    background: transparent;
+    pointer-events: none;
+}
+
+.material-group-separator td {
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* Single material row (non-grouped) styling */
+tbody tr:not(.material-group-header):not(.material-group-row):not(.material-group-separator):not(.alert-row) {
+    background-color: var(--card-bg);
+    transition: background-color 0.2s;
+}
+
+tbody tr:not(.material-group-header):not(.material-group-row):not(.material-group-separator):not(.alert-row):hover {
+    background-color: var(--bg-color);
+}
+
+/* DataTables Custom Styling */
+.dataTables_wrapper {
+    padding: 0;
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    padding: 10px 0;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-left: 8px;
+    font-size: 0.95em;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.dataTables_wrapper .dataTables_length select {
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin: 0 8px;
+}
+
+table.dataTable {
+    border-collapse: collapse !important;
+    width: 100% !important;
+}
+
+table.dataTable thead th {
+    background-color: var(--bg-color);
+    font-weight: 600;
+    color: var(--text-color);
+    border-bottom: 2px solid var(--border-color);
+    padding: 12px;
+    text-align: left;
+}
+
+table.dataTable tbody td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+table.dataTable tbody tr:hover {
+    background-color: var(--bg-color);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 6px 12px;
+    margin: 0 2px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: var(--bg-color);
+    border-color: var(--primary-color);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+#materialsTable_wrapper,
+#archiveTable_wrapper {
+    margin-top: 15px;
+}
+
+/* Archive table specific styles */
+#archiveTable tbody tr:hover {
+    background-color: var(--bg-color);
+}
+
+/* ===========================
+   RESPONSIVE TABLES & DATATABLES
+   =========================== */
+
+/* Tablet Breakpoint (768px - 1024px) */
+@media (max-width: 1024px) {
+    table {
+        font-size: 0.9em;
+    }
+
+    th, td {
+        padding: 10px;
+    }
+
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        margin-bottom: 12px;
+    }
+
+    .dataTables_wrapper .dataTables_filter input {
+        padding: 8px 10px;
+        font-size: 0.9em;
+    }
+
+    .dataTables_wrapper .dataTables_length select {
+        padding: 6px 8px;
+    }
+}
+
+/* Mobile Breakpoint (max-width: 768px) */
+@media (max-width: 768px) {
+    /* Table Wrapper for Horizontal Scrolling */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    table {
+        font-size: 0.85em;
+        min-width: 600px; /* Prevents table from being too cramped */
+    }
+
+    th, td {
+        padding: 10px 8px;
+        white-space: nowrap;
+    }
+
+    th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: var(--bg-color);
+    }
+
+    /* Material Group Styles Mobile */
+    .material-group-header {
+        font-size: 0.9em;
+    }
+
+    .material-group-header td {
+        padding: 12px 10px !important;
+    }
+
+    .material-group-row td:first-child {
+        padding-left: 15px !important;
+    }
+
+    /* DataTables Controls Mobile */
+    .dataTables_wrapper {
+        padding: 0;
+    }
+
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        width: 100%;
+        text-align: left;
+        margin-bottom: 15px;
+    }
+
+    .dataTables_wrapper .dataTables_filter {
+        text-align: right;
+    }
+
+    .dataTables_wrapper .dataTables_filter label {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .dataTables_wrapper .dataTables_filter input {
+        width: 100%;
+        margin-left: 0;
+        padding: 10px 12px;
+        font-size: 16px; /* Prevents zoom on iOS */
+        border-radius: 6px;
+    }
+
+    .dataTables_wrapper .dataTables_length label {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .dataTables_wrapper .dataTables_length select {
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 6px;
+    }
+
+    /* DataTables Info and Pagination Mobile */
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+        width: 100%;
+        text-align: center;
+        margin-top: 15px;
+        font-size: 0.9em;
+    }
+
+    .dataTables_wrapper .dataTables_paginate {
+        margin-top: 20px;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 8px 12px;
+        margin: 4px 2px;
+        font-size: 0.9em;
+        min-width: 44px; /* Touch-friendly */
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Horizontal scroll indicator */
+    .table-responsive::after {
+        content: '← Swipe to see more →';
+        display: block;
+        text-align: center;
+        padding: 10px;
+        background: var(--bg-color);
+        color: var(--text-secondary);
+        font-size: 0.85em;
+        font-style: italic;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .table-responsive.scrolled::after {
+        content: none;
+    }
+
+    /* Sticky first column option (if needed) */
+    table.sticky-first-col td:first-child,
+    table.sticky-first-col th:first-child {
+        position: sticky;
+        left: 0;
+        background-color: var(--card-bg);
+        z-index: 5;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    }
+
+    table.sticky-first-col th:first-child {
+        z-index: 15; /* Above regular sticky header */
+    }
+
+    /* Archive table mobile */
+    #archiveTable_wrapper {
+        margin-top: 15px;
+    }
+
+    /* Materials table mobile */
+    #materialsTable_wrapper {
+        margin-top: 15px;
+    }
+}
+
+/* Small Mobile Breakpoint (max-width: 480px) */
+@media (max-width: 480px) {
+    table {
+        font-size: 0.8em;
+        min-width: 500px;
+    }
+
+    th, td {
+        padding: 8px 6px;
+    }
+
+    .material-group-header {
+        font-size: 0.85em;
+    }
+
+    .material-group-header td {
+        padding: 10px 8px !important;
+    }
+
+    .material-group-row td:first-child {
+        padding-left: 12px !important;
+    }
+
+    /* DataTables Controls Compact */
+    .dataTables_wrapper .dataTables_filter input,
+    .dataTables_wrapper .dataTables_length select {
+        padding: 8px 10px;
+    }
+
+    .dataTables_wrapper .dataTables_info {
+        font-size: 0.85em;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 6px 10px;
+        margin: 2px 1px;
+        font-size: 0.85em;
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    /* Compact scroll indicator */
+    .table-responsive::after {
+        font-size: 0.8em;
+        padding: 8px;
+    }
+}
+
+/* Touch-friendly table improvements */
+@media (hover: none) and (pointer: coarse) {
+    /* Increase touch targets */
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px 14px;
+    }
+
+    /* Larger select and input */
+    .dataTables_wrapper .dataTables_filter input,
+    .dataTables_wrapper .dataTables_length select {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    /* Disable hover effects */
+    tbody tr:hover {
+        background-color: transparent;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: var(--card-bg);
+    }
+
+    /* Make checkboxes larger */
+    .material-select-checkbox,
+    #selectAllMaterials {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    table {
+        font-size: 0.8em;
+    }
+
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        display: inline-block;
+        width: 48%;
+        margin-bottom: 10px;
+    }
+
+    .dataTables_wrapper .dataTables_filter {
+        float: right;
+    }
+
+    .dataTables_wrapper .dataTables_length {
+        float: left;
+    }
+}
+
+/* Dark mode table improvements for mobile */
+body.dark-mode .table-responsive::after {
+    background: rgba(30, 41, 59, 0.95);
+    border-top-color: var(--border-color);
+}
+
+body.dark-mode table.sticky-first-col td:first-child,
+body.dark-mode table.sticky-first-col th:first-child {
+    background-color: var(--card-bg);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.3);
+}
