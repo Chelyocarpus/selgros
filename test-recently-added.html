@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recently Added Materials - Feature Demo</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #16a34a;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --background-secondary: #f9fafb;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: var(--text-color);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h2 {
+            margin: 0 0 15px 0;
+            color: var(--text-color);
+            font-size: 1.5em;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #15803d;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        /* Recently Added Card Styling */
+        .recently-added-card {
+            background: linear-gradient(135deg, var(--card-bg) 0%, rgba(22, 163, 74, 0.05) 100%);
+            border: 2px solid var(--success-color);
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+        }
+        
+        .badge {
+            background: var(--success-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        
+        /* Recently Added Item Animation */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .recently-added-item {
+            background: var(--card-bg);
+            border: 2px solid var(--success-color);
+            border-left: 5px solid var(--success-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        
+        .recently-added-item:hover {
+            background: var(--background-secondary);
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .material-code-badge {
+            background: var(--success-color);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95em;
+        }
+        
+        .material-info {
+            flex: 1;
+        }
+        
+        .material-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .material-details {
+            display: flex;
+            gap: 20px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+        
+        .icon {
+            margin-right: 5px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Recently Added Materials Feature Demo</h1>
+        <p class="subtitle">This demonstrates the new "Recently Added Materials" panel that helps users verify their entries immediately after adding them.</p>
+        
+        <!-- Add Material Form -->
+        <div class="card">
+            <h2>➕ Add New Material</h2>
+            <div class="form-group">
+                <label for="materialCode">Material Code *</label>
+                <input type="text" id="materialCode" placeholder="e.g., 266920">
+            </div>
+            <div class="form-group">
+                <label for="materialName">Material Name (Optional)</label>
+                <input type="text" id="materialName" placeholder="e.g., Product XYZ">
+            </div>
+            <div class="form-group">
+                <label for="materialCapacity">MKT Maximum Capacity *</label>
+                <input type="number" id="materialCapacity" placeholder="e.g., 10" min="0">
+            </div>
+            <button class="btn btn-success" onclick="addMaterial()">
+                <span class="icon">➕</span> Add Material
+            </button>
+        </div>
+        
+        <!-- Recently Added Materials Panel -->
+        <div id="recentlyAddedPanel" class="card recently-added-card hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="display: flex; align-items: center; gap: 10px; margin: 0;">
+                    <span>🕒</span>
+                    <span>Recently Added Materials</span>
+                    <span class="badge" id="recentlyAddedCount">0</span>
+                </h2>
+                <button class="btn btn-secondary btn-small" onclick="clearRecentlyAdded()">
+                    <span class="icon">🧹</span> Clear
+                </button>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 15px;">
+                Materials added in this session. Review them to verify correctness before continuing.
+            </p>
+            <div id="recentlyAddedList"></div>
+        </div>
+        
+        <!-- Info -->
+        <div class="card" style="background: #eff6ff; border-left: 4px solid var(--primary-color);">
+            <h2 style="margin: 0 0 10px 0;">ℹ️ Feature Benefits</h2>
+            <ul style="margin: 0; padding-left: 20px; color: var(--text-color);">
+                <li>See newly added materials immediately without leaving the entry screen</li>
+                <li>Quick verification of material code, name, and capacity</li>
+                <li>Edit or remove materials directly from the recently added panel</li>
+                <li>Smooth slide-in animation for better visual feedback</li>
+                <li>Session-based tracking - list persists during your session</li>
+                <li>Reduces mistakes and duplicate entries</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        let recentlyAdded = [];
+        
+        function addMaterial() {
+            const code = document.getElementById('materialCode').value.trim();
+            const name = document.getElementById('materialName').value.trim();
+            const capacity = document.getElementById('materialCapacity').value.trim();
+            
+            if (!code || !capacity) {
+                alert('Please fill in Material Code and Capacity');
+                return;
+            }
+            
+            const material = {
+                code,
+                name,
+                capacity,
+                timestamp: Date.now()
+            };
+            
+            // Add to recently added list
+            recentlyAdded.unshift(material);
+            
+            // Keep only last 10
+            if (recentlyAdded.length > 10) {
+                recentlyAdded = recentlyAdded.slice(0, 10);
+            }
+            
+            // Clear form
+            document.getElementById('materialCode').value = '';
+            document.getElementById('materialName').value = '';
+            document.getElementById('materialCapacity').value = '';
+            
+            // Render panel
+            renderRecentlyAdded();
+            
+            // Focus back to code input
+            document.getElementById('materialCode').focus();
+        }
+        
+        function renderRecentlyAdded() {
+            const panel = document.getElementById('recentlyAddedPanel');
+            const list = document.getElementById('recentlyAddedList');
+            const count = document.getElementById('recentlyAddedCount');
+            
+            if (recentlyAdded.length === 0) {
+                panel.classList.add('hidden');
+                return;
+            }
+            
+            panel.classList.remove('hidden');
+            count.textContent = recentlyAdded.length;
+            
+            list.innerHTML = recentlyAdded.map((material, index) => {
+                const delay = index * 0.05;
+                return `
+                    <div class="recently-added-item" style="animation: slideIn 0.3s ease-out ${delay}s backwards;">
+                        <div class="material-info">
+                            <div class="material-header">
+                                <span class="material-code-badge">${material.code}</span>
+                                ${material.name ? `<span style="color: var(--text-color); font-weight: 500;">${material.name}</span>` : ''}
+                            </div>
+                            <div class="material-details">
+                                <span>📦 Capacity: <strong style="color: var(--success-color);">${material.capacity}</strong></span>
+                                <span>🕒 Just added</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn btn-primary btn-small" onclick="editMaterial(${index})" title="Edit">
+                                ✏️
+                            </button>
+                            <button class="btn btn-secondary btn-small" onclick="removeFromRecent(${index})" title="Remove from list">
+                                ✖️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function removeFromRecent(index) {
+            recentlyAdded.splice(index, 1);
+            renderRecentlyAdded();
+        }
+        
+        function clearRecentlyAdded() {
+            if (confirm('Clear the recently added list?')) {
+                recentlyAdded = [];
+                renderRecentlyAdded();
+            }
+        }
+        
+        function editMaterial(index) {
+            const material = recentlyAdded[index];
+            document.getElementById('materialCode').value = material.code;
+            document.getElementById('materialName').value = material.name;
+            document.getElementById('materialCapacity').value = material.capacity;
+            document.getElementById('materialCode').focus();
+        }
+        
+        // Allow Enter key to submit
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                addMaterial();
+            }
+        });
+    </script>
+</body>
+</html>
