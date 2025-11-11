@@ -26,6 +26,24 @@ function renderMaterialsTab() {
             <button class="btn-success" onclick="addMaterial()"><i class="fa-solid fa-plus"></i> ${ui.t('btnAddMaterial')}</button>
         </div>
 
+        <!-- Recently Added Materials Panel -->
+        <div id="recentlyAddedPanel" class="card recently-added-card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>${ui.t('recentlyAddedTitle') || 'Recently Added Materials'}</span>
+                    <span class="badge" id="recentlyAddedCount" style="background: var(--success-color); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">0</span>
+                </h2>
+                <button class="btn-secondary btn-small" onclick="ui.clearRecentlyAddedPanel()" title="${ui.t('clearRecentlyAdded') || 'Clear list'}">
+                    <i class="fa-solid fa-broom"></i> ${ui.t('btnClearList') || 'Clear'}
+                </button>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 15px;">
+                ${ui.t('recentlyAddedDescription') || 'Materials added in this session. Review them to verify correctness before continuing.'}
+            </p>
+            <div id="recentlyAddedList"></div>
+        </div>
+
         <div class="card">
             <h2><i class="fa-solid fa-file-arrow-up"></i> ${ui.t('bulkImportTitle')} / ${ui.t('bulkExportTitle')}</h2>
             <p style="color: var(--text-secondary); margin-bottom: 20px;">${ui.t('bulkImportExportDesc')}</p>
@@ -233,6 +251,7 @@ function renderMaterialsTab() {
             ui.renderNotesList();
             ui.renderGroupsList();
             ui.populateFilterGroupDropdown(); // Populate filter dropdown
+            ui.renderRecentlyAddedPanel(); // Render recently added panel
         }, 100);
     }
 }
@@ -348,8 +367,12 @@ UIManager.prototype.addMaterial = function() {
         document.getElementById('newMaterialName').value = '';
         document.getElementById('newMaterialCapacity').value = '';
 
-        // Refresh list
+        // Add to recently added list
+        this.addToRecentlyAdded(code);
+
+        // Refresh list and recently added panel
         this.renderMaterialsList();
+        this.renderRecentlyAddedPanel();
 
         this.showToast(`<i class="fa-solid fa-plus"></i> Material ${code} added successfully! Capacity set to ${capacity}.`, 'success', 'Added');
     } catch (error) {
@@ -1762,6 +1785,124 @@ UIManager.prototype.exportFilteredMaterials = function() {
     } else {
         this.showToast('Error exporting materials', 'error');
     }
+};
+
+// ========================
+// Recently Added Materials Panel
+// ========================
+
+// Render recently added materials panel
+UIManager.prototype.renderRecentlyAddedPanel = function() {
+    const panel = document.getElementById('recentlyAddedPanel');
+    const listContainer = document.getElementById('recentlyAddedList');
+    const countBadge = document.getElementById('recentlyAddedCount');
+    
+    if (!panel || !listContainer) return;
+    
+    // Get recently added material codes
+    const recentCodes = this.recentlyAddedMaterials || [];
+    
+    // Hide panel if no recent materials
+    if (recentCodes.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+    
+    // Show panel
+    panel.style.display = 'block';
+    
+    // Update count badge
+    if (countBadge) {
+        countBadge.textContent = recentCodes.length;
+    }
+    
+    // Get material objects
+    const materials = recentCodes
+        .map(code => this.dataManager.getMaterial(code))
+        .filter(m => m !== null);
+    
+    if (materials.length === 0) {
+        listContainer.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                <i class="fa-solid fa-info-circle"></i> ${this.t('noRecentMaterials') || 'No recently added materials in this session.'}
+            </div>
+        `;
+        return;
+    }
+    
+    // Render materials list
+    listContainer.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${materials.map((material, index) => {
+                const isPromoActive = material.promoActive && (!material.promoEndDate || new Date(material.promoEndDate) >= new Date());
+                const capacity = isPromoActive && material.promoCapacity ? material.promoCapacity : material.capacity;
+                const capacityLabel = isPromoActive && material.promoCapacity 
+                    ? `${capacity} <small style="color: var(--text-secondary);">(promo)</small>`
+                    : capacity;
+                
+                // Get group info if exists
+                let groupBadge = '';
+                if (material.group) {
+                    const group = this.dataManager.getGroup(material.group);
+                    if (group) {
+                        groupBadge = `<span style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; background: ${group.color || '#3b82f6'}20; color: ${group.color || '#3b82f6'}; border: 1px solid ${group.color || '#3b82f6'}; margin-left: 8px;">
+                            <i class="fa-solid fa-tag"></i> ${group.name}
+                        </span>`;
+                    }
+                }
+                
+                return `
+                    <div class="recently-added-item" style="
+                        background: var(--card-bg);
+                        border: 2px solid var(--success-color);
+                        border-left: 5px solid var(--success-color);
+                        border-radius: 8px;
+                        padding: 12px 15px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        transition: all 0.2s;
+                        animation: slideIn 0.3s ease-out ${index * 0.05}s backwards;
+                    ">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                                <span style="background: var(--success-color); color: white; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.95em;">
+                                    ${material.code}
+                                </span>
+                                ${material.name ? `<span style="color: var(--text-color); font-weight: 500;">${material.name}</span>` : ''}
+                                ${groupBadge}
+                            </div>
+                            <div style="display: flex; gap: 20px; font-size: 0.85em; color: var(--text-secondary);">
+                                <span><i class="fa-solid fa-boxes-stacked"></i> ${this.t('capacity') || 'Capacity'}: <strong style="color: var(--success-color);">${capacityLabel}</strong></span>
+                                <span><i class="fa-solid fa-clock"></i> ${this.t('justAdded') || 'Just added'}</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn-primary btn-small" onclick="ui.openEditModal('${material.code}')" title="${this.t('btnEdit') || 'Edit'}">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button class="btn-secondary btn-small" onclick="ui.removeFromRecentlyAddedPanel('${material.code}')" title="${this.t('removeFromList') || 'Remove from list'}">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+};
+
+// Clear recently added panel
+UIManager.prototype.clearRecentlyAddedPanel = function() {
+    this.clearRecentlyAdded();
+    this.renderRecentlyAddedPanel();
+    this.showToast(this.t('recentlyAddedCleared') || 'Recently added list cleared', 'info');
+};
+
+// Remove material from recently added panel
+UIManager.prototype.removeFromRecentlyAddedPanel = function(materialCode) {
+    this.removeFromRecentlyAdded(materialCode);
+    this.renderRecentlyAddedPanel();
 };
 
 // ========================

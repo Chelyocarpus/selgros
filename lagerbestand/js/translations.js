@@ -150,6 +150,17 @@ const translations = {
         btnEdit: 'Bearbeiten',
         btnDelete: 'Löschen',
         
+        // Recently Added Materials Panel
+        recentlyAddedTitle: 'Kürzlich hinzugefügte Materialien',
+        recentlyAddedDescription: 'In dieser Sitzung hinzugefügte Materialien. Überprüfen Sie diese, um die Richtigkeit zu bestätigen, bevor Sie fortfahren.',
+        noRecentMaterials: 'Keine kürzlich hinzugefügten Materialien in dieser Sitzung.',
+        justAdded: 'Gerade hinzugefügt',
+        capacity: 'Kapazität',
+        removeFromList: 'Aus Liste entfernen',
+        clearRecentlyAdded: 'Liste löschen',
+        btnClearList: 'Liste löschen',
+        recentlyAddedCleared: 'Liste der kürzlich hinzugefügten Materialien gelöscht',
+        
         // Bulk Operations
         selectAll: 'Alle auswählen',
         itemsSelected: 'Materialien ausgewählt',
@@ -702,6 +713,17 @@ const translations = {
         colCreated: 'Created',
         btnEdit: 'Edit',
         btnDelete: 'Delete',
+        
+        // Recently Added Materials Panel
+        recentlyAddedTitle: 'Recently Added Materials',
+        recentlyAddedDescription: 'Materials added in this session. Review them to verify correctness before continuing.',
+        noRecentMaterials: 'No recently added materials in this session.',
+        justAdded: 'Just added',
+        capacity: 'Capacity',
+        removeFromList: 'Remove from list',
+        clearRecentlyAdded: 'Clear list',
+        btnClearList: 'Clear',
+        recentlyAddedCleared: 'Recently added list cleared',
         
         // Bulk Operations
         selectAll: 'Select All',

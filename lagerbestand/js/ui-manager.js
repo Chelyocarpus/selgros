@@ -43,6 +43,68 @@ class UIManager {
         
         // Selected items for bulk operations
         this.selectedItems = new Set();
+        
+        // Recently added materials in current session
+        this.recentlyAddedMaterials = this.loadRecentlyAddedMaterials();
+    }
+    
+    /**
+     * Load recently added materials from sessionStorage
+     * @returns {Array} Array of recently added material codes
+     */
+    loadRecentlyAddedMaterials() {
+        try {
+            const data = sessionStorage.getItem('recently_added_materials');
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('Error loading recently added materials:', e);
+            return [];
+        }
+    }
+    
+    /**
+     * Save recently added materials to sessionStorage
+     */
+    saveRecentlyAddedMaterials() {
+        try {
+            sessionStorage.setItem('recently_added_materials', JSON.stringify(this.recentlyAddedMaterials));
+        } catch (e) {
+            console.error('Error saving recently added materials:', e);
+        }
+    }
+    
+    /**
+     * Add material code to recently added list
+     * @param {string} materialCode - Material code to add
+     */
+    addToRecentlyAdded(materialCode) {
+        // Add to beginning of array, remove if already exists
+        this.recentlyAddedMaterials = this.recentlyAddedMaterials.filter(code => code !== materialCode);
+        this.recentlyAddedMaterials.unshift(materialCode);
+        
+        // Keep only last 10 items
+        if (this.recentlyAddedMaterials.length > 10) {
+            this.recentlyAddedMaterials = this.recentlyAddedMaterials.slice(0, 10);
+        }
+        
+        this.saveRecentlyAddedMaterials();
+    }
+    
+    /**
+     * Clear recently added materials list
+     */
+    clearRecentlyAdded() {
+        this.recentlyAddedMaterials = [];
+        this.saveRecentlyAddedMaterials();
+    }
+    
+    /**
+     * Remove material from recently added list
+     * @param {string} materialCode - Material code to remove
+     */
+    removeFromRecentlyAdded(materialCode) {
+        this.recentlyAddedMaterials = this.recentlyAddedMaterials.filter(code => code !== materialCode);
+        this.saveRecentlyAddedMaterials();
     }
 
     /**
@@ -808,6 +870,12 @@ class UIManager {
             // Refresh materials list if on materials tab
             this.renderMaterialsList();
             
+            // Add to recently added if in add mode
+            if (mode === 'add' || mode === 'quickadd') {
+                this.addToRecentlyAdded(code);
+                this.renderRecentlyAddedPanel();
+            }
+            
             // Update undo/redo buttons
             if (this.updateUndoRedoButtons) {
                 this.updateUndoRedoButtons();
@@ -849,6 +917,10 @@ class UIManager {
 
         if (this.dataManager.deleteMaterial(code)) {
             this.renderMaterialsList();
+            
+            // Remove from recently added list if present
+            this.removeFromRecentlyAdded(code);
+            this.renderRecentlyAddedPanel();
             
             // Update undo/redo buttons
             if (this.updateUndoRedoButtons) {

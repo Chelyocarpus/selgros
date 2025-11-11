@@ -2811,3 +2811,69 @@ body.high-contrast .storage-stat-label {
 body.high-contrast .storage-stat-value {
     color: #ffffff !important;
 }
+
+/* ===========================
+   RECENTLY ADDED MATERIALS PANEL
+   =========================== */
+
+/* Recently Added Card Styling */
+.recently-added-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(22, 163, 74, 0.05) 100%);
+    border: 2px solid var(--success-color);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+/* Recently Added Item Animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.recently-added-item {
+    position: relative;
+}
+
+.recently-added-item:hover {
+    background: var(--background-secondary) !important;
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Mode Recently Added */
+body.dark-mode .recently-added-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(22, 163, 74, 0.08) 100%);
+    border-color: var(--success-color);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+}
+
+body.dark-mode .recently-added-item {
+    background: rgba(22, 163, 74, 0.05) !important;
+    border-color: var(--success-color);
+}
+
+body.dark-mode .recently-added-item:hover {
+    background: rgba(22, 163, 74, 0.1) !important;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+/* High Contrast Recently Added */
+body.high-contrast .recently-added-card {
+    background: #000000 !important;
+    border: 3px solid #00ff00 !important;
+}
+
+body.high-contrast .recently-added-item {
+    background: #000000 !important;
+    border: 2px solid #00ff00 !important;
+}
+
+body.high-contrast .recently-added-item:hover {
+    background: #1a1a1a !important;
+    border-color: #ffff00 !important;
+}
