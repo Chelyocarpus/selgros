@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selgros - Portal</title>
+    <link rel="shortcut icon" type="image/x-icon" href="https://www.selgros.de/themes/contrib/garnet/dist/assets/branding/logo-selgros3d.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #e30613;
+            --secondary-color: #333;
+            --accent-color: #f5f5f5;
+            --text-dark: #333;
+            --text-light: #666;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --card-hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+        }
+
+        header img {
+            max-width: 300px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--text-dark);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .app-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        .app-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary-color), #ff4757);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .app-card h2 {
+            color: var(--text-dark);
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .app-card p {
+            color: var(--text-light);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .app-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            background: var(--accent-color);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 15px;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-light);
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .footer-links {
+            margin-top: 10px;
+        }
+
+        .footer-links a {
+            color: var(--text-light);
+            text-decoration: none;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .apps-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header img {
+                max-width: 200px;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .app-card {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .app-card:nth-child(1) { animation-delay: 0.1s; }
+        .app-card:nth-child(2) { animation-delay: 0.2s; }
+        .app-card:nth-child(3) { animation-delay: 0.3s; }
+        .app-card:nth-child(4) { animation-delay: 0.4s; }
+        .app-card:nth-child(5) { animation-delay: 0.5s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="https://www.selgros.de/themes/contrib/garnet/dist/assets/branding/logo-selgros3d.svg" alt="Selgros Logo">
+            <h1>Portal</h1>
+            <p class="subtitle">Wählen Sie eine Anwendung aus</p>
+        </header>
+
+        <main>
+            <div class="apps-grid">
+                <!-- Lagerbestand App -->
+                <a href="lagerbestand/index.html" class="app-card">
+                    <div class="app-icon">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <h2>Lagerbestand</h2>
+                    <p>Warehouse Warning System - Bestandsüberwachung, Materialverwaltung und Berichtsanalyse</p>
+                    <span class="app-badge">Warehouse Management</span>
+                </a>
+
+                <!-- Verkaufsanalyse App -->
+                <a href="verkaufsanalyse/index.html" class="app-card">
+                    <div class="app-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h2>Verkaufsanalyse</h2>
+                    <p>Analyse und Visualisierung von Verkaufsdaten mit umfangreichen Statistiken</p>
+                    <span class="app-badge">Analytics</span>
+                </a>
+
+                <!-- Wareneingang App -->
+                <a href="wareneingang/index.html" class="app-card">
+                    <div class="app-icon">
+                        <i class="fas fa-truck-loading"></i>
+                    </div>
+                    <h2>Wareneingang</h2>
+                    <p>Verwaltung und Dokumentation des Wareneingangs</p>
+                    <span class="app-badge">Logistics</span>
+                </a>
+
+                <!-- Labels App -->
+                <a href="labels/index.html" class="app-card">
+                    <div class="app-icon">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <h2>Etiketten</h2>
+                    <p>Drucken Sie professionelle Etiketten mit Bildern</p>
+                    <span class="app-badge">Print</span>
+                </a>
+
+                <!-- QR Code Generator -->
+                <a href="index.html" class="app-card">
+                    <div class="app-icon">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <h2>Regalnummer Generator</h2>
+                    <p>Generieren Sie QR-Codes für Regalnummern</p>
+                    <span class="app-badge">Tools</span>
+                </a>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Selgros Portal. Alle Anwendungen sind Client-seitig und sicher.</p>
+            <div class="footer-links">
+                <a href="https://www.selgros.de" target="_blank">
+                    <i class="fas fa-globe"></i> Selgros Website
+                </a>
+                <a href="#" onclick="alert('Version 1.0.0'); return false;">
+                    <i class="fas fa-info-circle"></i> Info
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Add keyboard navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.app-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        window.location.href = this.href;
+                    }
+                });
+                
+                // Make cards keyboard focusable
+                card.setAttribute('tabindex', '0');
+            });
+
+            // Log portal access (optional)
+            console.log('Selgros Portal loaded at:', new Date().toLocaleString('de-DE'));
+        });
+    </script>
+</body>
+</html>

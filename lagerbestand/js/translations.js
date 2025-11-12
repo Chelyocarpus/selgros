@@ -127,6 +127,16 @@ const translations = {
         jumpThresholdOptional: 'Optional - Warnung bei täglichem Anstieg über diesem Betrag',
         btnAddMaterial: 'Material hinzufügen',
         
+        // Recently Added Materials
+        recentlyAddedTitle: 'Kürzlich hinzugefügte Materialien',
+        btnClearList: 'Liste löschen',
+        recentlyAddedDescription: 'In dieser Sitzung hinzugefügte Materialien. Überprüfen Sie die Genauigkeit, bevor Sie fortfahren.',
+        addedTimeAgo: 'Hinzugefügt',
+        secondsAgo: '{seconds} Sekunden her',
+        noRecentlyAddedMaterials: 'Keine Materialien in der Liste',
+        recentlyAddedCleared: '{count} Materialien aus der Liste entfernt',
+        btnRemove: 'Aus Liste entfernen',
+        
         // Promotional Settings
         promoTitle: 'Aktionseinstellungen',
         promoCapacity: 'Aktionskapazität',
@@ -196,7 +206,7 @@ const translations = {
         backupImportDesc: 'Daten aus einer vorherigen Sicherung wiederherstellen',
         backupSuccess: 'Daten erfolgreich importiert',
         backupError: 'Fehler beim Importieren der Daten',
-        backupImported: 'Importiert: {{materials}} Materialien, {{archive}} Berichte',
+        backupImported: 'Importiert: {materials} Materialien, {archive} Berichte',
         
         // IndexedDB Sync
         syncTitle: 'Automatische Synchronisation',
@@ -270,8 +280,11 @@ const translations = {
         bulkImportExportDesc: 'Materialien in großen Mengen im CSV-Format importieren oder exportieren',
         btnImportMaterials: 'Materialien importieren',
         btnExportMaterials: 'Materialien exportieren',
+        btnExportSAP: 'Für SAP exportieren',
         importMaterialsDesc: 'Materialien aus CSV/Excel-Datei importieren',
         exportMaterialsDesc: 'Materialien als CSV-Datei exportieren',
+        exportSAPDesc: 'Materialnummern für SAP-Import exportieren (nur Materialnummern)',
+        sapExportSuccess: 'Materialnummern für SAP exportiert',
         importSuccess: 'Materialien erfolgreich importiert',
         importError: 'Fehler beim Importieren der Materialien',
         exportSuccess: 'Materialien erfolgreich exportiert',
@@ -310,8 +323,8 @@ const translations = {
         undoActionBulkImport: 'Massen-Import',
         undoActionClearAll: 'Alle gelöscht',
         undoJustNow: 'Gerade eben',
-        undoMinutesAgo: 'vor {{minutes}} Min.',
-        undoHoursAgo: 'vor {{hours}} Std.',
+        undoMinutesAgo: 'vor {minutes} Min.',
+        undoHoursAgo: 'vor {hours} Std.',
 
         // Material Groups
         groupsTitle: 'Material-Gruppen',
@@ -680,6 +693,16 @@ const translations = {
         jumpThresholdOptional: 'Optional - alert when daily increase exceeds this amount',
         btnAddMaterial: 'Add Material',
         
+        // Recently Added Materials
+        recentlyAddedTitle: 'Recently Added Materials',
+        btnClearList: 'Clear List',
+        recentlyAddedDescription: 'Materials added in this session. Review for accuracy before continuing.',
+        addedTimeAgo: 'Added',
+        secondsAgo: '{seconds} seconds ago',
+        noRecentlyAddedMaterials: 'No materials in the list',
+        recentlyAddedCleared: 'Cleared {count} materials from the list',
+        btnRemove: 'Remove from list',
+        
         // Promotional Settings
         promoTitle: 'Promotional Settings',
         promoCapacity: 'Promotional Capacity',
@@ -749,7 +772,7 @@ const translations = {
         backupImportDesc: 'Restore data from a previous backup',
         backupSuccess: 'Data imported successfully',
         backupError: 'Error importing data',
-        backupImported: 'Imported: {{materials}} materials, {{archive}} reports',
+        backupImported: 'Imported: {materials} materials, {archive} reports',
         
         // IndexedDB Sync
         syncTitle: 'Automatic Sync',
@@ -823,8 +846,11 @@ const translations = {
         bulkImportExportDesc: 'Import or export materials in bulk using CSV format',
         btnImportMaterials: 'Import Materials',
         btnExportMaterials: 'Export Materials',
+        btnExportSAP: 'Export for SAP',
         importMaterialsDesc: 'Import materials from CSV/Excel file',
         exportMaterialsDesc: 'Export materials as CSV file',
+        exportSAPDesc: 'Export material numbers for SAP import (material numbers only)',
+        sapExportSuccess: 'material numbers exported for SAP',
         importSuccess: 'Materials imported successfully',
         importError: 'Error importing materials',
         exportSuccess: 'Materials exported successfully',
@@ -863,8 +889,8 @@ const translations = {
         undoActionBulkImport: 'Bulk import',
         undoActionClearAll: 'All cleared',
         undoJustNow: 'Just now',
-        undoMinutesAgo: '{{minutes}} min ago',
-        undoHoursAgo: '{{hours}} hrs ago',
+        undoMinutesAgo: '{minutes} min ago',
+        undoHoursAgo: '{hours} hrs ago',
 
         // Material Groups
         groupsTitle: 'Material Groups',

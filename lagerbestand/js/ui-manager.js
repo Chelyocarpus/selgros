@@ -22,6 +22,9 @@ function debounce(func, wait) {
  * UI Manager class - handles all UI interactions and state
  */
 class UIManager {
+    // Constants
+    static MAX_RECENT_MATERIALS = 20; // Maximum number of recently added materials to track
+    
     constructor(dataManager, reportProcessor) {
         this.dataManager = dataManager;
         this.reportProcessor = reportProcessor;
@@ -43,6 +46,10 @@ class UIManager {
         
         // Selected items for bulk operations
         this.selectedItems = new Set();
+        
+        // Recently added materials (session-based tracking)
+        this.recentlyAddedMaterials = [];
+        this.loadRecentlyAdded();
     }
 
     /**
@@ -803,6 +810,20 @@ class UIManager {
                 group || null
             );
 
+            // Add to recently added list if it's a new material (not editing)
+            if (mode !== 'edit') {
+                const material = this.createMaterialObject(
+                    code,
+                    name,
+                    capacityNum,
+                    promoCapacity ? parseInt(promoCapacity) : null,
+                    promoActive,
+                    promoEndDate || null,
+                    group || null
+                );
+                this.addToRecentlyAdded(material);
+            }
+
             this.closeMaterialModal();
 
             // Refresh materials list if on materials tab
@@ -980,8 +1001,8 @@ class UIManager {
                 
                 // Show success message
                 const message = this.t('backupImported')
-                    .replace('{{materials}}', result.materialsCount)
-                    .replace('{{archive}}', result.archiveCount);
+                    .replace('{materials}', result.materialsCount)
+                    .replace('{archive}', result.archiveCount);
                 
                 this.showToast(message, 'success', '<i class="fa-solid fa-file-arrow-up"></i> ' + this.t('backupSuccess'));
             })
@@ -1025,6 +1046,222 @@ class UIManager {
             );
         }
     }
+
+    // ========================
+    // Recently Added Materials Management
+    // ========================
+
+    /**
+     * Load recently added materials from sessionStorage
+     */
+    loadRecentlyAdded() {
+        try {
+            const stored = sessionStorage.getItem('recentlyAddedMaterials');
+            if (stored) {
+                this.recentlyAddedMaterials = JSON.parse(stored);
+            } else {
+                this.recentlyAddedMaterials = [];
+            }
+        } catch (error) {
+            console.error('Error loading recently added materials:', error);
+            this.recentlyAddedMaterials = [];
+        }
+    }
+
+    /**
+     * Save recently added materials to sessionStorage
+     */
+    saveRecentlyAdded() {
+        try {
+            sessionStorage.setItem('recentlyAddedMaterials', JSON.stringify(this.recentlyAddedMaterials));
+        } catch (error) {
+            console.error('Error saving recently added materials:', error);
+        }
+    }
+
+    /**
+     * Create a material object with consistent structure
+     * @param {string} code - Material code
+     * @param {string} name - Material name
+     * @param {number} capacity - MKT capacity
+     * @param {number|null} promoCapacity - Promotional capacity
+     * @param {boolean} promoActive - Whether promo is active
+     * @param {string|null} promoEndDate - Promo end date
+     * @param {string|null} group - Group ID
+     * @returns {Object} Material object with consistent structure
+     */
+    createMaterialObject(code, name, capacity, promoCapacity = null, promoActive = false, promoEndDate = null, group = null) {
+        return {
+            code: code,
+            name: name,
+            capacity: capacity,
+            promoCapacity: promoCapacity,
+            promoActive: promoActive,
+            promoEndDate: promoEndDate,
+            group: group
+        };
+    }
+
+    /**
+     * Add a material to the recently added list
+     * @param {Object} material - Material object
+     */
+    addToRecentlyAdded(material) {
+        // Add timestamp
+        const item = {
+            ...material,
+            addedAt: new Date().toISOString()
+        };
+        
+        // Add to beginning of array (most recent first)
+        this.recentlyAddedMaterials.unshift(item);
+        
+        // Limit to maximum recent items
+        if (this.recentlyAddedMaterials.length > UIManager.MAX_RECENT_MATERIALS) {
+            this.recentlyAddedMaterials = this.recentlyAddedMaterials.slice(0, UIManager.MAX_RECENT_MATERIALS);
+        }
+        
+        // Save to session storage
+        this.saveRecentlyAdded();
+        
+        // Update UI
+        this.renderRecentlyAdded();
+    }
+
+    /**
+     * Remove a material from the recently added list
+     * @param {string} materialCode - Material code to remove
+     */
+    removeFromRecentlyAdded(materialCode) {
+        this.recentlyAddedMaterials = this.recentlyAddedMaterials.filter(
+            item => item.code !== materialCode
+        );
+        this.saveRecentlyAdded();
+        this.renderRecentlyAdded();
+    }
+
+    /**
+     * Clear all recently added materials
+     */
+    clearRecentlyAdded() {
+        if (this.recentlyAddedMaterials.length === 0) {
+            this.showToast(this.t('noRecentlyAddedMaterials') || 'No materials in the list', 'info');
+            return;
+        }
+        
+        const count = this.recentlyAddedMaterials.length;
+        this.recentlyAddedMaterials = [];
+        this.saveRecentlyAdded();
+        this.renderRecentlyAdded();
+        
+        const message = (this.t('recentlyAddedCleared') || 'Cleared {count} materials from the list').replace('{count}', count);
+        this.showToast(message, 'success');
+    }
+
+    /**
+     * Render the recently added materials list
+     */
+    renderRecentlyAdded() {
+        const card = document.getElementById('recentlyAddedCard');
+        const list = document.getElementById('recentlyAddedList');
+        const countBadge = document.getElementById('recentlyAddedCount');
+        
+        if (!card || !list || !countBadge) return;
+        
+        // Update count badge
+        countBadge.textContent = this.recentlyAddedMaterials.length;
+        
+        // Show/hide card based on whether there are items
+        if (this.recentlyAddedMaterials.length === 0) {
+            card.style.display = 'none';
+            return;
+        }
+        
+        card.style.display = 'block';
+        
+        // Render list items
+        list.innerHTML = this.recentlyAddedMaterials.map((item, index) => {
+            const timeAgo = this.getTimeAgo(item.addedAt);
+            const isJustAdded = index === 0 && (Date.now() - new Date(item.addedAt).getTime()) < 5000; // Within 5 seconds
+            
+            return `
+                <div class="recently-added-item ${isJustAdded ? 'just-added' : ''}" data-material-code="${item.code}">
+                    <div class="recently-added-item-content">
+                        <div class="recently-added-item-header">
+                            <span class="recently-added-item-code">
+                                <i class="fa-solid fa-box"></i> ${item.code}
+                            </span>
+                            ${item.name ? `<span class="recently-added-item-name">${item.name}</span>` : ''}
+                        </div>
+                        <div class="recently-added-item-details">
+                            <div class="recently-added-item-detail">
+                                <i class="fa-solid fa-warehouse"></i>
+                                <strong>${this.t('mktCapacity') || 'Capacity'}:</strong> ${item.capacity}
+                            </div>
+                            ${item.promoCapacity ? `
+                                <div class="recently-added-item-detail">
+                                    <i class="fa-solid fa-gift"></i>
+                                    <strong>${this.t('promoCapacity') || 'Promo'}:</strong> ${item.promoCapacity}
+                                </div>
+                            ` : ''}
+                            ${item.group ? `
+                                <div class="recently-added-item-detail">
+                                    <i class="fa-solid fa-tag"></i>
+                                    <strong>${this.t('materialGroup') || 'Group'}:</strong> ${this.dataManager.getGroup(item.group)?.name || item.group}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="recently-added-item-time">
+                            <i class="fa-regular fa-clock"></i> ${this.t('addedTimeAgo') || 'Added'} ${timeAgo}
+                        </div>
+                    </div>
+                    <div class="recently-added-item-actions">
+                        <button class="btn-primary btn-small" onclick="ui.openEditModal('${item.code}')" title="${this.t('btnEdit') || 'Edit'}">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn-danger btn-small" onclick="ui.removeFromRecentlyAdded('${item.code}')" title="${this.t('btnRemove') || 'Remove from list'}">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Scroll to top of the recently added card to show the new item
+        if (this.recentlyAddedMaterials.length > 0) {
+            setTimeout(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+    }
+
+    /**
+     * Get human-readable time ago string
+     * @param {string} timestamp - ISO timestamp
+     * @returns {string} Time ago string
+     */
+    getTimeAgo(timestamp) {
+        if (!timestamp) return this.t('undoJustNow') || 'just now';
+        
+        const now = Date.now();
+        const time = new Date(timestamp).getTime();
+        const diff = now - time;
+        
+        const seconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        
+        if (seconds < 10) {
+            return this.t('undoJustNow') || 'just now';
+        } else if (seconds < 60) {
+            return (this.t('secondsAgo') || '{seconds} seconds ago').replace('{seconds}', seconds);
+        } else if (minutes < 60) {
+            return (this.t('undoMinutesAgo') || '{minutes} minutes ago').replace('{minutes}', minutes);
+        } else {
+            return (this.t('undoHoursAgo') || '{hours} hours ago').replace('{hours}', hours);
+        }
+    }
+
 
 
 }
