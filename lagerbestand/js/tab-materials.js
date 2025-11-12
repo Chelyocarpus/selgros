@@ -26,6 +26,23 @@ function renderMaterialsTab() {
             <button class="btn-success" onclick="addMaterial()"><i class="fa-solid fa-plus"></i> ${ui.t('btnAddMaterial')}</button>
         </div>
 
+        <!-- Recently Added Materials Preview -->
+        <div class="card recently-added-card" id="recentlyAddedCard" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> ${ui.t('recentlyAddedTitle') || 'Recently Added Materials'}
+                    <span class="recently-added-badge" id="recentlyAddedCount">0</span>
+                </h2>
+                <button class="btn-secondary btn-small" onclick="ui.clearRecentlyAdded()">
+                    <i class="fa-solid fa-broom"></i> ${ui.t('btnClearList') || 'Clear List'}
+                </button>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9em;">
+                <i class="fa-solid fa-info-circle"></i> ${ui.t('recentlyAddedDescription') || 'Materials added in this session. Review for accuracy before continuing.'}
+            </p>
+            <div id="recentlyAddedList" class="recently-added-list"></div>
+        </div>
+
         <div class="card">
             <h2><i class="fa-solid fa-file-arrow-up"></i> ${ui.t('bulkImportTitle')} / ${ui.t('bulkExportTitle')}</h2>
             <p style="color: var(--text-secondary); margin-bottom: 20px;">${ui.t('bulkImportExportDesc')}</p>
@@ -44,6 +61,14 @@ function renderMaterialsTab() {
                     </button>
                     <small style="color: var(--text-secondary); display: block; margin-top: 8px;">
                         ${ui.t('exportFilteredDesc')}
+                    </small>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <button class="btn-success" onclick="ui.exportMaterialsForSAP()" style="width: 100%; padding: 15px; background: #0078d4; border-color: #0078d4;">
+                        <i class="fa-solid fa-file-export"></i> ${ui.t('btnExportSAP')}
+                    </button>
+                    <small style="color: var(--text-secondary); display: block; margin-top: 8px;">
+                        ${ui.t('exportSAPDesc')}
                     </small>
                 </div>
                 <div style="flex: 1; min-width: 200px;">
@@ -343,10 +368,25 @@ UIManager.prototype.addMaterial = function() {
             null // promoEndDate
         );
 
+        // Add to recently added list for live preview
+        const material = {
+            code: code,
+            name: name,
+            capacity: capacityNum,
+            promoCapacity: null,
+            promoActive: false,
+            promoEndDate: null,
+            group: null
+        };
+        this.addToRecentlyAdded(material);
+
         // Clear form
         document.getElementById('newMaterialCode').value = '';
         document.getElementById('newMaterialName').value = '';
         document.getElementById('newMaterialCapacity').value = '';
+
+        // Focus back on code input for continuous entry
+        document.getElementById('newMaterialCode').focus();
 
         // Refresh list
         this.renderMaterialsList();
@@ -528,6 +568,18 @@ UIManager.prototype.exportMaterialsCSV = function() {
         }
     } catch (error) {
         this.showToast('Error exporting materials: ' + error.message, 'error');
+    }
+};
+
+// Export materials for SAP import (Material Numbers only)
+UIManager.prototype.exportMaterialsForSAP = function() {
+    try {
+        const result = this.dataManager.exportMaterialsForSAP();
+        if (result.success) {
+            this.showToast(`<i class="fa-solid fa-file-export"></i> ${result.count} ${this.t('sapExportSuccess')}`, 'success', this.t('exportSuccess'));
+        }
+    } catch (error) {
+        this.showToast('Error exporting materials for SAP: ' + error.message, 'error');
     }
 };
 

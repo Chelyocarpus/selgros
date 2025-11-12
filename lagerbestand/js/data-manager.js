@@ -996,6 +996,36 @@ class DataManager {
         return { success: true, count: materials.length };
     }
 
+    // Export materials for SAP import (Material Numbers only)
+    exportMaterialsForSAP(materialCodes = null) {
+        const materials = materialCodes 
+            ? materialCodes.map(code => this.materials[code]).filter(m => m)
+            : this.getAllMaterials();
+        
+        // Sort by material code for consistent output
+        materials.sort((a, b) => a.code.localeCompare(b.code));
+        
+        // Create SAP-compatible file: one material number per line
+        const sapData = materials.map(material => material.code).join('\n');
+        
+        // Download as TXT file (SAP-compatible format)
+        const blob = new Blob([sapData], { type: 'text/plain;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        
+        // Generate filename with date
+        const dateStr = new Date().toISOString().slice(0, 10);
+        link.setAttribute('download', `SAP_Materialliste_${dateStr}.txt`);
+        
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        return { success: true, count: materials.length };
+    }
+
     // Import materials from CSV content
     importMaterialsFromCSV(csvContent) {
         try {

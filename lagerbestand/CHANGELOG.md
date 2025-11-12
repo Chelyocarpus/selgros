@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.0] - 2025-11-11
+
+### Added - Recently Added Materials Live Preview
+
+#### Live Material Preview Feature
+- **Session-Based Tracking**: Newly added materials are tracked in a session-based list
+  - Materials added during current session are displayed in real-time
+  - Persists using sessionStorage (cleared when browser is closed)
+  - Displays up to 20 most recent materials
+  
+- **Live Preview Card**: Interactive preview section showing recently added materials
+  - Appears automatically when materials are added
+  - Shows material code, name, capacity, promo settings, and groups
+  - Displays time elapsed since addition (e.g., "Added 2 minutes ago")
+  - Material count badge with animated pulse effect
+  - Smooth animations and visual feedback
+  
+- **Quick Actions**: Convenient actions directly from the preview
+  - Edit button to quickly modify recently added materials
+  - Remove button to take materials out of the preview list
+  - Clear All button to reset the entire preview list
+  - Auto-scroll to show newly added items
+  
+- **Enhanced User Experience**:
+  - Auto-focus on material code input after adding material for continuous entry
+  - Visual highlight for materials added within last 5 seconds
+  - Color-coded details with icons for better readability
+  - Responsive design supporting all screen sizes
+  - Full dark mode and high contrast mode support
+  
+- **Improved Workflow**: 
+  - Users can verify entries without leaving the entry screen
+  - Reduces mistakes and duplicate entries
+  - Enables efficient batch material addition
+  - Materials remain visible for review throughout the session
+
+#### Translations
+- Added German and English translations for all new UI elements
+- Localized time-ago strings (seconds, minutes, hours)
+
+---
+
 ## [2.3.0] - 2025-11-10
 
 ### Added - Mobile Responsiveness & Touch Support

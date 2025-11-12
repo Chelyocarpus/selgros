@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wareneingang</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Add DOMPurify -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+  <style>
+    /* Custom focus ring for accessibility */
+    .focus-ring:focus {
+      outline: 2px solid #1f2937;
+      outline-offset: 2px;
+    }
+    /* Visually hidden for screen readers */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+    /* Professional styling overrides */
+    .professional-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .professional-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-bottom: 3px solid #0f172a;
+    }
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s ease-in-out;
+    }
+    .stat-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .professional-button {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border: 1px solid #0f172a;
+      transition: all 0.2s ease-in-out;
+    }
+    .professional-button:hover {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .professional-table {
+      border: 1px solid #d1d5db;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Enhanced filter card styles */
+    .filter-card {
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .filter-card:hover {
+      transform: translateY(-1px);
+    }
+    
+    .filter-checkbox:checked + .filter-card-content {
+      border-color: var(--border-checked);
+      background-color: var(--bg-checked);
+      box-shadow: 0 4px 12px -2px var(--shadow-checked);
+    }
+    
+    .filter-checkbox:checked + .filter-card-content .filter-checkmark {
+      background-color: var(--check-bg);
+      border-color: var(--check-bg);
+    }
+    
+    .filter-checkbox:checked + .filter-card-content .filter-checkmark svg {
+      opacity: 1;
+    }
+    
+    .filter-checkbox:focus + .filter-card-content {
+      box-shadow: 0 0 0 4px var(--ring-color);
+    }
+    
+    /* Color variables for different filter types */
+    .filter-emerald {
+      --border-checked: #10b981;
+      --bg-checked: #ecfdf5;
+      --shadow-checked: rgba(16, 185, 129, 0.25);
+      --check-bg: #10b981;
+      --ring-color: rgba(16, 185, 129, 0.3);
+    }
+    
+    .filter-red {
+      --border-checked: #ef4444;
+      --bg-checked: #fef2f2;
+      --shadow-checked: rgba(239, 68, 68, 0.25);
+      --check-bg: #ef4444;
+      --ring-color: rgba(239, 68, 68, 0.3);
+    }
+    
+    .filter-blue {
+      --border-checked: #3b82f6;
+      --bg-checked: #eff6ff;
+      --shadow-checked: rgba(59, 130, 246, 0.25);
+      --check-bg: #3b82f6;
+      --ring-color: rgba(59, 130, 246, 0.3);
+    }
+    
+    /* Table optimization */
+    .table-fixed {
+      table-layout: fixed;
+    }
+    
+    .truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    /* Better table spacing */
+    table {
+      table-layout: auto;
+      width: 100%;
+    }
+    
+    table th:first-child,
+    table td:first-child {
+      min-width: 120px;
+    }
+    
+    table th:last-child,
+    table td:last-child {
+      min-width: 80px;
+      max-width: 120px;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-2 sm:p-6">
+  <a href="#mainContent" class="sr-only focus:not-sr-only focus:ring-2 focus:ring-slate-600 bg-white text-slate-700 px-3 py-2 rounded shadow z-50 absolute left-2 top-2">Skip to main content</a>
+  <main id="mainContent" class="container mx-auto max-w-4xl professional-card rounded-lg p-6 sm:p-8 mt-4 sm:mt-8">
+    <header class="professional-header text-white rounded-t-lg -mx-6 -mt-6 sm:-mx-8 sm:-mt-8 px-6 py-6 sm:px-8 sm:py-8 mb-8">
+      <div class="flex items-center">
+        <div class="bg-white bg-opacity-20 p-3 rounded-lg mr-4">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold">Wareneingang</h1>
+          <p class="text-slate-200 mt-1">Anomaly Detection & Analysis</p>
+        </div>
+      </div>
+    </header>
+
+    <div id="browserWarning" class="hidden bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 rounded-r relative mb-6" role="alert" aria-live="assertive">
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+          <strong class="font-semibold">Unsupported Browser</strong>
+          <p class="mt-1">Please switch to Chrome, Edge, or Opera to use this application. Your current browser doesn't support the File System Access API required for file processing.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification banner with improved structure -->
+    <div id="notificationBanner" class="hidden mb-6 rounded-lg relative" role="alert" aria-live="polite">
+        <div class="flex items-center p-4">
+            <span id="notificationIcon" class="mr-3 text-xl" aria-hidden="true"></span>
+            <div class="flex-1">
+                <span id="notificationMessage" class="text-sm font-medium"></span>
+            </div>
+            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100 focus-ring rounded p-1" aria-label="Close notification" tabindex="0" type="button">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="sr-only">Close notification</span>
+            </button>
+        </div>
+    </div>
+
+    <section class="mb-8">
+      <h2 class="text-xl font-semibold text-slate-800 mb-4">File Processing</h2>
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div class="flex-1">
+          <label for="fileInput" class="block text-sm font-medium text-slate-700 mb-2">Select MHTML File</label>
+          <div class="relative">
+            <input type="file" id="fileInput" accept=".mhtml,.mht" class="hidden" />
+            <button id="selectFileButton" class="w-full bg-white border-2 border-dashed border-slate-300 rounded-lg px-6 py-8 text-center hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors" type="button">
+              <svg class="mx-auto h-12 w-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 48 48" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" />
+              </svg>
+              <span class="block text-sm font-medium text-slate-900">Click to select MHTML file</span>
+              <span class="block text-xs text-slate-500 mt-1">or drag and drop here</span>
+            </button>
+            <div id="selectedFileName" class="hidden mt-2 text-sm text-slate-600 bg-slate-50 px-3 py-2 rounded border">
+              <svg class="inline w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span id="fileName">No file selected</span>
+            </div>
+            <div class="text-center mt-4">
+              <button id="processFileButton" class="professional-button text-white px-8 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Process File" type="button" disabled>
+                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                </svg>
+                Process File
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Validation Summary wrapper - professional styling -->
+  <div id="validationWrapper" class="hidden w-full px-2 sm:px-4 lg:px-6 mx-auto mt-8 mb-6">
+    <div id="validationSummary" class="w-full professional-card rounded-lg p-6"></div>
+  </div>
+
+  <!-- Table wrapper with professional styling -->
+  <div id="tableWrapper" class="hidden w-full px-2 sm:px-4 lg:px-6 mx-auto mt-6 mb-8">
+    <div class="w-full professional-table rounded-lg bg-white shadow-sm border border-gray-200">
+      <div id="output" class="w-full overflow-x-auto"></div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration object for better maintainability
+    const CONFIG = {
+      NOTIFICATION_DURATION: 5000,
+      DELIVERED_QUANTITY_COLUMN: 'Offene Menge L/A',
+      // Lazy loading configuration
+      ROWS_PER_PAGE: 100,
+      INITIAL_LOAD: 200,
+      // Performance configuration
+      DEBOUNCE_DELAY: 100, // Reduced for better real-time feedback
+      LAZY_LOAD_DELAY: 0, // Removed artificial delay for better performance
+      // Intersection Observer configuration (responsive to viewport)
+      getIntersectionMargin() {
+        // Use smaller margin on mobile for better performance
+        const isMobile = window.innerWidth < 768;
+        return isMobile ? '50px' : '100px';
+      },
+      // Filter configuration
+      FILTER_OUT_UNITS: ['kg', 'KG', 'Kg'], // Units to filter out
+      LOG_LEVELS: {
+        DEBUG: 0,
+        INFO: 1,
+        WARN: 2,
+        ERROR: 3
+      },
+      CURRENT_LOG_LEVEL: 1 // INFO level by default
+    };
+
+    // Logging utility with configurable levels
+    const Logger = {
+      debug: (message, ...args) => {
+        if (CONFIG.CURRENT_LOG_LEVEL <= CONFIG.LOG_LEVELS.DEBUG) {
+          console.debug(`[DEBUG] ${message}`, ...args);
+        }
+      },
+      info: (message, ...args) => {
+        if (CONFIG.CURRENT_LOG_LEVEL <= CONFIG.LOG_LEVELS.INFO) {
+          console.info(`[INFO] ${message}`, ...args);
+        }
+      },
+      warn: (message, ...args) => {
+        if (CONFIG.CURRENT_LOG_LEVEL <= CONFIG.LOG_LEVELS.WARN) {
+          console.warn(`[WARN] ${message}`, ...args);
+        }
+      },
+      error: (message, ...args) => {
+        if (CONFIG.CURRENT_LOG_LEVEL <= CONFIG.LOG_LEVELS.ERROR) {
+          console.error(`[ERROR] ${message}`, ...args);
+        }
+      }
+    };
+
+    // Debounced function utility
+    const debounce = (func, wait) => {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    };
+
+    // Browser detection with improved accessibility
+    const isSupported = () => {
+      return 'showOpenFilePicker' in window;
+    };
+
+    // Show warning and disable functionality if unsupported
+    if (!isSupported()) {
+      const browserWarning = document.getElementById('browserWarning');
+      const processFileButton = document.getElementById('processFileButton');
+      
+      if (browserWarning) {
+        browserWarning.classList.remove('hidden');
+      }
+      if (processFileButton) {
+        processFileButton.disabled = true;
+      }
+      Logger.error('Browser not supported - missing File System Access API');
+    }
+
+    // Application state management
+    const AppState = {
+      fileHandle: null,
+      currentFilteredData: [],
+      currentHeaders: [],
+      currentTargetColumnIndex: -1,
+      // Lazy loading state
+      displayedRows: 0,
+      totalFilteredRows: 0,
+      isLoading: false,
+      currentlyDisplayedData: []
+    };
+
+    // Error types configuration
+    const ERROR_TYPES = {
+      FILE_ACCESS: 'FILE_ACCESS',
+      FILE_PROCESSING: 'FILE_PROCESSING',
+      BROWSER_SUPPORT: 'BROWSER_SUPPORT'
+    };
+
+    // Notification types and configurations
+    const NOTIFICATION_TYPES = {
+      INFO: 'INFO',
+      SUCCESS: 'SUCCESS',
+      WARNING: 'WARNING',
+      ERROR: 'ERROR',
+      PROCESSING: 'PROCESSING'
+    };
+
+    const NOTIFICATION_CONFIGS = {
+      [NOTIFICATION_TYPES.INFO]: {
+        icon: 'ℹ️',
+        classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
+      },
+      [NOTIFICATION_TYPES.SUCCESS]: {
+        icon: '✅',
+        classes: 'bg-green-100 border border-2 border-green-400 text-green-700'
+      },
+      [NOTIFICATION_TYPES.WARNING]: {
+        icon: '⚠️',
+        classes: 'bg-yellow-100 border border-2 border-yellow-400 text-yellow-700'
+      },
+      [NOTIFICATION_TYPES.ERROR]: {
+        icon: '⚠️',
+        classes: 'bg-red-100 border border-2 border-red-400 text-red-700'
+      },
+      [NOTIFICATION_TYPES.PROCESSING]: {
+        icon: '🔄',
+        classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
+      }
+    };
+
+    // Notification system with improved UX
+    const NotificationManager = {
+      timeout: null,
+
+      show(message, type = NOTIFICATION_TYPES.INFO, duration = CONFIG.NOTIFICATION_DURATION) {
+        const { banner, icon, messageElement } = this.getElements();
+        
+        // Hide any existing notifications first
+        banner.classList.add('hidden');
+        
+        // Clear previous classes and set new ones
+        banner.className = 'mb-4 rounded relative';
+        
+        // Get config for notification type
+        const config = NOTIFICATION_CONFIGS[type] || NOTIFICATION_CONFIGS[NOTIFICATION_TYPES.INFO];
+        
+        // Apply styling from config
+        banner.classList.add(...config.classes.split(' '));
+        
+        // Set icon and message
+        icon.textContent = config.icon || 'ℹ️';
+        icon.className = 'mr-3 text-xl';
+        messageElement.textContent = message;
+        
+        // Show the banner
+        banner.classList.remove('hidden');
+
+        // Auto-hide if duration is specified
+        if (duration > 0) {
+          this.clearTimeout();
+          this.timeout = setTimeout(() => this.hide(), duration);
+        }
+      },
+
+      hide() {
+        const { banner } = this.getElements();
+        banner.classList.add('hidden');
+        this.clearTimeout();
+      },
+
+      clearTimeout() {
+        if (this.timeout) {
+          clearTimeout(this.timeout);
+          this.timeout = null;
+        }
+      },
+
+      getElements() {
+        return {
+          banner: document.getElementById('notificationBanner'),
+          icon: document.getElementById('notificationIcon'),
+          messageElement: document.getElementById('notificationMessage')
+        };
+      }
+    };
+
+    // Legacy function for backward compatibility
+    const showNotification = (message, type, duration) => NotificationManager.show(message, type, duration);
+    const hideNotification = () => NotificationManager.hide();
+
+    // Error handling with improved logging and user feedback
+    const ErrorHandler = {
+      handle(error, type, silent = false) {
+        // Always log to console with appropriate level
+        Logger.error(`[${type}]`, error);
+
+        // Determine user-friendly message
+        let userMessage = 'An unexpected error occurred.';
+        if (error instanceof Error) {
+          const { message } = error;
+          switch (type) {
+            case ERROR_TYPES.FILE_ACCESS:
+              userMessage = `Cannot access file: ${message}`;
+              break;
+            case ERROR_TYPES.FILE_PROCESSING:
+              userMessage = `Error processing file: ${message}`;
+              break;
+            case ERROR_TYPES.BROWSER_SUPPORT:
+              userMessage = `Browser compatibility error: ${message}`;
+              break;
+          }
+        } else if (typeof error === 'string') {
+          userMessage = error;
+        }
+
+        // Show notification unless silent
+        if (!silent) {
+          NotificationManager.show(userMessage, NOTIFICATION_TYPES.ERROR);
+        }
+
+        return { type, message: userMessage, error };
+      }
+    };
+
+    // File handling with improved structure
+    const FileHandler = {
+      async handleSelectedFile(file) {
+        try {
+          const text = await file.text();
+          await FileProcessor.processFile(text.trim());
+          
+          Logger.info('File processed successfully:', file.name);
+        } catch (error) {
+          ErrorHandler.handle(error, ERROR_TYPES.FILE_PROCESSING);
+        }
+      }
+    };
+
+    // Application initialization with improved structure
+    const AppInitializer = {
+      async init() {
+        if (isSupported()) {
+          Logger.info('Browser supported for File System Access API');
+        } else {
+          Logger.error('Browser not supported');
+        }
+        
+        // Hide empty elements on page load
+        this.hideEmptyElements();
+      },
+      
+      hideEmptyElements() {
+        const validationWrapper = document.getElementById('validationWrapper');
+        const tableWrapper = document.getElementById('tableWrapper');
+        
+        if (validationWrapper) {
+          validationWrapper.classList.add('hidden');
+        }
+        if (tableWrapper) {
+          tableWrapper.classList.add('hidden');
+        }
+      }
+    };
+    
+    // Initialize application
+    AppInitializer.init();
+
+    // Event handlers with improved structure and error handling
+    const EventHandlers = {
+      async handleFileSelection() {
+        try {
+          const handles = await window.showOpenFilePicker({
+            types: [{
+              description: 'MHTML Files',
+              accept: {
+                'application/x-mimearchive': ['.mhtml', '.mht'],
+                'message/rfc822': ['.mhtml', '.mht']
+              }
+            }],
+            multiple: false,
+            startIn: 'downloads'
+          });
+          
+          AppState.fileHandle = handles[0];
+          const file = await AppState.fileHandle.getFile();
+          
+          // Update UI to show selected file
+          this.updateFileSelection(file.name);
+          
+          await FileHandler.handleSelectedFile(file);
+          
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            ErrorHandler.handle(err, ERROR_TYPES.FILE_ACCESS);
+          }
+        }
+      },
+
+      handleFileInputChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+          this.updateFileSelection(file.name);
+          FileHandler.handleSelectedFile(file);
+        }
+      },
+
+      updateFileSelection(fileName) {
+        const fileNameElement = document.getElementById('fileName');
+        const selectedFileNameDiv = document.getElementById('selectedFileName');
+        const processButton = document.getElementById('processFileButton');
+        
+        if (fileNameElement && selectedFileNameDiv && processButton) {
+          fileNameElement.textContent = fileName;
+          selectedFileNameDiv.classList.remove('hidden');
+          processButton.disabled = false;
+          processButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      },
+
+      async handleProcessFile() {
+        if (!AppState.fileHandle) {
+          NotificationManager.show('Please select a file first!', NOTIFICATION_TYPES.WARNING);
+          return;
+        }
+
+        try {
+          const file = await AppState.fileHandle.getFile();
+          const text = await file.text();
+          await FileProcessor.processFile(text.trim());
+        } catch (err) {
+          ErrorHandler.handle(err, ERROR_TYPES.FILE_ACCESS);
+        }
+      }
+    };
+
+    // Filtering system with improved performance
+    const FilterManager = {
+      toggleFilter(filterId) {
+        const checkbox = document.getElementById(filterId);
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          this.applyFilters();
+        }
+      },
+
+      applyFilters() {
+        // Use debounce with improved delay for better real-time feedback
+        if (!this._debouncedApply) {
+          this._debouncedApply = debounce(() => {
+            const { showZero, showNegative, showPositive } = this.getFilterStates();
+
+            const filteredData = AppState.currentFilteredData.filter(rowData => {
+              switch (rowData.type) {
+                case 'zero': return showZero;
+                case 'negative': return showNegative;
+                case 'positive': return showPositive;
+                default: return false;
+              }
+            });
+
+            // Update state for lazy loading
+            AppState.totalFilteredRows = filteredData.length;
+            AppState.displayedRows = 0;
+            AppState.currentlyDisplayedData = filteredData;
+
+            // Update visible count
+            const visibleCountElement = document.getElementById('visibleCount');
+            if (visibleCountElement) {
+              visibleCountElement.textContent = filteredData.length;
+            }
+
+            // Re-render table with lazy loading (this will reset scroll position)
+            LazyTableRenderer.renderInitial(filteredData, AppState.currentHeaders, AppState.currentTargetColumnIndex);
+          }, CONFIG.DEBOUNCE_DELAY);
+        }
+        this._debouncedApply();
+      },
+
+      getFilterStates() {
+        const showZero = document.getElementById('showZero')?.checked ?? true;
+        const showNegative = document.getElementById('showNegative')?.checked ?? true;
+        const showPositive = document.getElementById('showPositive')?.checked ?? true;
+        
+        return { showZero, showNegative, showPositive };
+      },
+
+      initialize() {
+        const showZero = document.getElementById('showZero');
+        const showNegative = document.getElementById('showNegative');
+        const showPositive = document.getElementById('showPositive');
+        
+        if (showZero) {
+          showZero.addEventListener('change', () => this.applyFilters());
+        }
+        if (showNegative) {
+          showNegative.addEventListener('change', () => this.applyFilters());
+        }
+        if (showPositive) {
+          showPositive.addEventListener('change', () => this.applyFilters());
+        }
+      }
+    };
+
+    // Validation summary generator with improved template handling
+    const ValidationSummaryGenerator = {
+      generate({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, filteredOutKg, columnName }) {
+        const hasAnomalies = negativeRows > 0 || positiveRows > 0;
+        const hasData = zeroRows > 0 || negativeRows > 0 || positiveRows > 0;
+        
+        return `
+          <div class="mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+              <h3 class="font-bold text-lg text-slate-800">Validation Summary</h3>
+            </div>
+            ${this.generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, filteredOutKg })}
+          </div>
+          ${this.generateWarningsAndMessages({ invalidValues, filteredOutKg, hasAnomalies, columnName })}
+        `;
+      },
+
+      generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, filteredOutKg }) {
+        return `
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-4 mb-4">
+            <div class="stat-card p-4 rounded-lg">
+              <div class="text-sm font-medium text-slate-600 uppercase tracking-wide">Total Rows</div>
+              <div class="text-2xl font-bold text-slate-900 mt-1">${totalRows}</div>
+            </div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-emerald-500">
+              <div class="text-sm font-medium text-emerald-600 uppercase tracking-wide">Normal</div>
+              <div class="text-2xl font-bold text-emerald-700 mt-1">${zeroRows}</div>
+            </div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-red-500">
+              <div class="text-sm font-medium text-red-600 uppercase tracking-wide">Falschbuchungen</div>
+              <div class="text-2xl font-bold text-red-700 mt-1">${negativeRows}</div>
+            </div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-blue-500">
+              <div class="text-sm font-medium text-blue-600 uppercase tracking-wide">Genullt</div>
+              <div class="text-2xl font-bold text-blue-700 mt-1">${positiveRows}</div>
+            </div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-amber-500">
+              <div class="text-sm font-medium text-amber-600 uppercase tracking-wide">Invalid Values</div>
+              <div class="text-2xl font-bold text-amber-700 mt-1">${invalidValues}</div>
+            </div>
+            <div class="stat-card p-4 rounded-lg border-l-4 border-purple-500">
+              <div class="text-sm font-medium text-purple-600 uppercase tracking-wide">Filtered KG</div>
+              <div class="text-2xl font-bold text-purple-700 mt-1">${filteredOutKg}</div>
+            </div>
+          </div>
+          <div class="bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-6 shadow-sm">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div class="flex-1">
+                <h4 class="text-sm font-semibold text-slate-700 mb-4 flex items-center">
+                  <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                  </svg>
+                  Filter Options
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <label class="filter-card filter-emerald">
+                    <input type="checkbox" id="showZero" class="filter-checkbox sr-only" checked aria-label="Show zero values">
+                    <div class="filter-card-content bg-white border-2 border-emerald-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-emerald-300 hover:shadow-md">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                          <div class="w-4 h-4 rounded-full bg-emerald-500 mr-3 shadow-sm"></div>
+                          <div>
+                            <div class="font-semibold text-slate-800">Normal</div>
+                            <div class="text-sm text-slate-500">${zeroRows} entries</div>
+                          </div>
+                        </div>
+                        <div class="filter-checkmark w-5 h-5 border-2 border-emerald-300 rounded flex items-center justify-center transition-all duration-200">
+                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="filter-card filter-red">
+                    <input type="checkbox" id="showNegative" class="filter-checkbox sr-only" checked aria-label="Show negative values">
+                    <div class="filter-card-content bg-white border-2 border-red-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-red-300 hover:shadow-md">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                          <div class="w-4 h-4 rounded-full bg-red-500 mr-3 shadow-sm"></div>
+                          <div>
+                            <div class="font-semibold text-slate-800">Falschbuchungen</div>
+                            <div class="text-sm text-slate-500">${negativeRows} entries</div>
+                          </div>
+                        </div>
+                        <div class="filter-checkmark w-5 h-5 border-2 border-red-300 rounded flex items-center justify-center transition-all duration-200">
+                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="filter-card filter-blue">
+                    <input type="checkbox" id="showPositive" class="filter-checkbox sr-only" checked aria-label="Show positive values">
+                    <div class="filter-card-content bg-white border-2 border-blue-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-blue-300 hover:shadow-md">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                          <div class="w-4 h-4 rounded-full bg-blue-500 mr-3 shadow-sm"></div>
+                          <div>
+                            <div class="font-semibold text-slate-800">Genullt</div>
+                            <div class="text-sm text-slate-500">${positiveRows} entries</div>
+                          </div>
+                        </div>
+                        <div class="filter-checkmark w-5 h-5 border-2 border-blue-300 rounded flex items-center justify-center transition-all duration-200">
+                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div class="lg:ml-6 flex-shrink-0">
+                <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 shadow-sm">
+                  <div class="text-center">
+                    <div class="text-sm font-medium text-slate-600 mb-1">Results</div>
+                    <div class="text-lg font-bold text-slate-900">
+                      <span id="visibleCount">${zeroRows + negativeRows + positiveRows}</span>
+                      <span class="text-sm font-normal text-slate-500">of</span>
+                      <span id="totalCount">${zeroRows + negativeRows + positiveRows}</span>
+                    </div>
+                    <div class="text-xs text-slate-500">records shown</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      },
+
+      generateWarningsAndMessages({ invalidValues, filteredOutKg, hasAnomalies, columnName }) {
+        let html = '';
+        
+        if (filteredOutKg > 0) {
+          html += `
+            <div class="bg-purple-50 border-l-4 border-purple-500 p-4 text-purple-800 mt-4 rounded-r-lg">
+              <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <p class="font-medium">Information: ${filteredOutKg} rows with KG units were automatically filtered out (KG measurements typically have natural variations)</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        if (invalidValues > 0) {
+          html += `
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 text-amber-800 mt-4 rounded-r-lg">
+              <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <p class="font-medium">Warning: ${invalidValues} invalid numeric values found in '${columnName}' column</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        if (!hasAnomalies) {
+          html += `
+            <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 text-emerald-800 mt-4 rounded-r-lg">
+              <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <p class="font-medium">Success: No Falschbuchungen or Genullt found in '${columnName}' column. All values are normal.</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        return html;
+      }
+    };
+
+    // Table rendering with improved performance and accessibility
+    const TableRenderer = {
+      render(filteredData, headers, targetColumnIndex) {
+        const output = document.getElementById('output');
+        const tableWrapper = document.getElementById('tableWrapper');
+        if (!output) {
+          return;
+        }
+
+        output.innerHTML = '';
+
+        if (filteredData.length === 0) {
+          output.innerHTML = '<p class="text-gray-500 p-4 text-center">No anomalies match the current filter settings.</p>';
+          if (tableWrapper) {
+            tableWrapper.classList.remove('hidden');
+          }
+          return;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'w-full border-collapse text-xs sm:text-sm bg-white';
+        table.setAttribute('role', 'table');
+        table.setAttribute('aria-label', 'Anomaly data table');
+        
+        table.appendChild(this.createHeader(headers));
+        table.appendChild(this.createBody(filteredData, headers, targetColumnIndex));
+        
+        output.appendChild(table);
+        
+        // Show the table wrapper when content is added
+        if (tableWrapper) {
+          tableWrapper.classList.remove('hidden');
+        }
+      },
+
+      createHeader(headers) {
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'bg-slate-100 border-b-2 border-slate-300';
+        headerRow.setAttribute('role', 'row');
+        
+        // Add regular headers (no dot column)
+        headers.forEach((header, index) => {
+          const th = document.createElement('th');
+          th.className = 'border border-slate-300 px-1 py-1 text-left font-semibold text-slate-700 text-xs sm:text-sm';
+          th.textContent = header;
+          th.setAttribute('scope', 'col');
+          
+          headerRow.appendChild(th);
+        });
+        
+        thead.appendChild(headerRow);
+        return thead;
+      },
+
+      createBody(filteredData, headers, targetColumnIndex) {
+        const tbody = document.createElement('tbody');
+        
+        filteredData.forEach((rowData, rowIndex) => {
+          const tr = document.createElement('tr');
+          tr.setAttribute('role', 'row');
+          
+          // Apply row styling with border
+          const { className } = this.getRowStyle(rowData.type);
+          tr.className = className;
+          
+          rowData.cells.forEach((cell, index) => {
+            const td = document.createElement('td');
+            const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+            let cellClass = `border border-slate-200 px-3 py-2 text-xs sm:text-sm ${isNumber ? 'text-right' : 'text-left'} text-slate-700 truncate`;
+            
+            // Highlight the quantity column
+            if (index === targetColumnIndex) {
+              cellClass += this.getHighlightClass(rowData.type);
+            }
+            
+            td.className = cellClass;
+            td.textContent = cell;
+            td.setAttribute('role', 'cell');
+            td.setAttribute('title', cell); // Add tooltip for truncated text
+            if (index === targetColumnIndex) {
+              td.setAttribute('aria-label', `${headers[index]}: ${cell}`);
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        
+        return tbody;
+      },
+
+      getRowStyle(type) {
+        switch (type) {
+          case 'zero':
+            return {
+              className: 'bg-emerald-50 hover:bg-emerald-100 transition-colors border-l-4 border-emerald-400'
+            };
+          case 'negative':
+            return {
+              className: 'bg-red-50 hover:bg-red-100 transition-colors border-l-4 border-red-400'
+            };
+          case 'positive':
+            return {
+              className: 'bg-blue-50 hover:bg-blue-100 transition-colors border-l-4 border-blue-400'
+            };
+          default:
+            return {
+              className: 'hover:bg-slate-50 transition-colors'
+            };
+        }
+      },
+
+      getHighlightClass(type) {
+        switch (type) {
+          case 'zero': return ' font-bold text-emerald-800 bg-emerald-100';
+          case 'negative': return ' font-bold text-red-800 bg-red-100';
+          case 'positive': return ' font-bold text-blue-800 bg-blue-100';
+          default: return '';
+        }
+      }
+    };
+
+    // Lazy Table Renderer for improved performance with large datasets
+    const LazyTableRenderer = {
+      table: null,
+      tbody: null,
+      headers: null,
+      targetColumnIndex: -1,
+      loadingIndicator: null,
+      intersectionObserver: null,
+      sentinel: null,
+
+      renderInitial(filteredData, headers, targetColumnIndex) {
+        this.headers = headers;
+        this.targetColumnIndex = targetColumnIndex;
+        
+        // Reset lazy loading state for new data/filters
+        this.resetLazyLoader();
+        
+        const output = document.getElementById('output');
+        const tableWrapper = document.getElementById('tableWrapper');
+        if (!output) {
+          return;
+        }
+
+        output.innerHTML = '';
+
+        if (filteredData.length === 0) {
+          output.innerHTML = '<p class="text-gray-500 p-4 text-center">No anomalies match the current filter settings.</p>';
+          if (tableWrapper) {
+            tableWrapper.classList.remove('hidden');
+          }
+          return;
+        }
+
+        // Create table structure
+        this.table = document.createElement('table');
+        this.table.className = 'w-full border-collapse text-xs sm:text-sm bg-white';
+        this.table.setAttribute('role', 'table');
+        this.table.setAttribute('aria-label', 'Anomaly data table');
+        
+        this.table.appendChild(this.createHeader());
+        this.tbody = this.createBody();
+        this.table.appendChild(this.tbody);
+        
+        // Create loading indicator
+        this.createLoadingIndicator();
+        
+        output.appendChild(this.table);
+        output.appendChild(this.loadingIndicator);
+
+        // Show the table wrapper when content is added
+        if (tableWrapper) {
+          tableWrapper.classList.remove('hidden');
+        }
+
+        // Load initial rows
+        this.loadMoreRows(Math.min(CONFIG.INITIAL_LOAD, filteredData.length));
+
+        // Setup intersection observer for infinite scroll
+        this.setupIntersectionObserver();
+      },
+
+      resetLazyLoader() {
+        // Disconnect existing observer to prevent memory leaks
+        if (this.intersectionObserver) {
+          this.intersectionObserver.disconnect();
+          this.intersectionObserver = null;
+        }
+        
+        // Remove existing sentinel
+        if (this.sentinel && this.sentinel.parentNode) {
+          this.sentinel.parentNode.removeChild(this.sentinel);
+          this.sentinel = null;
+        }
+        
+        // Reset scroll position to top to prevent missing/duplicate rows
+        window.scrollTo(0, 0);
+        
+        // Reset loading state
+        AppState.displayedRows = 0;
+        AppState.isLoading = false;
+        
+        // Clear any existing table body content
+        if (this.tbody) {
+          this.tbody.innerHTML = '';
+        }
+      },
+
+      createHeader() {
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'bg-slate-100 border-b-2 border-slate-300 sticky top-0 z-10';
+        headerRow.setAttribute('role', 'row');
+        
+        // Add regular headers (no dot column)
+        this.headers.forEach((header, index) => {
+          const th = document.createElement('th');
+          th.className = 'border border-slate-300 px-1 py-1 text-left font-semibold text-slate-700 text-xs sm:text-sm';
+          th.textContent = header;
+          th.setAttribute('scope', 'col');
+          
+          headerRow.appendChild(th);
+        });
+        
+        thead.appendChild(headerRow);
+        return thead;
+      },
+
+      createBody() {
+        const tbody = document.createElement('tbody');
+        tbody.id = 'lazyTableBody';
+        return tbody;
+      },
+
+      createLoadingIndicator() {
+        this.loadingIndicator = document.createElement('div');
+        this.loadingIndicator.id = 'loadingIndicator';
+        this.loadingIndicator.className = 'hidden text-center py-4';
+        this.loadingIndicator.innerHTML = `
+          <div class="flex items-center justify-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Loading more rows...
+          </div>
+        `;
+      },
+
+      loadMoreRows(count) {
+        if (AppState.isLoading || AppState.displayedRows >= AppState.totalFilteredRows) {
+          return;
+        }
+
+        AppState.isLoading = true;
+        this.showLoadingIndicator();
+
+        // Use configurable delay - removed artificial delay for better performance
+        const loadDelay = CONFIG.LAZY_LOAD_DELAY;
+        
+        if (loadDelay > 0) {
+          setTimeout(() => this.performRowLoading(count), loadDelay);
+        } else {
+          this.performRowLoading(count);
+        }
+      },
+
+      performRowLoading(count) {
+        const start = AppState.displayedRows;
+        const end = Math.min(start + count, AppState.totalFilteredRows);
+        const rowsToAdd = AppState.currentlyDisplayedData.slice(start, end);
+
+        rowsToAdd.forEach((rowData, index) => {
+          const tr = this.createRow(rowData, start + index);
+          this.tbody.appendChild(tr);
+        });
+
+        AppState.displayedRows = end;
+        AppState.isLoading = false;
+        this.hideLoadingIndicator();
+
+        // Update progress indicator
+        this.updateProgressIndicator();
+
+        Logger.debug(`Loaded rows ${start + 1}-${end} of ${AppState.totalFilteredRows}`);
+      },
+
+      createRow(rowData, rowIndex) {
+        const tr = document.createElement('tr');
+        tr.setAttribute('role', 'row');
+        
+        // Apply row styling with border
+        const { className } = TableRenderer.getRowStyle(rowData.type);
+        tr.className = className;
+        
+        rowData.cells.forEach((cell, index) => {
+          const td = document.createElement('td');
+          const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+          let cellClass = `border border-slate-200 px-3 py-2 text-xs sm:text-sm ${isNumber ? 'text-right' : 'text-left'} text-slate-700 truncate`;
+          
+          // Highlight the quantity column
+          if (index === this.targetColumnIndex) {
+            cellClass += TableRenderer.getHighlightClass(rowData.type);
+          }
+          
+          td.className = cellClass;
+          td.textContent = cell;
+          td.setAttribute('role', 'cell');
+          td.setAttribute('title', cell); // Add tooltip for truncated text
+          if (index === this.targetColumnIndex) {
+            td.setAttribute('aria-label', `${this.headers[index]}: ${cell}`);
+          }
+          tr.appendChild(td);
+        });
+        
+        return tr;
+      },
+
+      setupIntersectionObserver() {
+        // Disconnect existing observer to prevent memory leaks
+        if (this.intersectionObserver) {
+          this.intersectionObserver.disconnect();
+          this.intersectionObserver = null;
+        }
+        
+        // Remove existing sentinel
+        if (this.sentinel && this.sentinel.parentNode) {
+          this.sentinel.parentNode.removeChild(this.sentinel);
+          this.sentinel = null;
+        }
+        
+        // Create a new sentinel element to trigger loading
+        this.sentinel = document.createElement('div');
+        this.sentinel.id = 'loadSentinel';
+        this.sentinel.className = 'h-1';
+        
+        this.intersectionObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting && !AppState.isLoading && AppState.displayedRows < AppState.totalFilteredRows) {
+              this.loadMoreRows(CONFIG.ROWS_PER_PAGE);
+            }
+          });
+        }, {
+          rootMargin: CONFIG.getIntersectionMargin() // Responsive margin based on viewport
+        });
+
+        // Insert sentinel before loading indicator
+        this.loadingIndicator.parentNode.insertBefore(this.sentinel, this.loadingIndicator);
+        this.intersectionObserver.observe(this.sentinel);
+      },
+
+      showLoadingIndicator() {
+        if (this.loadingIndicator) {
+          this.loadingIndicator.classList.remove('hidden');
+        }
+      },
+
+      hideLoadingIndicator() {
+        if (this.loadingIndicator) {
+          this.loadingIndicator.classList.add('hidden');
+        }
+      },
+
+      updateProgressIndicator() {
+        const visibleCountElement = document.getElementById('visibleCount');
+        if (visibleCountElement) {
+          visibleCountElement.textContent = `${AppState.displayedRows} of ${AppState.totalFilteredRows}`;
+        }
+      },
+
+      cleanup() {
+        // Clean up observers and DOM elements when component is destroyed
+        if (this.intersectionObserver) {
+          this.intersectionObserver.disconnect();
+          this.intersectionObserver = null;
+        }
+        
+        if (this.sentinel && this.sentinel.parentNode) {
+          this.sentinel.parentNode.removeChild(this.sentinel);
+          this.sentinel = null;
+        }
+      }
+    };
+    
+    
+    // File processor with improved error handling and performance
+    const FileProcessor = {
+      async processFile(rawData) {
+        NotificationManager.show('Processing file...', NOTIFICATION_TYPES.PROCESSING, 0);
+        
+        try {
+          // Clear previous results
+          this.clearResults();
+          
+          // Parse and validate HTML content
+          const doc = await this.parseAndValidateHtml(rawData);
+          
+          // Extract and process table data
+          const { headers, targetColumnIndex, stats, filteredData } = this.processTableData(doc);
+          
+          // Update state
+          this.updateApplicationState(filteredData, headers, targetColumnIndex);
+          
+          // Update UI
+          this.updateValidationSummary(stats);
+          
+          if (stats.negativeRows === 0 && stats.positiveRows === 0) {
+            NotificationManager.show('No Falschbuchungen or Genullt found (all values are normal)', NOTIFICATION_TYPES.INFO);
+            return;
+          }
+          
+          // Apply filters
+          FilterManager.applyFilters();
+          
+          NotificationManager.show(
+            `Found ${stats.negativeRows} Falschbuchungen and ${stats.positiveRows} Genullt (${stats.zeroRows} normal values)`,
+            NOTIFICATION_TYPES.SUCCESS
+          );
+          
+        } catch (error) {
+          this.handleProcessingError(error);
+          throw error;
+        }
+      },
+
+      clearResults() {
+        const output = document.getElementById('output');
+        const validationSummary = document.getElementById('validationSummary');
+        const validationWrapper = document.getElementById('validationWrapper');
+        const tableWrapper = document.getElementById('tableWrapper');
+        
+        // Clean up lazy table renderer
+        LazyTableRenderer.cleanup();
+        
+        if (output) {
+          output.innerHTML = '';
+        }
+        if (validationSummary) {
+          validationSummary.innerHTML = '';
+        }
+        if (validationWrapper) {
+          validationWrapper.classList.add('hidden');
+        }
+        if (tableWrapper) {
+          tableWrapper.classList.add('hidden');
+        }
+      },
+
+      async parseAndValidateHtml(rawData) {
+        // Find the HTML content section in MHTML
+        const htmlStart = rawData.indexOf('<html');
+        
+        if (htmlStart === -1) {
+          throw new Error('No HTML content found in file. Please ensure this is a valid MHTML file.');
+        }
+        
+        const htmlContent = rawData.substring(htmlStart);
+        
+        // Sanitize and parse the HTML content
+        const sanitizedHtml = DOMPurify.sanitize(htmlContent, {
+          WHOLE_DOCUMENT: true,
+          RETURN_DOM: false,
+          USE_PROFILES: { html: true, svg: false, svgFilters: false }
+        });
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(sanitizedHtml, 'text/html');
+        
+        if (!doc.querySelector('table') && !doc.querySelector('tr')) {
+          throw new Error('Invalid file format: No table data found after sanitization');
+        }
+
+        return doc;
+      },
+
+      processTableData(doc) {
+        const rows = doc.querySelectorAll('tr');
+        if (!rows.length) {
+          throw new Error('No table data found');
+        }
+
+        // Extract headers and remove the last column
+        const allHeaders = Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
+        const headers = allHeaders.slice(0, -1); // Remove last column
+        
+        // Find required columns
+        const targetColumnIndex = headers.indexOf(CONFIG.DELIVERED_QUANTITY_COLUMN);
+        if (targetColumnIndex === -1) {
+          throw new Error(`Required column '${CONFIG.DELIVERED_QUANTITY_COLUMN}' not found in file`);
+        }
+
+        // Find unit column for KG filtering
+        const unitColumnIndex = headers.indexOf('Einh. L/A');
+        if (unitColumnIndex !== -1) {
+          Logger.info(`Found unit column 'Einh. L/A' at index ${unitColumnIndex} - will filter out KG entries`);
+        }
+
+        // Process data rows and collect stats
+        const stats = { totalRows: 0, zeroRows: 0, negativeRows: 0, positiveRows: 0, invalidValues: 0, filteredOutKg: 0 };
+        
+        const filteredData = Array.from(rows)
+          .slice(1)
+          .map(row => {
+            stats.totalRows++;
+            const allCells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+            const cells = allCells.slice(0, -1); // Remove last column data
+            
+            if (!cells[targetColumnIndex]) {
+              return null;
+            }
+            
+            // Check if this row contains KG units and should be filtered out
+            const containsKgUnit = this.shouldFilterOutKgRow(allCells, unitColumnIndex);
+            if (containsKgUnit) {
+              stats.filteredOutKg++;
+              return null; // Filter out KG rows
+            }
+            
+            const value = parseFloat(cells[targetColumnIndex].replace(',', '.'));
+            if (isNaN(value)) {
+              stats.invalidValues++;
+              return null;
+            }
+            
+            if (value === 0) {
+              stats.zeroRows++;
+              return { cells, type: 'zero' }; // Include zero values for filtering
+            } else if (value < 0) {
+              stats.negativeRows++;
+              return { cells, type: 'negative' };
+            } else if (value > 0) {
+              stats.positiveRows++;
+              return { cells, type: 'positive' };
+            }
+            
+            return null;
+          })
+          .filter(row => row !== null);
+
+        return { headers, targetColumnIndex, stats, filteredData };
+      },
+
+      shouldFilterOutKgRow(cells, unitColumnIndex) {
+        // If we found the unit column, check it specifically
+        if (unitColumnIndex !== -1 && cells[unitColumnIndex]) {
+          const unitCell = cells[unitColumnIndex].toLowerCase().trim();
+          return CONFIG.FILTER_OUT_UNITS.some(unit => {
+            const unitLower = unit.toLowerCase();
+            return unitCell === unitLower || 
+                   unitCell.includes(unitLower) ||
+                   unitCell.startsWith(unitLower) ||
+                   unitCell.endsWith(unitLower);
+          });
+        }
+        
+        // Fallback: check all cells if unit column not found
+        return cells.some(cell => {
+          if (typeof cell !== 'string') return false;
+          const cellLower = cell.toLowerCase();
+          return CONFIG.FILTER_OUT_UNITS.some(unit => {
+            const unitLower = unit.toLowerCase();
+            // Check for unit at end of string (with optional space/punctuation)
+            return cellLower.endsWith(unitLower) || 
+                   cellLower.endsWith(` ${unitLower}`) ||
+                   cellLower.includes(`${unitLower} `) ||
+                   cellLower.includes(` ${unitLower}`) ||
+                   // Check for patterns like "5,2 kg" or "5.2kg"
+                   /[\d\s,\.]\s*kg\s*$/i.test(cell) ||
+                   /^kg\s*[\d\s,\.]/i.test(cell);
+          });
+        });
+      },
+
+      updateApplicationState(filteredData, headers, targetColumnIndex) {
+        AppState.currentFilteredData = filteredData;
+        AppState.currentHeaders = headers;
+        AppState.currentTargetColumnIndex = targetColumnIndex;
+      },
+
+      updateValidationSummary(stats) {
+        const validationSummary = document.getElementById('validationSummary');
+        const validationWrapper = document.getElementById('validationWrapper');
+        if (validationSummary && validationWrapper) {
+          validationSummary.innerHTML = DOMPurify.sanitize(
+            ValidationSummaryGenerator.generate({
+              ...stats,
+              columnName: CONFIG.DELIVERED_QUANTITY_COLUMN
+            })
+          );
+          
+          // Show the validation wrapper when content is added
+          validationWrapper.classList.remove('hidden');
+          
+          // Initialize filters after the HTML is inserted
+          FilterManager.initialize();
+        }
+      },
+
+      handleProcessingError(error) {
+        const validationSummary = document.getElementById('validationSummary');
+        if (validationSummary) {
+          validationSummary.innerHTML = DOMPurify.sanitize(`
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 text-red-700">
+              <p class="font-bold">Error Processing File</p>
+              <p>${error.message}</p>
+            </div>
+          `);
+        }
+        
+        NotificationManager.show(`Error processing file: ${error.message}`, NOTIFICATION_TYPES.ERROR);
+      }
+    };
+    // Event listeners setup with improved organization
+    const EventListenerSetup = {
+      init() {
+        this.setupFileSelection();
+        this.setupProcessFile();
+        this.setupKeyboardAccessibility();
+        this.setupDragAndDrop();
+      },
+
+      setupFileSelection() {
+        const selectFileButton = document.getElementById('selectFileButton');
+        const fileInput = document.getElementById('fileInput');
+        
+        if (selectFileButton && fileInput) {
+          selectFileButton.addEventListener('click', () => {
+            if (isSupported()) {
+              EventHandlers.handleFileSelection();
+            } else {
+              fileInput.click();
+            }
+          });
+          
+          fileInput.addEventListener('change', (e) => {
+            EventHandlers.handleFileInputChange(e);
+          });
+        }
+      },
+
+      setupProcessFile() {
+        const processFileButton = document.getElementById('processFileButton');
+        if (processFileButton) {
+          processFileButton.addEventListener('click', EventHandlers.handleProcessFile);
+        }
+      },
+
+      setupDragAndDrop() {
+        const selectFileButton = document.getElementById('selectFileButton');
+        if (selectFileButton) {
+          selectFileButton.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            selectFileButton.classList.add('border-slate-500', 'bg-slate-50');
+          });
+          
+          selectFileButton.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            selectFileButton.classList.remove('border-slate-500', 'bg-slate-50');
+          });
+          
+          selectFileButton.addEventListener('drop', (e) => {
+            e.preventDefault();
+            selectFileButton.classList.remove('border-slate-500', 'bg-slate-50');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && (files[0].name.endsWith('.mhtml') || files[0].name.endsWith('.mht'))) {
+              EventHandlers.updateFileSelection(files[0].name);
+              FileHandler.handleSelectedFile(files[0]);
+            }
+          });
+        }
+      },
+
+      setupKeyboardAccessibility() {
+        // Add keyboard support for custom button-like elements only
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            const target = e.target;
+            // Only handle custom elements with role="button", exclude native interactive elements
+            if (target.getAttribute('role') === 'button' && 
+                target.hasAttribute('tabindex') &&
+                !['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'A'].includes(target.tagName)) {
+              e.preventDefault();
+              target.click();
+            }
+          }
+        });
+      }
+    };
+
+    // Legacy function support for backward compatibility
+    const toggleFilter = (filterId) => FilterManager.toggleFilter(filterId);
+
+    // Initialize everything when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        EventListenerSetup.init();
+        Logger.info('Application initialized successfully');
+      });
+    } else {
+      EventListenerSetup.init();
+      Logger.info('Application initialized successfully');
+    }
+  </script>
+</body>
+</html>
