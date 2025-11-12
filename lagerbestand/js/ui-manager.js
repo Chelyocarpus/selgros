@@ -22,6 +22,9 @@ function debounce(func, wait) {
  * UI Manager class - handles all UI interactions and state
  */
 class UIManager {
+    // Constants
+    static MAX_RECENT_MATERIALS = 20; // Maximum number of recently added materials to track
+    
     constructor(dataManager, reportProcessor) {
         this.dataManager = dataManager;
         this.reportProcessor = reportProcessor;
@@ -809,15 +812,15 @@ class UIManager {
 
             // Add to recently added list if it's a new material (not editing)
             if (mode !== 'edit') {
-                const material = {
-                    code: code,
-                    name: name,
-                    capacity: capacityNum,
-                    promoCapacity: promoCapacity ? parseInt(promoCapacity) : null,
-                    promoActive: promoActive,
-                    promoEndDate: promoEndDate || null,
-                    group: group || null
-                };
+                const material = this.createMaterialObject(
+                    code,
+                    name,
+                    capacityNum,
+                    promoCapacity ? parseInt(promoCapacity) : null,
+                    promoActive,
+                    promoEndDate || null,
+                    group || null
+                );
                 this.addToRecentlyAdded(material);
             }
 
@@ -998,8 +1001,8 @@ class UIManager {
                 
                 // Show success message
                 const message = this.t('backupImported')
-                    .replace('{{materials}}', result.materialsCount)
-                    .replace('{{archive}}', result.archiveCount);
+                    .replace('{materials}', result.materialsCount)
+                    .replace('{archive}', result.archiveCount);
                 
                 this.showToast(message, 'success', '<i class="fa-solid fa-file-arrow-up"></i> ' + this.t('backupSuccess'));
             })
@@ -1077,6 +1080,29 @@ class UIManager {
     }
 
     /**
+     * Create a material object with consistent structure
+     * @param {string} code - Material code
+     * @param {string} name - Material name
+     * @param {number} capacity - MKT capacity
+     * @param {number|null} promoCapacity - Promotional capacity
+     * @param {boolean} promoActive - Whether promo is active
+     * @param {string|null} promoEndDate - Promo end date
+     * @param {string|null} group - Group ID
+     * @returns {Object} Material object with consistent structure
+     */
+    createMaterialObject(code, name, capacity, promoCapacity = null, promoActive = false, promoEndDate = null, group = null) {
+        return {
+            code: code,
+            name: name,
+            capacity: capacity,
+            promoCapacity: promoCapacity,
+            promoActive: promoActive,
+            promoEndDate: promoEndDate,
+            group: group
+        };
+    }
+
+    /**
      * Add a material to the recently added list
      * @param {Object} material - Material object
      */
@@ -1090,9 +1116,9 @@ class UIManager {
         // Add to beginning of array (most recent first)
         this.recentlyAddedMaterials.unshift(item);
         
-        // Limit to 20 most recent items
-        if (this.recentlyAddedMaterials.length > 20) {
-            this.recentlyAddedMaterials = this.recentlyAddedMaterials.slice(0, 20);
+        // Limit to maximum recent items
+        if (this.recentlyAddedMaterials.length > UIManager.MAX_RECENT_MATERIALS) {
+            this.recentlyAddedMaterials = this.recentlyAddedMaterials.slice(0, UIManager.MAX_RECENT_MATERIALS);
         }
         
         // Save to session storage
@@ -1230,9 +1256,9 @@ class UIManager {
         } else if (seconds < 60) {
             return (this.t('secondsAgo') || '{seconds} seconds ago').replace('{seconds}', seconds);
         } else if (minutes < 60) {
-            return (this.t('undoMinutesAgo') || '{minutes} minutes ago').replace('{{minutes}}', minutes).replace('{minutes}', minutes);
+            return (this.t('undoMinutesAgo') || '{minutes} minutes ago').replace('{minutes}', minutes);
         } else {
-            return (this.t('undoHoursAgo') || '{hours} hours ago').replace('{{hours}}', hours).replace('{hours}', hours);
+            return (this.t('undoHoursAgo') || '{hours} hours ago').replace('{hours}', hours);
         }
     }
 

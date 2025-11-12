@@ -962,9 +962,28 @@ class DataManager {
 
     // Export materials as CSV
     exportMaterialsCSV(materialCodes = null) {
-        const materials = materialCodes 
-            ? materialCodes.map(code => this.materials[code]).filter(m => m)
-            : this.getAllMaterials();
+        let materials;
+        let missingCodes = [];
+        
+        if (materialCodes) {
+            // Track which codes were requested vs found
+            materials = [];
+            materialCodes.forEach(code => {
+                const material = this.materials[code];
+                if (material) {
+                    materials.push(material);
+                } else {
+                    missingCodes.push(code);
+                }
+            });
+            
+            // Log warning if some codes weren't found
+            if (missingCodes.length > 0) {
+                console.warn(`CSV Export: ${missingCodes.length} material code(s) not found:`, missingCodes);
+            }
+        } else {
+            materials = this.getAllMaterials();
+        }
             
         const headers = ['Material Code', 'Material Name', 'MKT Capacity', 'Promo Capacity', 'Promo Active', 'Promo End Date', 'Group', 'Created At'];
         
@@ -993,14 +1012,38 @@ class DataManager {
         link.click();
         document.body.removeChild(link);
         
-        return { success: true, count: materials.length };
+        return { 
+            success: true, 
+            count: materials.length,
+            missingCodes: missingCodes.length > 0 ? missingCodes : undefined,
+            totalRequested: materialCodes ? materialCodes.length : materials.length
+        };
     }
 
     // Export materials for SAP import (Material Numbers only)
     exportMaterialsForSAP(materialCodes = null) {
-        const materials = materialCodes 
-            ? materialCodes.map(code => this.materials[code]).filter(m => m)
-            : this.getAllMaterials();
+        let materials;
+        let missingCodes = [];
+        
+        if (materialCodes) {
+            // Track which codes were requested vs found
+            materials = [];
+            materialCodes.forEach(code => {
+                const material = this.materials[code];
+                if (material) {
+                    materials.push(material);
+                } else {
+                    missingCodes.push(code);
+                }
+            });
+            
+            // Log warning if some codes weren't found
+            if (missingCodes.length > 0) {
+                console.warn(`SAP Export: ${missingCodes.length} material code(s) not found:`, missingCodes);
+            }
+        } else {
+            materials = this.getAllMaterials();
+        }
         
         // Sort by material code for consistent output
         materials.sort((a, b) => a.code.localeCompare(b.code));
@@ -1023,7 +1066,12 @@ class DataManager {
         link.click();
         document.body.removeChild(link);
         
-        return { success: true, count: materials.length };
+        return { 
+            success: true, 
+            count: materials.length,
+            missingCodes: missingCodes.length > 0 ? missingCodes : undefined,
+            totalRequested: materialCodes ? materialCodes.length : materials.length
+        };
     }
 
     // Import materials from CSV content

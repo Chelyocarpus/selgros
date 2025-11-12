@@ -206,7 +206,7 @@ const translations = {
         backupImportDesc: 'Daten aus einer vorherigen Sicherung wiederherstellen',
         backupSuccess: 'Daten erfolgreich importiert',
         backupError: 'Fehler beim Importieren der Daten',
-        backupImported: 'Importiert: {{materials}} Materialien, {{archive}} Berichte',
+        backupImported: 'Importiert: {materials} Materialien, {archive} Berichte',
         
         // IndexedDB Sync
         syncTitle: 'Automatische Synchronisation',
@@ -323,8 +323,8 @@ const translations = {
         undoActionBulkImport: 'Massen-Import',
         undoActionClearAll: 'Alle gelöscht',
         undoJustNow: 'Gerade eben',
-        undoMinutesAgo: 'vor {{minutes}} Min.',
-        undoHoursAgo: 'vor {{hours}} Std.',
+        undoMinutesAgo: 'vor {minutes} Min.',
+        undoHoursAgo: 'vor {hours} Std.',
 
         // Material Groups
         groupsTitle: 'Material-Gruppen',
@@ -772,7 +772,7 @@ const translations = {
         backupImportDesc: 'Restore data from a previous backup',
         backupSuccess: 'Data imported successfully',
         backupError: 'Error importing data',
-        backupImported: 'Imported: {{materials}} materials, {{archive}} reports',
+        backupImported: 'Imported: {materials} materials, {archive} reports',
         
         // IndexedDB Sync
         syncTitle: 'Automatic Sync',
@@ -889,8 +889,8 @@ const translations = {
         undoActionBulkImport: 'Bulk import',
         undoActionClearAll: 'All cleared',
         undoJustNow: 'Just now',
-        undoMinutesAgo: '{{minutes}} min ago',
-        undoHoursAgo: '{{hours}} hrs ago',
+        undoMinutesAgo: '{minutes} min ago',
+        undoHoursAgo: '{hours} hrs ago',
 
         // Material Groups
         groupsTitle: 'Material Groups',

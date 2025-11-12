@@ -369,15 +369,15 @@ UIManager.prototype.addMaterial = function() {
         );
 
         // Add to recently added list for live preview
-        const material = {
-            code: code,
-            name: name,
-            capacity: capacityNum,
-            promoCapacity: null,
-            promoActive: false,
-            promoEndDate: null,
-            group: null
-        };
+        const material = this.createMaterialObject(
+            code,
+            name,
+            capacityNum,
+            null, // promoCapacity
+            false, // promoActive
+            null, // promoEndDate
+            null  // group
+        );
         this.addToRecentlyAdded(material);
 
         // Clear form
@@ -564,7 +564,15 @@ UIManager.prototype.exportMaterialsCSV = function() {
     try {
         const result = this.dataManager.exportMaterialsCSV();
         if (result.success) {
-            this.showToast(`<i class="fa-solid fa-file-arrow-down"></i> ${result.count} materials exported successfully!`, 'success', this.t('exportSuccess'));
+            let message = `<i class="fa-solid fa-file-arrow-down"></i> ${result.count} materials exported successfully!`;
+            
+            // Warn about missing codes if any
+            if (result.missingCodes && result.missingCodes.length > 0) {
+                message += `<br><small>⚠️ ${result.missingCodes.length} material code(s) not found and skipped.</small>`;
+                console.warn('Missing material codes during export:', result.missingCodes);
+            }
+            
+            this.showToast(message, result.missingCodes ? 'warning' : 'success', this.t('exportSuccess'));
         }
     } catch (error) {
         this.showToast('Error exporting materials: ' + error.message, 'error');
@@ -576,7 +584,15 @@ UIManager.prototype.exportMaterialsForSAP = function() {
     try {
         const result = this.dataManager.exportMaterialsForSAP();
         if (result.success) {
-            this.showToast(`<i class="fa-solid fa-file-export"></i> ${result.count} ${this.t('sapExportSuccess')}`, 'success', this.t('exportSuccess'));
+            let message = `<i class="fa-solid fa-file-export"></i> ${result.count} ${this.t('sapExportSuccess')}`;
+            
+            // Warn about missing codes if any
+            if (result.missingCodes && result.missingCodes.length > 0) {
+                message += `<br><small>⚠️ ${result.missingCodes.length} material code(s) not found and skipped.</small>`;
+                console.warn('Missing material codes during SAP export:', result.missingCodes);
+            }
+            
+            this.showToast(message, result.missingCodes ? 'warning' : 'success', this.t('exportSuccess'));
         }
     } catch (error) {
         this.showToast('Error exporting materials for SAP: ' + error.message, 'error');
@@ -881,9 +897,9 @@ UIManager.prototype.getTimeAgo = function(timestamp) {
     if (minutes < 1) {
         return this.t('undoJustNow');
     } else if (minutes < 60) {
-        return this.t('undoMinutesAgo').replace('{{minutes}}', minutes);
+        return this.t('undoMinutesAgo').replace('{minutes}', minutes);
     } else {
-        return this.t('undoHoursAgo').replace('{{hours}}', hours);
+        return this.t('undoHoursAgo').replace('{hours}', hours);
     }
 };
 
@@ -1810,7 +1826,15 @@ UIManager.prototype.exportFilteredMaterials = function() {
     const result = this.dataManager.exportMaterialsCSV(materialCodes);
     
     if (result.success) {
-        this.showToast(`<i class="fa-solid fa-file-arrow-down"></i> ${result.count} materials exported successfully!`, 'success');
+        let message = `<i class="fa-solid fa-file-arrow-down"></i> ${result.count} materials exported successfully!`;
+        
+        // Warn about missing codes if any
+        if (result.missingCodes && result.missingCodes.length > 0) {
+            message += `<br><small>⚠️ ${result.missingCodes.length} material code(s) not found and skipped.</small>`;
+            console.warn('Missing material codes during filtered export:', result.missingCodes);
+        }
+        
+        this.showToast(message, result.missingCodes ? 'warning' : 'success');
     } else {
         this.showToast('Error exporting materials', 'error');
     }
