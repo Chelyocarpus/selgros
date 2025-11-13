@@ -617,7 +617,7 @@ class UIManager {
             }, 100);
             
             // Announce to screen readers
-            if (accessibilityManager) {
+            if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                 accessibilityManager.announce(this.t('deleteModalTitle') + ': ' + message.replace(/<[^>]*>/g, ''), 'assertive');
             }
         });
@@ -696,7 +696,7 @@ class UIManager {
             input.addEventListener('keypress', enterHandler);
             
             // Announce to screen readers
-            if (accessibilityManager) {
+            if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                 accessibilityManager.announce(
                     this.t('clearAllModalTitle') + ': ' + message.replace(/<[^>]*>/g, '').replace('{count}', count),
                     'assertive'
@@ -745,7 +745,7 @@ class UIManager {
             input.select();
             
             // Announce error to screen readers
-            if (accessibilityManager) {
+            if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                 accessibilityManager.announce(this.t('clearAllTypeMismatch'), 'assertive');
             }
             
@@ -921,7 +921,7 @@ class UIManager {
             }
 
         } catch (error) {
-            this.showToast('Error saving material: ' + error.message, 'error');
+            this.showToast('Error saving material: ' + SecurityUtils.escapeHTML(error.message), 'error');
         }
     }
 
@@ -994,7 +994,7 @@ class UIManager {
             
             this.showToast(`<i class="fa-solid fa-trash-can"></i> All ${materialCount} material${materialCount > 1 ? 's' : ''} cleared successfully!`, 'success', 'Cleared');
         } catch (error) {
-            this.showToast('Error clearing materials: ' + error.message, 'error');
+            this.showToast('Error clearing materials: ' + SecurityUtils.escapeHTML(error.message), 'error');
         }
     }
 
@@ -1025,7 +1025,7 @@ class UIManager {
             
             this.showToast(`<i class="fa-solid fa-trash-can"></i> All ${archiveCount} archived report${archiveCount > 1 ? 's' : ''} cleared successfully!`, 'success', 'Cleared');
         } catch (error) {
-            this.showToast('Error clearing archive: ' + error.message, 'error');
+            this.showToast('Error clearing archive: ' + SecurityUtils.escapeHTML(error.message), 'error');
         }
     }
 
@@ -1043,7 +1043,7 @@ class UIManager {
                 '<i class="fa-solid fa-file-arrow-down"></i> Exported'
             );
         } catch (error) {
-            this.showToast('Error exporting data: ' + error.message, 'error');
+            this.showToast('Error exporting data: ' + SecurityUtils.escapeHTML(error.message), 'error');
         }
     }
 
@@ -1328,6 +1328,529 @@ class UIManager {
         }
     }
 
+    // ========================
+    // Quick Category Assignment
+    // ========================
+
+    /**
+     * Create a category option element safely
+     * @param {Object} options - Option configuration
+     * @param {string} options.groupId - Group ID (empty for ungrouped)
+     * @param {string} options.groupName - Group name
+     * @param {string} [options.color] - Group color
+     * @param {boolean} options.isSelected - Whether this option is selected
+     * @returns {HTMLElement} Category option element
+     */
+    createCategoryOption({ groupId, groupName, color, isSelected }) {
+        const option = document.createElement('div');
+        option.className = 'category-dropdown-option';
+        option.dataset.groupId = groupId;
+        option.dataset.groupName = groupName;
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        option.setAttribute('tabindex', '0');
+        
+        const dot = document.createElement('span');
+        dot.className = 'category-option-dot';
+        // Validate color to prevent CSS injection
+        const validatedColor = color ? SecurityUtils.validateColor(color) : null;
+        dot.style.background = validatedColor || 'var(--default-category-color)';
+        
+        const name = document.createElement('span');
+        name.className = 'category-option-name';
+        name.textContent = groupName;
+        
+        option.appendChild(dot);
+        option.appendChild(name);
+        
+        if (isSelected) {
+            const check = document.createElement('i');
+            check.className = 'fa-solid fa-check category-option-check';
+            option.appendChild(check);
+        }
+        
+        return option;
+    }
+
+    /**
+     * Open custom category dropdown with search
+     * @param {HTMLElement} button - The button that was clicked
+     * @param {Event} event - Click event
+     */
+    openCategoryDropdown(button, event) {
+        event.stopPropagation();
+        
+        // Close any existing dropdown
+        this.closeCategoryDropdown();
+        
+        // Store button reference for accessibility updates
+        this.currentCategoryButton = button;
+        
+        // Update aria-expanded on the button
+        button.setAttribute('aria-expanded', 'true');
+        
+        const { materialCode, currentGroup: currentGroupId } = button.dataset;
+        const groups = this.dataManager.getAllGroups();
+        
+        // Create dropdown container
+        const dropdown = document.createElement('div');
+        dropdown.className = 'category-dropdown-popup';
+        dropdown.id = 'categoryDropdownPopup';
+        dropdown.setAttribute('role', 'listbox');
+        dropdown.setAttribute('aria-label', this.t('selectCategory') || 'Select category');
+        
+        // Create header with search
+        const header = document.createElement('div');
+        header.className = 'category-dropdown-header';
+        
+        const searchWrapper = document.createElement('div');
+        searchWrapper.className = 'category-dropdown-search-wrapper';
+        
+        const searchIcon = document.createElement('i');
+        searchIcon.className = 'fa-solid fa-search category-search-icon';
+        
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'category-dropdown-search';
+        searchInput.placeholder = this.t('searchCategories') || 'Search categories...';
+        searchInput.autocomplete = 'off';
+        searchInput.setAttribute('role', 'searchbox');
+        searchInput.setAttribute('aria-label', this.t('searchCategories') || 'Search categories');
+        searchInput.setAttribute('aria-controls', 'categoryDropdownOptions');
+        
+        searchWrapper.appendChild(searchIcon);
+        searchWrapper.appendChild(searchInput);
+        header.appendChild(searchWrapper);
+        
+        // Create options container
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'category-dropdown-options';
+        optionsContainer.id = 'categoryDropdownOptions';
+        optionsContainer.setAttribute('role', 'group');
+        
+        // Add ungrouped option
+        const ungroupedOption = this.createCategoryOption({
+            groupId: '',
+            groupName: this.t('groupUngrouped'),
+            color: null, // Will use CSS variable
+            isSelected: currentGroupId ? false : true
+        });
+        optionsContainer.appendChild(ungroupedOption);
+        
+        // Add group options
+        groups.forEach(group => {
+            const option = this.createCategoryOption({
+                groupId: group.id,
+                groupName: group.name,
+                color: group.color || null, // Will use CSS variable if no color
+                isSelected: currentGroupId === group.id
+            });
+            optionsContainer.appendChild(option);
+        });
+        
+        // Create footer
+        const footer = document.createElement('div');
+        footer.className = 'category-dropdown-footer';
+        
+        const createButton = document.createElement('button');
+        createButton.className = 'category-dropdown-create';
+        createButton.type = 'button';
+        createButton.addEventListener('click', () => {
+            this.showGroupModal();
+            this.closeCategoryDropdown();
+        });
+        
+        const createIcon = document.createElement('i');
+        createIcon.className = 'fa-solid fa-plus';
+        
+        const createText = document.createTextNode(' ' + (this.t('btnCreateGroup') || 'Create New'));
+        
+        createButton.appendChild(createIcon);
+        createButton.appendChild(createText);
+        footer.appendChild(createButton);
+        
+        // Assemble dropdown
+        dropdown.appendChild(header);
+        dropdown.appendChild(optionsContainer);
+        dropdown.appendChild(footer);
+        
+        document.body.appendChild(dropdown);
+        
+        // Position dropdown with viewport overflow handling
+        const buttonRect = button.getBoundingClientRect();
+        const dropdownRect = dropdown.getBoundingClientRect();
+        
+        // Default position: below the button, left-aligned
+        let top = buttonRect.bottom + window.scrollY + 4;
+        let left = buttonRect.left + window.scrollX;
+        
+        // Check for right overflow
+        if (left + dropdownRect.width > window.innerWidth) {
+            left = Math.max(8, window.innerWidth - dropdownRect.width - 8);
+        }
+        
+        // Check for bottom overflow
+        if (buttonRect.bottom + dropdownRect.height > window.innerHeight) {
+            // Position above the button
+            top = Math.max(8, buttonRect.top + window.scrollY - dropdownRect.height - 4);
+        }
+        
+        dropdown.style.position = 'absolute';
+        dropdown.style.top = `${top}px`;
+        dropdown.style.left = `${left}px`;
+        dropdown.style.minWidth = `${Math.max(buttonRect.width, 200)}px`;
+        
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = dropdown.querySelector('.category-dropdown-search');
+            if (searchInput) searchInput.focus();
+        }, 10);
+        
+        // Add event listeners
+        this.setupCategoryDropdownListeners(dropdown, materialCode);
+        
+        // Add show class for animation
+        setTimeout(() => dropdown.classList.add('show'), 10);
+    }
+    
+    /**
+     * Setup event listeners for category dropdown
+     * @param {HTMLElement} dropdown - Dropdown element
+     * @param {string} materialCode - Material code
+     */
+    setupCategoryDropdownListeners(dropdown, materialCode) {
+        const searchInput = dropdown.querySelector('.category-dropdown-search');
+        const optionsContainer = dropdown.querySelector('#categoryDropdownOptions');
+        
+        // Store event handlers for cleanup
+        this.categoryDropdownHandlers = this.categoryDropdownHandlers || {};
+        
+        // Search functionality
+        this.categoryDropdownHandlers.searchInput = (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const options = optionsContainer.querySelectorAll('.category-dropdown-option');
+            
+            options.forEach(option => {
+                const groupName = option.dataset.groupName.toLowerCase();
+                if (groupName.includes(searchTerm)) {
+                    option.style.display = 'flex';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        };
+        searchInput.addEventListener('input', this.categoryDropdownHandlers.searchInput);
+        
+        // Keyboard navigation for search input
+        this.categoryDropdownHandlers.searchKeydown = (e) => {
+            const options = optionsContainer.querySelectorAll('.category-dropdown-option');
+            if (e.key === 'Escape') {
+                this.closeCategoryDropdown();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const firstVisible = Array.from(options).find(opt => opt.style.display !== 'none');
+                if (firstVisible) firstVisible.focus();
+            }
+        };
+        searchInput.addEventListener('keydown', this.categoryDropdownHandlers.searchKeydown);
+        
+        // Prevent dropdown from closing when clicking inside
+        this.categoryDropdownHandlers.dropdownClick = (e) => {
+            e.stopPropagation();
+        };
+        dropdown.addEventListener('click', this.categoryDropdownHandlers.dropdownClick);
+        
+        // Option click and keyboard handlers
+        const options = optionsContainer.querySelectorAll('.category-dropdown-option');
+        this.categoryDropdownHandlers.optionHandlers = [];
+        
+        options.forEach((option, index) => {
+            // Click handler
+            const clickHandler = () => {
+                const { groupId } = option.dataset;
+                this.quickAssignCategory(materialCode, groupId);
+                this.closeCategoryDropdown();
+            };
+            option.addEventListener('click', clickHandler);
+            
+            // Keyboard handler
+            const keydownHandler = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    option.click();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    // Find next visible option
+                    const visibleOptions = Array.from(options).filter(opt => opt.style.display !== 'none');
+                    const currentVisibleIndex = visibleOptions.indexOf(option);
+                    const nextVisible = visibleOptions[currentVisibleIndex + 1];
+                    if (nextVisible) nextVisible.focus();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    // Find previous visible option or return to search
+                    const visibleOptions = Array.from(options).filter(opt => opt.style.display !== 'none');
+                    const currentVisibleIndex = visibleOptions.indexOf(option);
+                    if (currentVisibleIndex === 0) {
+                        searchInput.focus();
+                    } else {
+                        const previousVisible = visibleOptions[currentVisibleIndex - 1];
+                        if (previousVisible) previousVisible.focus();
+                    }
+                } else if (e.key === 'Escape') {
+                    this.closeCategoryDropdown();
+                }
+            };
+            option.addEventListener('keydown', keydownHandler);
+            
+            // Store handlers for cleanup
+            this.categoryDropdownHandlers.optionHandlers.push({
+                element: option,
+                clickHandler,
+                keydownHandler
+            });
+        });
+        
+        // Close on outside click
+        setTimeout(() => {
+            document.addEventListener('click', this.closeCategoryDropdownHandler = () => {
+                this.closeCategoryDropdown();
+            }, { once: true });
+        }, 10);
+    }
+    
+    /**
+     * Close category dropdown
+     */
+    closeCategoryDropdown() {
+        const dropdown = document.getElementById('categoryDropdownPopup');
+        if (dropdown) {
+            // Explicitly remove all event listeners before removing the dropdown
+            if (this.categoryDropdownHandlers) {
+                const searchInput = dropdown.querySelector('.category-dropdown-search');
+                
+                // Remove search input listeners
+                if (searchInput) {
+                    if (this.categoryDropdownHandlers.searchInput) {
+                        searchInput.removeEventListener('input', this.categoryDropdownHandlers.searchInput);
+                    }
+                    if (this.categoryDropdownHandlers.searchKeydown) {
+                        searchInput.removeEventListener('keydown', this.categoryDropdownHandlers.searchKeydown);
+                    }
+                }
+                
+                // Remove dropdown click listener
+                if (this.categoryDropdownHandlers.dropdownClick) {
+                    dropdown.removeEventListener('click', this.categoryDropdownHandlers.dropdownClick);
+                }
+                
+                // Remove option listeners
+                if (this.categoryDropdownHandlers.optionHandlers) {
+                    this.categoryDropdownHandlers.optionHandlers.forEach(({ element, clickHandler, keydownHandler }) => {
+                        element.removeEventListener('click', clickHandler);
+                        element.removeEventListener('keydown', keydownHandler);
+                    });
+                }
+                
+                // Clear handlers object
+                this.categoryDropdownHandlers = null;
+            }
+            
+            dropdown.classList.remove('show');
+            
+            // Clear any pending removal timeout to prevent race condition
+            if (this.categoryDropdownRemovalTimeout) {
+                clearTimeout(this.categoryDropdownRemovalTimeout);
+            }
+            
+            // Schedule removal with stored timeout ID
+            this.categoryDropdownRemovalTimeout = setTimeout(() => {
+                // Check if dropdown still exists before removing
+                const stillExists = document.getElementById('categoryDropdownPopup');
+                if (stillExists) {
+                    stillExists.remove();
+                }
+                this.categoryDropdownRemovalTimeout = null;
+            }, 200);
+        }
+        
+        // Update aria-expanded on the button
+        if (this.currentCategoryButton) {
+            this.currentCategoryButton.setAttribute('aria-expanded', 'false');
+            this.currentCategoryButton = null;
+        }
+        
+        // Remove click handler
+        if (this.closeCategoryDropdownHandler) {
+            document.removeEventListener('click', this.closeCategoryDropdownHandler);
+            this.closeCategoryDropdownHandler = null;
+        }
+    }
+
+    /**
+     * Quick assign category to material without opening edit dialog
+     * @param {string} materialCode - Material code
+     * @param {string} groupId - Group ID (empty string for ungrouped)
+     */
+    quickAssignCategory(materialCode, groupId) {
+        const material = this.dataManager.getMaterial(materialCode);
+        if (!material) {
+            this.showToast('Material not found', 'error');
+            return;
+        }
+
+        const oldGroup = material.group;
+        const newGroup = groupId || null;
+
+        // No change
+        if (oldGroup === newGroup) {
+            return;
+        }
+
+        try {
+            // Update material with new group
+            const success = this.dataManager.assignMaterialToGroup(materialCode, newGroup);
+
+            if (success) {
+                // Get group names for feedback
+                const oldGroupName = oldGroup 
+                    ? (this.dataManager.getGroup(oldGroup)?.name || this.t('groupUngrouped'))
+                    : this.t('groupUngrouped');
+                const newGroupName = newGroup 
+                    ? (this.dataManager.getGroup(newGroup)?.name || this.t('groupUngrouped'))
+                    : this.t('groupUngrouped');
+
+                // Show success message with escaped values to prevent XSS
+                const message = `<i class="fa-solid fa-tag"></i> ${SecurityUtils.escapeHTML(materialCode)}: ${SecurityUtils.escapeHTML(oldGroupName)} → ${SecurityUtils.escapeHTML(newGroupName)}`;
+                this.showToast(message, 'success', this.t('categoryUpdated') || 'Category Updated');
+
+                // Update the visual indicator
+                this.updateCategoryIndicator(materialCode, newGroup);
+
+                // Announce to screen readers
+                if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
+                    accessibilityManager.announce(
+                        `Material ${SecurityUtils.escapeHTML(materialCode)} moved to ${SecurityUtils.escapeHTML(newGroupName)}`,
+                        'polite'
+                    );
+                }
+            } else {
+                this.showToast('Error updating category', 'error');
+                // Revert dropdown to previous value
+                this.revertCategoryDropdown(materialCode, oldGroup);
+            }
+        } catch (error) {
+            console.error('Quick category assignment error:', error);
+            this.showToast('Error: ' + SecurityUtils.escapeHTML(error.message), 'error');
+            // Revert dropdown to previous value
+            this.revertCategoryDropdown(materialCode, oldGroup);
+        }
+    }
+
+    /**
+     * Update the category indicator visual element
+     * @param {string} materialCode - Material code
+     * @param {string|null} groupId - New group ID
+     */
+    updateCategoryIndicator(materialCode, groupId) {
+        // Escape materialCode to prevent selector injection
+        const escapedCode = CSS.escape(materialCode);
+        const row = document.querySelector(`tr[data-material-code="${escapedCode}"]`);
+        if (!row) return;
+
+        const wrapper = row.querySelector('.quick-category-select-wrapper');
+        const button = row.querySelector('.quick-category-select');
+        if (!wrapper || !button) return;
+
+        // Add animation class
+        wrapper.classList.add('category-changed');
+        setTimeout(() => wrapper.classList.remove('category-changed'), 400);
+
+        // Update styling and text based on new group
+        if (groupId) {
+            const group = this.dataManager.getGroup(groupId);
+            if (group) {
+                // Validate color to prevent CSS injection
+                const rawColor = group.color || 'var(--default-group-color)';
+                const color = SecurityUtils.validateColor(rawColor) || 'var(--default-group-color)';
+                
+                wrapper.style.setProperty('--category-color', color);
+                wrapper.style.setProperty('--category-bg', `linear-gradient(135deg, ${color}15 0%, ${color}30 100%)`);
+                wrapper.style.setProperty('--category-bg-hover', `linear-gradient(135deg, ${color}25 0%, ${color}40 100%)`);
+                wrapper.style.setProperty('--category-text', this.getContrastColor(color));
+                button.setAttribute('data-has-category', 'true');
+                button.setAttribute('data-current-group', groupId);
+                
+                // Update button text
+                const textSpan = button.querySelector('.category-select-text');
+                if (textSpan) textSpan.textContent = group.name;
+            }
+        } else {
+            // Reset to ungrouped state
+            wrapper.style.setProperty('--category-color', 'var(--default-category-color)');
+            wrapper.style.setProperty('--category-bg', '');
+            wrapper.style.setProperty('--category-bg-hover', '');
+            wrapper.style.setProperty('--category-text', '');
+            button.setAttribute('data-has-category', 'false');
+            button.setAttribute('data-current-group', '');
+            
+            // Update button text
+            const textSpan = button.querySelector('.category-select-text');
+            if (textSpan) textSpan.textContent = this.t('groupUngrouped');
+        }
+    }
+
+    /**
+     * Get contrasting text color for a given background color
+     * @param {string} hexColor - Hex color code
+     * @returns {string} - Black or color-adjusted text color
+     */
+    getContrastColor(hexColor) {
+        // Validate input
+        if (!hexColor || typeof hexColor !== 'string') {
+            return '#000000'; // Default to black for invalid input
+        }
+        
+        // Convert hex to RGB
+        const hex = hexColor.replace('#', '');
+        
+        // Validate hex format (must be 3 or 6 characters)
+        if (!/^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex)) {
+            console.warn(`Invalid hex color: ${hexColor}, using default`);
+            return '#000000';
+        }
+        
+        // Expand shorthand format (e.g., '03F' to '0033FF')
+        const fullHex = hex.length === 3 
+            ? hex.split('').map(char => char + char).join('')
+            : hex;
+        
+        const r = parseInt(fullHex.substring(0, 2), 16);
+        const g = parseInt(fullHex.substring(2, 4), 16);
+        const b = parseInt(fullHex.substring(4, 6), 16);
+        
+        // Validate parsed values
+        if (isNaN(r) || isNaN(g) || isNaN(b)) {
+            console.warn(`Failed to parse hex color: ${hexColor}, using default`);
+            return '#000000';
+        }
+        
+        // Calculate luminance
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Return darker shade of the color for better readability
+        return luminance > 0.5 ? `rgb(${Math.floor(r * 0.4)}, ${Math.floor(g * 0.4)}, ${Math.floor(b * 0.4)})` : hexColor;
+    }
+
+    /**
+     * Revert category dropdown to previous value on error
+     * @param {string} materialCode - Material code
+     * @param {string|null} groupId - Previous group ID
+     */
+    revertCategoryDropdown(materialCode, groupId) {
+        // Since we're using a custom button dropdown now (not a select element),
+        // we need to update the visual indicator to revert to the previous state
+        this.updateCategoryIndicator(materialCode, groupId);
+    }
 
 
 }

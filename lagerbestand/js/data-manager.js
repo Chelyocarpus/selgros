@@ -1351,6 +1351,10 @@ class DataManager {
             throw new Error('Group name is required');
         }
         
+        // Sanitize inputs
+        const sanitizedName = SecurityUtils.sanitizeHTML(name.trim());
+        const sanitizedDescription = SecurityUtils.sanitizeHTML(description.trim());
+        
         // Default colors for groups if not provided
         const defaultColors = [
             '#3b82f6', // Blue
@@ -1365,6 +1369,12 @@ class DataManager {
             '#6366f1'  // Indigo
         ];
         
+        // Validate color format (must be valid hex color)
+        if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
+            console.warn(`Invalid color format: ${color}, using default`);
+            color = null;
+        }
+        
         // If no color provided, pick next available color
         if (!color) {
             const existingColors = Object.values(this.groups).map(g => g.color);
@@ -1374,8 +1384,8 @@ class DataManager {
         const groupId = Date.now().toString();
         this.groups[groupId] = {
             id: groupId,
-            name: name.trim(),
-            description: description.trim(),
+            name: sanitizedName,
+            description: sanitizedDescription,
             color: color,
             createdAt: new Date().toISOString()
         };
@@ -1412,9 +1422,23 @@ class DataManager {
     // Update group
     updateGroup(groupId, updates) {
         if (this.groups[groupId]) {
+            // Sanitize string fields if present
+            const sanitizedUpdates = { ...updates };
+            if (updates.name) {
+                sanitizedUpdates.name = SecurityUtils.sanitizeHTML(updates.name.trim());
+            }
+            if (updates.description !== undefined) {
+                sanitizedUpdates.description = SecurityUtils.sanitizeHTML(updates.description.trim());
+            }
+            // Validate color format if present
+            if (updates.color && !/^#[0-9A-Fa-f]{6}$/.test(updates.color)) {
+                console.warn(`Invalid color format: ${updates.color}, keeping existing color`);
+                delete sanitizedUpdates.color;
+            }
+            
             this.groups[groupId] = {
                 ...this.groups[groupId],
-                ...updates,
+                ...sanitizedUpdates,
                 updatedAt: new Date().toISOString()
             };
             return this.saveGroups();
@@ -1444,7 +1468,7 @@ class DataManager {
 
     // Add note (can be material-specific or general)
     addNote(materialCode, content) {
-        const noteId = 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const noteId = 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
         
         const note = {
             id: noteId,
