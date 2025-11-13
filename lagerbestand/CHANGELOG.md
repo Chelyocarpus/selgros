@@ -32,7 +32,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated bulk edit/delete operations to preserve state
   - Updated group deletion to preserve state
   - Improved user experience: workflow continuity maintained when managing multiple materials
-  - Files modified: `js/tab-materials.js`, `js/ui-manager.js`
+  - Files modified: `js/tab-materials.js`, `js/ui-manager.js`, `css/tables.css`, `js/utils.js`
+
+### Improved
+
+#### Code Quality & Browser Compatibility
+- **Event-Driven State Restoration**: Replaced arbitrary timeouts with DataTable's draw event
+  - Uses `table.on('draw.stateRestore')` for reliable DOM update detection
+  - Eliminates race conditions from setTimeout-based approaches
+  - Namespaced event handler ensures single execution and proper cleanup
+  
+- **Performance Optimization**: Streamlined DataTable rendering
+  - Combined search, order, and page settings before single `table.draw(false)` call
+  - Reduced from 2 draw calls to 1, minimizing flicker and improving performance
+  - More efficient state application with less DOM manipulation
+  
+- **CSS Class-Based Highlighting**: Replaced inline styles with CSS class
+  - Added `.highlighted-row` class in `css/tables.css`
+  - Proper dark mode support with themed colors
+  - Better maintainability and separation of concerns
+  - No style conflicts with existing CSS rules
+  
+- **Selection Filtering**: Enhanced checkbox state restoration
+  - Filters `selectedMaterials` to only include items present in current table data
+  - Prevents errors when materials have been deleted or data has changed
+  - Validates against current material codes before restoring selection
+  - More robust handling of edge cases
+  
+- **Type Safety**: Added parameter validation for `renderMaterialsList()`
+  - Type check ensures `options` is an object before destructuring
+  - Prevents runtime errors if called with invalid arguments
+  - Gracefully handles `null`, `undefined`, or non-object values
+  
+- **Browser Compatibility**: Added CSS.escape polyfill in `utils.js`
+  - Full W3C spec-compliant implementation for older browsers
+  - Supports browsers without native CSS.escape (IE, older Safari)
+  - Handles edge cases: NULL characters, leading digits, special characters
+  - Safe escaping for dynamic selector generation
 
 ---
 

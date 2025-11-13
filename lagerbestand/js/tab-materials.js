@@ -652,29 +652,42 @@ UIManager.prototype.restoreMaterialsTableState = function(state, highlightMateri
     
     const table = $('#materialsTable').DataTable();
     
-    // Restore search
-    if (state.search) {
+    // Apply search, order, and page settings before a single draw
+    if (state.search !== undefined && state.search !== null) {
         table.search(state.search);
     }
     
-    // Restore order
     if (state.order && state.order.length > 0) {
         table.order(state.order);
     }
     
-    // Redraw with current settings
-    table.draw(false); // false = stay on same page
-    
-    // Restore page (after draw)
     if (state.page !== undefined) {
-        table.page(state.page).draw(false);
+        table.page(state.page);
     }
     
-    // Restore checkbox selections
+    // Single draw to apply all settings
+    table.draw(false); // false = stay on same page
+    
+    // Get current materials for filtering selections
+    const currentMaterials = this.dataManager.getAllMaterials();
+    const currentMaterialCodes = new Set(currentMaterials.map(m => m.code));
+    
+    // Restore checkbox selections - filter to only include materials that still exist
     if (state.selectedMaterials && state.selectedMaterials.length > 0) {
-        this.selectedItems = new Set(state.selectedMaterials);
+        // Filter selected materials to only those present in current data AND have checkboxes
+        const validSelectedMaterials = state.selectedMaterials.filter(code => {
+            if (!currentMaterialCodes.has(code)) {
+                return false; // Material doesn't exist anymore
+            }
+            // Verify checkbox exists in DOM
+            const escapedCode = CSS.escape(code);
+            const checkbox = document.querySelector(`.material-select-checkbox[data-material-code="${escapedCode}"]`);
+            return checkbox !== null;
+        });
         
-        state.selectedMaterials.forEach(materialCode => {
+        this.selectedItems = new Set(validSelectedMaterials);
+        
+        validSelectedMaterials.forEach(materialCode => {
             const escapedCode = CSS.escape(materialCode);
             const checkbox = document.querySelector(`.material-select-checkbox[data-material-code="${escapedCode}"]`);
             if (checkbox) {
@@ -686,41 +699,45 @@ UIManager.prototype.restoreMaterialsTableState = function(state, highlightMateri
         this.updateSelectAllCheckbox();
     }
     
-    // Highlight the edited/updated material if specified
-    if (highlightMaterialCode) {
-        // Small delay to ensure DOM is fully rendered
-        setTimeout(() => {
+    // Use DataTable's draw event to reliably apply state changes after DOM is updated
+    const handleDrawComplete = () => {
+        // Remove the event listener to ensure it only runs once
+        table.off('draw.stateRestore');
+        
+        if (highlightMaterialCode) {
             const escapedCode = CSS.escape(highlightMaterialCode);
             const row = document.querySelector(`tr[data-material-code="${escapedCode}"]`);
             if (row) {
-                // Add highlight effect
-                row.style.transition = 'background-color 0.3s ease';
-                row.style.backgroundColor = 'var(--primary-color-light, #e3f2fd)';
+                // Add highlight effect using CSS class
+                row.classList.add('highlighted-row');
                 
                 // Scroll to the row if it's not visible
                 row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 
                 // Remove highlight after 2 seconds
                 setTimeout(() => {
-                    row.style.backgroundColor = '';
+                    row.classList.remove('highlighted-row');
                 }, 2000);
             }
-        }, 100);
-    } else {
-        // Restore scroll position
-        setTimeout(() => {
+        } else {
+            // Restore scroll position
             if (state.scrollPosition !== undefined) {
                 window.scrollTo({
                     top: state.scrollPosition,
                     behavior: 'auto' // Use 'auto' for instant scroll to avoid jarring effect
                 });
             }
-        }, 50);
-    }
+        }
+    };
+    
+    // Listen for draw event with namespaced event name for easy removal
+    table.on('draw.stateRestore', handleDrawComplete);
 };
 
 // Render materials list
-UIManager.prototype.renderMaterialsList = function(options = {}) {
+UIManager.prototype.renderMaterialsList = function(options) {
+    // Ensure options is an object to prevent destructuring errors
+    options = (typeof options === 'object' && options !== null) ? options : {};
     const { preserveState = false, highlightMaterialCode = null } = options;
     const materials = this.dataManager.getAllMaterials();
     const tbody = document.getElementById('materialsTableBody');
@@ -2211,8 +2228,10 @@ UIManager.prototype.bulkDeleteMaterials = async function() {
     const result = this.dataManager.bulkDeleteMaterials(materialCodes);
     
     if (result.success) {
-        this.showToast(`<i class="fa-solid fa-trash-can"></i> ${result.count} materials deleted successfully!`, 'success');
+        // Clear selection BEFORE re-rendering to prevent deleted items from being restored
         this.clearBulkSelection();
+        
+        this.showToast(`<i class="fa-solid fa-trash-can"></i> ${result.count} materials deleted successfully!`, 'success');
         this.renderMaterialsList({ preserveState: true });
     } else {
         this.showToast('Error deleting materials: ' + result.error, 'error');

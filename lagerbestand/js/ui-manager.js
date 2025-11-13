@@ -938,6 +938,13 @@ class UIManager {
         }
 
         if (this.dataManager.deleteMaterial(code)) {
+            // Remove from selected items if it was selected
+            if (this.selectedItems && this.selectedItems.has(code)) {
+                this.selectedItems.delete(code);
+                this.updateBulkActionsToolbar();
+                this.updateSelectAllCheckbox();
+            }
+            
             // Preserve state when deleting (but don't highlight anything)
             this.renderMaterialsList({ preserveState: true });
             
