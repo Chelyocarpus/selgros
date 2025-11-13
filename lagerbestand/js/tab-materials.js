@@ -438,6 +438,8 @@ UIManager.prototype.createMaterialRow = function(material) {
     
     // Capacity column
     const capacityCell = document.createElement('td');
+    // Add data-order attribute for DataTables sorting
+    capacityCell.setAttribute('data-order', material.capacity);
     const isPromoActive = this.isPromotionActive(material);
     if (material.promoCapacity && isPromoActive) {
         const promoSpan = document.createElement('span');
@@ -454,7 +456,8 @@ UIManager.prototype.createMaterialRow = function(material) {
         const capacitySpan = document.createElement('span');
         capacitySpan.style.fontWeight = '600';
         capacitySpan.style.color = 'var(--success-color)';
-        capacitySpan.textContent = material.capacity;
+        // Ensure capacity is displayed as a number
+        capacitySpan.textContent = material.capacity !== undefined && material.capacity !== null ? material.capacity : '0';
         capacityCell.appendChild(capacitySpan);
     }
     row.appendChild(capacityCell);
@@ -541,6 +544,112 @@ UIManager.prototype.createMaterialRow = function(material) {
 };
 
 /**
+ * Update a single material row in the DataTable without full reload
+ * @param {string} materialCode - Material code to update
+ * @returns {boolean} Success status
+ */
+UIManager.prototype.updateMaterialRow = function(materialCode) {
+    // Check if DataTable is initialized
+    if (!$.fn.DataTable.isDataTable('#materialsTable')) {
+        return false;
+    }
+    
+    const material = this.dataManager.getMaterial(materialCode);
+    if (!material) {
+        console.warn(`Material ${materialCode} not found for row update`);
+        return false;
+    }
+    
+    const table = $('#materialsTable').DataTable();
+    const escapedCode = CSS.escape(materialCode);
+    const row = $(`tr[data-material-code="${escapedCode}"]`);
+    
+    if (row.length === 0) {
+        console.warn(`Row for material ${materialCode} not found in table`);
+        return false;
+    }
+    
+    // Get the DataTable row instance
+    const dataTableRow = table.row(row);
+    
+    // Store checkbox state before update
+    const wasChecked = row.find('.material-select-checkbox').prop('checked');
+    
+    // Update each cell individually using DataTables API
+    // Get the current row node
+    const rowNode = $(dataTableRow.node());
+    
+    // Update capacity cell (column index 3)
+    const capacityValue = material.capacity !== undefined && material.capacity !== null ? material.capacity : '—';
+    const capacityHtml = capacityValue !== '—' 
+        ? `<span style="font-weight: 600; color: var(--success-color);">${capacityValue}</span>`
+        : capacityValue;
+    const capacityCell = rowNode.find('td').eq(3);
+    capacityCell.html(capacityHtml);
+    capacityCell.attr('data-order', material.capacity || 0);
+    
+    // Update promo capacity cell (column index 4)
+    const promoValue = material.promoCapacity !== undefined && material.promoCapacity !== null ? material.promoCapacity : '—';
+    const promoHtml = promoValue !== '—'
+        ? `<span style="font-weight: 600; color: var(--info-color);">${promoValue}</span>`
+        : promoValue;
+    const promoCell = rowNode.find('td').eq(4);
+    promoCell.html(promoHtml);
+    promoCell.attr('data-order', material.promoCapacity || 0);
+    
+    // Update group cell (column index 5) with category button
+    const groupCell = rowNode.find('td').eq(5);
+    groupCell.empty();
+    const categoryButton = this.createCategoryButton(material);
+    groupCell.append(categoryButton);
+    
+    // Invalidate the row to force DataTables to re-index the data
+    dataTableRow.invalidate();
+    
+    // Restore checkbox state
+    if (wasChecked) {
+        rowNode.find('.material-select-checkbox').prop('checked', true);
+    }
+    
+    // Redraw the table without resetting pagination
+    table.draw(false);
+    
+    return true;
+};
+
+/**
+ * Remove a single material row from the DataTable without full reload
+ * @param {string} materialCode - Material code to remove
+ * @returns {boolean} Success status
+ */
+UIManager.prototype.removeMaterialRow = function(materialCode) {
+    // Check if DataTable is initialized
+    if (!$.fn.DataTable.isDataTable('#materialsTable')) {
+        return false;
+    }
+    
+    const table = $('#materialsTable').DataTable();
+    const escapedCode = CSS.escape(materialCode);
+    const row = $(`tr[data-material-code="${escapedCode}"]`);
+    
+    if (row.length === 0) {
+        console.warn(`Row for material ${materialCode} not found in table`);
+        return false;
+    }
+    
+    // Remove from selected items if selected
+    this.selectedItems.delete(materialCode);
+    this.updateBulkActionsToolbar();
+    this.updateSelectAllCheckbox();
+    
+    // Remove the row from DataTable
+    // Use draw(false) to maintain current page position
+    table.row(row).remove().draw(false);
+    
+    return true;
+};
+
+/**
  * Check if a material's promotion is currently active
  * @param {Object} material - Material object
  * @returns {boolean} Whether promotion is active
@@ -618,9 +727,18 @@ UIManager.prototype.renderMaterialsList = function() {
     const materials = this.dataManager.getAllMaterials();
     const tbody = document.getElementById('materialsTableBody');
     
-    // Destroy existing DataTable if it exists
+    // Store DataTable state before destroying
+    let previousState = null;
     if ($.fn.DataTable.isDataTable('#materialsTable')) {
-        $('#materialsTable').DataTable().destroy();
+        const table = $('#materialsTable').DataTable();
+        previousState = {
+            page: table.page(),
+            length: table.page.len(),
+            order: table.order(),
+            search: table.search(),
+            scrollTop: $('#materialsTable').closest('.dataTables_scrollBody').scrollTop() || 0
+        };
+        table.destroy();
     }
 
     // Clear tbody
@@ -659,9 +777,10 @@ UIManager.prototype.renderMaterialsList = function() {
     });
 
     // Initialize DataTable
-    $('#materialsTable').DataTable({
-        pageLength: 10,
-        order: [[1, 'asc']], // Sort by material code (now column 1 due to checkbox column)
+    const dataTableInstance = $('#materialsTable').DataTable({
+        pageLength: previousState?.length || 10,
+        order: previousState?.order || [[1, 'asc']], // Sort by material code (now column 1 due to checkbox column)
+        search: previousState?.search ? { search: previousState.search } : {},
         language: {
             search: `<i class="fa-solid fa-magnifying-glass"></i> ${this.t('dtSearchMaterials')}`,
             lengthMenu: this.t('dtLengthMenuMaterials'),
@@ -681,6 +800,22 @@ UIManager.prototype.renderMaterialsList = function() {
             { orderable: false, targets: [0, 7] } // Disable sorting on checkbox and Actions columns
         ]
     });
+    
+    // Restore page and scroll position after DataTable is fully initialized
+    if (previousState) {
+        // Use setTimeout to ensure DataTable rendering is complete
+        setTimeout(() => {
+            if (previousState.page !== undefined) {
+                dataTableInstance.page(previousState.page).draw('page');
+            }
+            if (previousState.scrollTop) {
+                const scrollBody = $('#materialsTable').closest('.dataTables_scrollBody');
+                if (scrollBody.length) {
+                    scrollBody.scrollTop(previousState.scrollTop);
+                }
+            }
+        }, 10);
+    }
     
     // Update sync status display
     this.updateSyncStatus();

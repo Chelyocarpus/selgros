@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.1] - 2025-11-13
+
+### Fixed
+
+#### Category Dropdown Responsive Positioning & Performance
+- **Issue Resolved**: Category dropdown now properly positions on all screen sizes with optimized performance
+  - Previously positioned off-screen on mobile devices (viewport < 768px)
+  - Caused significant style computation (23%), reflow (21%), and frame construction (15%) overhead
+  - Dropdown position calculated incorrectly due to premature DOM measurement
+  
+- **Technical Improvements**:
+  - Implemented `requestAnimationFrame()` for batched DOM read/write operations
+  - Set `visibility: hidden` before appending to DOM to measure dimensions without visual flash
+  - Using `cssText` for bulk style updates to minimize reflow triggers
+  - Added viewport boundary detection with proper edge constraints (8px padding)
+  - Responsive width constraints: `max-width: calc(100vw - 16px)` on all screens
+  - Small screen detection (< 768px) forces full-width positioning when dropdown exceeds viewport
+  - Eliminated multiple sequential style assignments that caused layout thrashing
+  
+- **User Benefits**:
+  - Category dropdown always visible and accessible on mobile devices
+  - Smooth dropdown opening with no visible layout shifts
+  - Significantly reduced CPU usage during dropdown interactions
+  - Better touch target positioning on tablets and phones
+  - Dropdown automatically adapts to available screen space
+  
+- **Performance Impact**:
+  - Reduced style computation and reflow cycles by batching DOM operations
+  - Single reflow instead of multiple sequential reflows
+  - Improved perceived responsiveness on lower-end devices
+
+#### Material List Scroll Position Preservation
+- **Issue Resolved**: Material list no longer resets scroll position after updating or deleting entries
+  - Previously, any edit or delete operation would reload the entire list, losing user's position
+  - Users had to manually scroll back to find their place after each operation
+  - Broke workflow continuity when working with multiple entries
+  - **Critical Bug**: Changes were not visible without manual page reload due to improper DOM update approach
+  - **Critical Bug**: Capacity values showing as "NaN" after updates due to missing data-order attribute
+  
+- **Technical Improvements**:
+  - DataTable state (page, scroll position, search, sorting) now preserved during updates
+  - `updateMaterialRow()` method added for single-row updates without full table reload
+  - `removeMaterialRow()` method added for single-row deletion without full table reload
+  - Edit operations now update only the affected row, preserving all table state
+  - Delete operations now remove only the affected row, maintaining user's view
+  - Checkbox selections preserved across row updates
+  - **Fixed**: Implemented cell-level updates using jQuery DOM manipulation (`$(row).find('td').eq(index).html()`) instead of row node replacement
+  - **Fixed**: Proper DataTables cache invalidation by calling `dataTableRow.invalidate()` after cell content updates
+  - **Fixed**: Using `table.draw(false)` to maintain pagination state while refreshing display
+  - **Fixed**: Added `data-order` attribute to capacity cells for proper DataTables sorting and numeric value extraction
+  - **Fixed**: Added null/undefined checks for capacity display to prevent NaN rendering
+  
+- **User Benefits**:
+  - Seamless editing experience with maintained scroll position
+  - **Changes now immediately visible** after updating materials
+  - **Capacity values display correctly** as numbers, not "NaN"
+  - No interruption when making multiple consecutive edits
+  - Better workflow efficiency for bulk material management
+  - Search filters and sorting remain active after updates
+  - Page position preserved in paginated views
+  
+- **Fallback Mechanism**:
+  - Full table reload used only when row-level operations fail
+  - Ensures data consistency even in edge cases
+  - Graceful degradation maintains application stability
+
+---
+
 ## [2.5.0] - 2025-01-13
 
 ### Added - Quick Category Selection in Materials List

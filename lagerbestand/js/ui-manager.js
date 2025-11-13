@@ -876,8 +876,18 @@ class UIManager {
 
             this.closeMaterialModal();
 
-            // Refresh materials list if on materials tab
-            this.renderMaterialsList();
+            // For edits, only update the specific row to preserve scroll position
+            // For new additions, full reload is needed
+            if (mode === 'edit') {
+                const updateSuccess = this.updateMaterialRow(code);
+                if (!updateSuccess) {
+                    // Fallback to full reload if row update fails
+                    this.renderMaterialsList();
+                }
+            } else {
+                // Full reload for new materials
+                this.renderMaterialsList();
+            }
             
             // Update undo/redo buttons
             if (this.updateUndoRedoButtons) {
@@ -935,7 +945,12 @@ class UIManager {
         }
 
         if (this.dataManager.deleteMaterial(code)) {
-            this.renderMaterialsList();
+            // Use single row removal to preserve scroll position
+            const removeSuccess = this.removeMaterialRow(code);
+            if (!removeSuccess) {
+                // Fallback to full reload if row removal fails
+                this.renderMaterialsList();
+            }
             
             // Update undo/redo buttons
             if (this.updateUndoRedoButtons) {
@@ -953,8 +968,6 @@ class UIManager {
                 const analysis = this.reportProcessor.analyzeStock(parsedData);
                 this.displayResults(analysis);
             }
-            
-            this.showToast(`Material ${code} deleted successfully!`, 'success');
         } else {
             this.showToast('Error deleting material.', 'error');
         }
@@ -1474,31 +1487,55 @@ class UIManager {
         dropdown.appendChild(optionsContainer);
         dropdown.appendChild(footer);
         
+        // Set initial styles before appending to minimize reflows
+        dropdown.style.position = 'absolute';
+        dropdown.style.visibility = 'hidden';
+        
         document.body.appendChild(dropdown);
         
         // Position dropdown with viewport overflow handling
-        const buttonRect = button.getBoundingClientRect();
-        const dropdownRect = dropdown.getBoundingClientRect();
-        
-        // Default position: below the button, left-aligned
-        let top = buttonRect.bottom + window.scrollY + 4;
-        let left = buttonRect.left + window.scrollX;
-        
-        // Check for right overflow
-        if (left + dropdownRect.width > window.innerWidth) {
-            left = Math.max(8, window.innerWidth - dropdownRect.width - 8);
-        }
-        
-        // Check for bottom overflow
-        if (buttonRect.bottom + dropdownRect.height > window.innerHeight) {
-            // Position above the button
-            top = Math.max(8, buttonRect.top + window.scrollY - dropdownRect.height - 4);
-        }
-        
-        dropdown.style.position = 'absolute';
-        dropdown.style.top = `${top}px`;
-        dropdown.style.left = `${left}px`;
-        dropdown.style.minWidth = `${Math.max(buttonRect.width, 200)}px`;
+        // Use requestAnimationFrame to batch DOM reads/writes and reduce reflows
+        requestAnimationFrame(() => {
+            const buttonRect = button.getBoundingClientRect();
+            const dropdownRect = dropdown.getBoundingClientRect();
+            
+            // Default position: below the button, left-aligned
+            let top = buttonRect.bottom + window.scrollY + 4;
+            let left = buttonRect.left + window.scrollX;
+            
+            // Check for right overflow
+            const rightEdge = left + dropdownRect.width;
+            if (rightEdge > window.innerWidth) {
+                left = Math.max(8, window.innerWidth - dropdownRect.width - 8);
+            }
+            
+            // Ensure left edge doesn't go off screen
+            if (left < 8) {
+                left = 8;
+            }
+            
+            // Check for bottom overflow
+            if (buttonRect.bottom + dropdownRect.height > window.innerHeight) {
+                // Position above the button
+                top = Math.max(8, buttonRect.top + window.scrollY - dropdownRect.height - 4);
+            }
+            
+            // Batch all style updates together
+            dropdown.style.cssText = `
+                position: absolute;
+                top: ${top}px;
+                left: ${left}px;
+                min-width: ${Math.max(buttonRect.width, 200)}px;
+                max-width: calc(100vw - 16px);
+                visibility: visible;
+            `;
+            
+            // Ensure dropdown fits within viewport width on small screens
+            if (window.innerWidth < 768 && dropdownRect.width > window.innerWidth - 16) {
+                dropdown.style.width = `${window.innerWidth - 16}px`;
+                dropdown.style.left = '8px';
+            }
+        });
         
         // Focus search input
         setTimeout(() => {
