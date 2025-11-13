@@ -921,7 +921,7 @@ class UIManager {
             }
 
         } catch (error) {
-            this.showToast('Error saving material: ' + error.message, 'error');
+            this.showToast('Error saving material: ' + SecurityUtils.escapeHTML(error.message), 'error');
         }
     }
 
@@ -994,7 +994,7 @@ class UIManager {
             
             this.showToast(`<i class="fa-solid fa-trash-can"></i> All ${materialCount} material${materialCount > 1 ? 's' : ''} cleared successfully!`, 'success', 'Cleared');
         } catch (error) {
-            this.showToast('Error clearing materials: ' + error.message, 'error');
+            this.showToast('Error clearing materials: ' + SecurityUtils.escapeHTML(error.message), 'error');
         }
     }
 
@@ -1025,7 +1025,7 @@ class UIManager {
             
             this.showToast(`<i class="fa-solid fa-trash-can"></i> All ${archiveCount} archived report${archiveCount > 1 ? 's' : ''} cleared successfully!`, 'success', 'Cleared');
         } catch (error) {
-            this.showToast('Error clearing archive: ' + error.message, 'error');
+            this.showToast('Error clearing archive: ' + SecurityUtils.escapeHTML(error.message), 'error');
         }
     }
 
@@ -1043,7 +1043,7 @@ class UIManager {
                 '<i class="fa-solid fa-file-arrow-down"></i> Exported'
             );
         } catch (error) {
-            this.showToast('Error exporting data: ' + error.message, 'error');
+            this.showToast('Error exporting data: ' + SecurityUtils.escapeHTML(error.message), 'error');
         }
     }
 
@@ -1352,8 +1352,9 @@ class UIManager {
         
         const dot = document.createElement('span');
         dot.className = 'category-option-dot';
-        // Use CSS variable if no color provided
-        dot.style.background = color || 'var(--default-category-color)';
+        // Validate color to prevent CSS injection
+        const validatedColor = color ? SecurityUtils.validateColor(color) : null;
+        dot.style.background = validatedColor || 'var(--default-category-color)';
         
         const name = document.createElement('span');
         name.className = 'category-option-name';
@@ -1381,6 +1382,12 @@ class UIManager {
         
         // Close any existing dropdown
         this.closeCategoryDropdown();
+        
+        // Store button reference for accessibility updates
+        this.currentCategoryButton = button;
+        
+        // Update aria-expanded on the button
+        button.setAttribute('aria-expanded', 'true');
         
         const { materialCode, currentGroup: currentGroupId } = button.dataset;
         const groups = this.dataManager.getAllGroups();
@@ -1513,11 +1520,11 @@ class UIManager {
         const searchInput = dropdown.querySelector('.category-dropdown-search');
         const optionsContainer = dropdown.querySelector('#categoryDropdownOptions');
         
-        // Update ARIA expanded state
-        searchInput.setAttribute('aria-expanded', 'true');
+        // Store event handlers for cleanup
+        this.categoryDropdownHandlers = this.categoryDropdownHandlers || {};
         
         // Search functionality
-        searchInput.addEventListener('input', (e) => {
+        this.categoryDropdownHandlers.searchInput = (e) => {
             const searchTerm = e.target.value.toLowerCase();
             const options = optionsContainer.querySelectorAll('.category-dropdown-option');
             
@@ -1529,32 +1536,12 @@ class UIManager {
                     option.style.display = 'none';
                 }
             });
-        });
+        };
+        searchInput.addEventListener('input', this.categoryDropdownHandlers.searchInput);
         
-        // Option click handlers
-        const options = optionsContainer.querySelectorAll('.category-dropdown-option');
-        options.forEach(option => {
-            option.addEventListener('click', () => {
-                const { groupId } = option.dataset;
-                this.quickAssignCategory(materialCode, groupId);
-                this.closeCategoryDropdown();
-            });
-        });
-        
-        // Close on outside click
-        setTimeout(() => {
-            document.addEventListener('click', this.closeCategoryDropdownHandler = () => {
-                this.closeCategoryDropdown();
-            }, { once: true });
-        }, 10);
-        
-        // Prevent dropdown from closing when clicking inside
-        dropdown.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-        
-        // Keyboard navigation
-        searchInput.addEventListener('keydown', (e) => {
+        // Keyboard navigation for search input
+        this.categoryDropdownHandlers.searchKeydown = (e) => {
+            const options = optionsContainer.querySelectorAll('.category-dropdown-option');
             if (e.key === 'Escape') {
                 this.closeCategoryDropdown();
             } else if (e.key === 'ArrowDown') {
@@ -1562,12 +1549,32 @@ class UIManager {
                 const firstVisible = Array.from(options).find(opt => opt.style.display !== 'none');
                 if (firstVisible) firstVisible.focus();
             }
-        });
+        };
+        searchInput.addEventListener('keydown', this.categoryDropdownHandlers.searchKeydown);
         
-        // Option keyboard navigation
+        // Prevent dropdown from closing when clicking inside
+        this.categoryDropdownHandlers.dropdownClick = (e) => {
+            e.stopPropagation();
+        };
+        dropdown.addEventListener('click', this.categoryDropdownHandlers.dropdownClick);
+        
+        // Option click and keyboard handlers
+        const options = optionsContainer.querySelectorAll('.category-dropdown-option');
+        this.categoryDropdownHandlers.optionHandlers = [];
+        
         options.forEach((option, index) => {
             option.setAttribute('tabindex', '0');
-            option.addEventListener('keydown', (e) => {
+            
+            // Click handler
+            const clickHandler = () => {
+                const { groupId } = option.dataset;
+                this.quickAssignCategory(materialCode, groupId);
+                this.closeCategoryDropdown();
+            };
+            option.addEventListener('click', clickHandler);
+            
+            // Keyboard handler
+            const keydownHandler = (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     option.click();
@@ -1585,8 +1592,23 @@ class UIManager {
                 } else if (e.key === 'Escape') {
                     this.closeCategoryDropdown();
                 }
+            };
+            option.addEventListener('keydown', keydownHandler);
+            
+            // Store handlers for cleanup
+            this.categoryDropdownHandlers.optionHandlers.push({
+                element: option,
+                clickHandler,
+                keydownHandler
             });
         });
+        
+        // Close on outside click
+        setTimeout(() => {
+            document.addEventListener('click', this.closeCategoryDropdownHandler = () => {
+                this.closeCategoryDropdown();
+            }, { once: true });
+        }, 10);
     }
     
     /**
@@ -1595,8 +1617,59 @@ class UIManager {
     closeCategoryDropdown() {
         const dropdown = document.getElementById('categoryDropdownPopup');
         if (dropdown) {
+            // Explicitly remove all event listeners before removing the dropdown
+            if (this.categoryDropdownHandlers) {
+                const searchInput = dropdown.querySelector('.category-dropdown-search');
+                
+                // Remove search input listeners
+                if (searchInput) {
+                    if (this.categoryDropdownHandlers.searchInput) {
+                        searchInput.removeEventListener('input', this.categoryDropdownHandlers.searchInput);
+                    }
+                    if (this.categoryDropdownHandlers.searchKeydown) {
+                        searchInput.removeEventListener('keydown', this.categoryDropdownHandlers.searchKeydown);
+                    }
+                }
+                
+                // Remove dropdown click listener
+                if (this.categoryDropdownHandlers.dropdownClick) {
+                    dropdown.removeEventListener('click', this.categoryDropdownHandlers.dropdownClick);
+                }
+                
+                // Remove option listeners
+                if (this.categoryDropdownHandlers.optionHandlers) {
+                    this.categoryDropdownHandlers.optionHandlers.forEach(({ element, clickHandler, keydownHandler }) => {
+                        element.removeEventListener('click', clickHandler);
+                        element.removeEventListener('keydown', keydownHandler);
+                    });
+                }
+                
+                // Clear handlers object
+                this.categoryDropdownHandlers = null;
+            }
+            
             dropdown.classList.remove('show');
-            setTimeout(() => dropdown.remove(), 200);
+            
+            // Clear any pending removal timeout to prevent race condition
+            if (this.categoryDropdownRemovalTimeout) {
+                clearTimeout(this.categoryDropdownRemovalTimeout);
+            }
+            
+            // Schedule removal with stored timeout ID
+            this.categoryDropdownRemovalTimeout = setTimeout(() => {
+                // Check if dropdown still exists before removing
+                const stillExists = document.getElementById('categoryDropdownPopup');
+                if (stillExists) {
+                    stillExists.remove();
+                }
+                this.categoryDropdownRemovalTimeout = null;
+            }, 200);
+        }
+        
+        // Update aria-expanded on the button
+        if (this.currentCategoryButton) {
+            this.currentCategoryButton.setAttribute('aria-expanded', 'false');
+            this.currentCategoryButton = null;
         }
         
         // Remove click handler
@@ -1639,8 +1712,8 @@ class UIManager {
                     ? (this.dataManager.getGroup(newGroup)?.name || this.t('groupUngrouped'))
                     : this.t('groupUngrouped');
 
-                // Show success message
-                const message = `<i class="fa-solid fa-tag"></i> ${materialCode}: ${oldGroupName} → ${newGroupName}`;
+                // Show success message with escaped values to prevent XSS
+                const message = `<i class="fa-solid fa-tag"></i> ${SecurityUtils.escapeHTML(materialCode)}: ${SecurityUtils.escapeHTML(oldGroupName)} → ${SecurityUtils.escapeHTML(newGroupName)}`;
                 this.showToast(message, 'success', this.t('categoryUpdated') || 'Category Updated');
 
                 // Update the visual indicator
@@ -1649,7 +1722,7 @@ class UIManager {
                 // Announce to screen readers
                 if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                     accessibilityManager.announce(
-                        `Material ${materialCode} moved to ${newGroupName}`,
+                        `Material ${SecurityUtils.escapeHTML(materialCode)} moved to ${SecurityUtils.escapeHTML(newGroupName)}`,
                         'polite'
                     );
                 }
@@ -1660,7 +1733,7 @@ class UIManager {
             }
         } catch (error) {
             console.error('Quick category assignment error:', error);
-            this.showToast('Error: ' + error.message, 'error');
+            this.showToast('Error: ' + SecurityUtils.escapeHTML(error.message), 'error');
             // Revert dropdown to previous value
             this.revertCategoryDropdown(materialCode, oldGroup);
         }
@@ -1687,7 +1760,10 @@ class UIManager {
         if (groupId) {
             const group = this.dataManager.getGroup(groupId);
             if (group) {
-                const color = group.color || 'var(--default-group-color)';
+                // Validate color to prevent CSS injection
+                const rawColor = group.color || 'var(--default-group-color)';
+                const color = SecurityUtils.validateColor(rawColor) || 'var(--default-group-color)';
+                
                 wrapper.style.setProperty('--category-color', color);
                 wrapper.style.setProperty('--category-bg', `linear-gradient(135deg, ${color}15 0%, ${color}30 100%)`);
                 wrapper.style.setProperty('--category-bg-hover', `linear-gradient(135deg, ${color}25 0%, ${color}40 100%)`);

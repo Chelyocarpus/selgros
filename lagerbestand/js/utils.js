@@ -46,6 +46,41 @@ class SecurityUtils {
     }
 
     /**
+     * Validate and sanitize CSS color value to prevent CSS injection
+     * @param {string} color - Color value to validate
+     * @returns {string|null} Validated color or null if invalid
+     */
+    static validateColor(color) {
+        if (!color || typeof color !== 'string') return null;
+        
+        // Trim whitespace
+        color = color.trim();
+        
+        // Allow CSS variables
+        if (/^var\(--[\w-]+\)$/.test(color)) {
+            return color;
+        }
+        
+        // Validate hex colors (#RGB or #RRGGBB)
+        if (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color)) {
+            return color;
+        }
+        
+        // Validate rgb/rgba
+        if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*[\d.]+\s*)?\)$/.test(color)) {
+            return color;
+        }
+        
+        // Validate hsl/hsla
+        if (/^hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%\s*(,\s*[\d.]+\s*)?\)$/.test(color)) {
+            return color;
+        }
+        
+        // Reject anything else (including potential CSS injection attempts)
+        return null;
+    }
+
+    /**
      * Validate file type using magic numbers (file signatures)
      * @param {File} file - File to validate
      * @returns {Promise<{valid: boolean, type: string, message: string}>}

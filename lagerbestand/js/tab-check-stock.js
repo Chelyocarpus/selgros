@@ -143,7 +143,7 @@ UIManager.prototype.processReport = function() {
 
     } catch (error) {
         console.error('Error processing report:', error);
-        this.showToast('Error processing report: ' + error.message, 'error');
+        this.showToast('Error processing report: ' + SecurityUtils.escapeHTML(error.message), 'error');
     }
 };
 
@@ -450,7 +450,7 @@ UIManager.prototype.handleFileUpload = async function(event) {
         this.hideLoading();
         this.closeBatchProcessingModal();
         ErrorHandler.log(error, 'File upload');
-        this.showToast('Error uploading file(s): ' + error.message, 'error');
+        this.showToast('Error uploading file(s): ' + SecurityUtils.escapeHTML(error.message), 'error');
         accessibilityManager?.announce('File upload error', 'assertive');
         event.target.value = '';
     }

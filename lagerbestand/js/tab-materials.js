@@ -393,7 +393,7 @@ UIManager.prototype.addMaterial = function() {
 
         this.showToast(`<i class="fa-solid fa-plus"></i> Material ${code} added successfully! Capacity set to ${capacity}.`, 'success', 'Added');
     } catch (error) {
-        this.showToast('Error adding material: ' + error.message, 'error');
+        this.showToast('Error adding material: ' + SecurityUtils.escapeHTML(error.message), 'error');
     }
 };
 
@@ -567,7 +567,11 @@ UIManager.prototype.isPromotionActive = function(material) {
  */
 UIManager.prototype.createCategoryButton = function(material) {
     const currentGroup = material.group ? this.dataManager.getGroup(material.group) : null;
-    const categoryColor = currentGroup?.color || 'var(--default-category-color)';
+    
+    // Validate color to prevent CSS injection
+    const rawColor = currentGroup?.color || 'var(--default-category-color)';
+    const categoryColor = SecurityUtils.validateColor(rawColor) || 'var(--default-category-color)';
+    
     const categoryBg = currentGroup ? `linear-gradient(135deg, ${categoryColor}15 0%, ${categoryColor}30 100%)` : '';
     const categoryBgHover = currentGroup ? `linear-gradient(135deg, ${categoryColor}25 0%, ${categoryColor}40 100%)` : '';
     const categoryText = currentGroup ? this.getContrastColor(categoryColor) : '';
@@ -753,7 +757,7 @@ UIManager.prototype.exportMaterialsCSV = function() {
             this.showToast(message, result.missingCodes ? 'warning' : 'success', this.t('exportSuccess'));
         }
     } catch (error) {
-        this.showToast('Error exporting materials: ' + error.message, 'error');
+        this.showToast('Error exporting materials: ' + SecurityUtils.escapeHTML(error.message), 'error');
     }
 };
 
@@ -773,7 +777,7 @@ UIManager.prototype.exportMaterialsForSAP = function() {
             this.showToast(message, result.missingCodes ? 'warning' : 'success', this.t('exportSuccess'));
         }
     } catch (error) {
-        this.showToast('Error exporting materials for SAP: ' + error.message, 'error');
+        this.showToast('Error exporting materials for SAP: ' + SecurityUtils.escapeHTML(error.message), 'error');
     }
 };
 
@@ -1222,9 +1226,12 @@ UIManager.prototype.populateFilterGroupDropdown = function() {
         const option = document.createElement('option');
         option.value = group.id;
         option.textContent = `■ ${group.name}`;
-        // Use CSS variable if no custom color is set
+        // Validate color to prevent CSS injection
         if (group.color) {
-            option.style.color = group.color;
+            const validatedColor = SecurityUtils.validateColor(group.color);
+            if (validatedColor) {
+                option.style.color = validatedColor;
+            }
         }
         select.appendChild(option);
     });
@@ -2216,7 +2223,7 @@ UIManager.prototype.optimizeStorage = async function() {
         this.updateStorageStatus();
     } catch (error) {
         this.hideLoading();
-        this.showToast('Error optimizing storage: ' + error.message, 'error');
+        this.showToast('Error optimizing storage: ' + SecurityUtils.escapeHTML(error.message), 'error');
     }
 };
 
