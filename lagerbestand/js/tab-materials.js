@@ -445,16 +445,38 @@ UIManager.prototype.renderMaterialsList = function() {
             ? `<span style="font-weight: 600; color: var(--warning-color);">${material.promoCapacity}</span> <small style="color: var(--text-secondary);">(${this.t('normal')}: ${material.capacity})</small>`
             : `<span style="font-weight: 600; color: var(--success-color);">${material.capacity}</span>`;
         
-        // Group badge display
-        let groupHtml = '<span style="color: var(--text-secondary);">—</span>';
-        if (material.group) {
-            const group = this.dataManager.getGroup(material.group);
-            if (group) {
-                groupHtml = `<span style="display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 600; background: ${group.color || '#3b82f6'}20; color: ${group.color || '#3b82f6'}; border: 1px solid ${group.color || '#3b82f6'};">
-                    <i class="fa-solid fa-tag"></i> ${group.name}
-                </span>`;
-            }
-        }
+        // Group badge display with quick select dropdown
+        let groupHtml = '';
+        const currentGroup = material.group ? this.dataManager.getGroup(material.group) : null;
+        const allGroups = this.dataManager.getAllGroups();
+        
+        // Build dropdown options
+        let groupOptions = `<option value="">${this.t('groupUngrouped')}</option>`;
+        allGroups.forEach(group => {
+            const selected = material.group === group.id ? 'selected' : '';
+            groupOptions += `<option value="${group.id}" ${selected}>${group.name}</option>`;
+        });
+        
+        // Category color variables for styling
+        const categoryColor = currentGroup?.color || '#94a3b8';
+        const categoryBg = currentGroup ? `linear-gradient(135deg, ${categoryColor}15 0%, ${categoryColor}30 100%)` : '';
+        const categoryBgHover = currentGroup ? `linear-gradient(135deg, ${categoryColor}25 0%, ${categoryColor}40 100%)` : '';
+        const categoryText = currentGroup ? this.getContrastColor(categoryColor) : '';
+        const displayText = currentGroup ? currentGroup.name : this.t('groupUngrouped');
+        
+        groupHtml = `
+            <div class="quick-category-select-wrapper" style="--category-color: ${categoryColor}; --category-bg: ${categoryBg}; --category-bg-hover: ${categoryBgHover}; --category-text: ${categoryText};">
+                <button class="quick-category-select" 
+                        data-material-code="${SecurityUtils.escapeHTML(material.code)}" 
+                        data-current-group="${material.group || ''}"
+                        data-has-category="${!!currentGroup}"
+                        onclick="ui.openCategoryDropdown(this, event)"
+                        title="${this.t('quickAssignCategory') || 'Quick assign category'}">
+                    <span class="category-select-text">${displayText}</span>
+                    <i class="fa-solid fa-chevron-down category-select-arrow"></i>
+                </button>
+            </div>
+        `;
         
         return `
             <tr data-material-code="${material.code}">

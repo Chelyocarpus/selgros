@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.0] - 2025-01-13
+
+### Added - Quick Category Selection in Materials List
+
+#### Inline Category Assignment
+- **Quick Select Dropdown**: Category/group selection directly in the materials list table
+  - Eliminates need to open full edit dialog for category changes
+  - Dropdown appears in the "Group" column of materials table
+  - Shows all available categories/groups with current selection highlighted
+  - Instant save on selection change
+  
+- **Visual Indicators**: Real-time visual feedback for category assignments
+  - Color-coded indicator dot next to dropdown matching category color
+  - Smooth pulse animation when category changes
+  - Indicator automatically updates on category assignment
+  - Hidden when material is ungrouped
+  
+- **User Experience Improvements**:
+  - Toast notifications showing category transition (old → new)
+  - Error handling with automatic rollback on failure
+  - Keyboard navigation support for accessibility
+  - Screen reader announcements for all actions
+  - Touch-friendly interface for mobile devices
+  
+- **Workflow Benefits**:
+  - Streamlines bulk categorization workflows
+  - Reduces time spent managing material categories
+  - Enables quick recategorization when organizational needs change
+  - Maintains focus on materials list without context switching
+  
+- **Mobile Responsive**: Optimized for all screen sizes
+  - Vertical layout on mobile (dropdown above indicator)
+  - Touch-optimized dropdown sizing
+  - Reduced font sizes for compact display
+  - Maintains full functionality on mobile devices
+
+#### Technical Implementation
+- New `quickAssignCategory()` method for instant category updates
+- `updateCategoryIndicator()` for visual feedback updates
+- `revertCategoryDropdown()` for error recovery
+- Integrated with existing DataManager category system
+- Dual persistence (Dexie IndexedDB + localStorage backup)
+
+#### Styling
+- Custom dropdown styling with branded colors
+- Hover and focus states for better interactivity
+- CSS animations for category indicator
+- Dark mode support
+- High contrast mode compatibility
+
+#### Translations
+- Added German translations: "Kategorie schnell zuweisen", "Kategorie aktualisiert"
+- Added English translations: "Quick assign category", "Category Updated"
+
+#### Documentation
+- Created comprehensive feature documentation (QUICK-CATEGORY-SELECT.md)
+- Includes usage guide, technical details, and testing scenarios
+- API documentation for new methods
+
+---
+
 ## [2.4.0] - 2025-11-11
 
 ### Added - Recently Added Materials Live Preview

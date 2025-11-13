@@ -1328,6 +1328,328 @@ class UIManager {
         }
     }
 
+    // ========================
+    // Quick Category Assignment
+    // ========================
+
+    /**
+     * Open custom category dropdown with search
+     * @param {HTMLElement} button - The button that was clicked
+     * @param {Event} event - Click event
+     */
+    openCategoryDropdown(button, event) {
+        event.stopPropagation();
+        
+        // Close any existing dropdown
+        this.closeCategoryDropdown();
+        
+        const materialCode = button.dataset.materialCode;
+        const currentGroupId = button.dataset.currentGroup;
+        const groups = this.dataManager.getAllGroups();
+        
+        // Create dropdown container
+        const dropdown = document.createElement('div');
+        dropdown.className = 'category-dropdown-popup';
+        dropdown.id = 'categoryDropdownPopup';
+        
+        // Build options HTML
+        let optionsHtml = `
+            <div class="category-dropdown-option" data-group-id="" data-group-name="${this.t('groupUngrouped')}">
+                <span class="category-option-dot" style="background: #94a3b8;"></span>
+                <span class="category-option-name">${this.t('groupUngrouped')}</span>
+                ${!currentGroupId ? '<i class="fa-solid fa-check category-option-check"></i>' : ''}
+            </div>
+        `;
+        
+        groups.forEach(group => {
+            const isSelected = currentGroupId === group.id;
+            optionsHtml += `
+                <div class="category-dropdown-option" data-group-id="${group.id}" data-group-name="${group.name}">
+                    <span class="category-option-dot" style="background: ${group.color || '#3b82f6'};"></span>
+                    <span class="category-option-name">${group.name}</span>
+                    ${isSelected ? '<i class="fa-solid fa-check category-option-check"></i>' : ''}
+                </div>
+            `;
+        });
+        
+        dropdown.innerHTML = `
+            <div class="category-dropdown-header">
+                <div class="category-dropdown-search-wrapper">
+                    <i class="fa-solid fa-search category-search-icon"></i>
+                    <input type="text" 
+                           class="category-dropdown-search" 
+                           placeholder="${this.t('searchCategories') || 'Search categories...'}" 
+                           autocomplete="off">
+                </div>
+            </div>
+            <div class="category-dropdown-options" id="categoryDropdownOptions">
+                ${optionsHtml}
+            </div>
+            <div class="category-dropdown-footer">
+                <button class="category-dropdown-create" onclick="ui.showGroupModal(); ui.closeCategoryDropdown();">
+                    <i class="fa-solid fa-plus"></i> ${this.t('btnCreateGroup') || 'Create New'}
+                </button>
+            </div>
+        `;
+        
+        // Position dropdown
+        const rect = button.getBoundingClientRect();
+        dropdown.style.top = `${rect.bottom + window.scrollY + 4}px`;
+        dropdown.style.left = `${rect.left + window.scrollX}px`;
+        dropdown.style.minWidth = `${Math.max(rect.width, 200)}px`;
+        
+        document.body.appendChild(dropdown);
+        
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = dropdown.querySelector('.category-dropdown-search');
+            if (searchInput) searchInput.focus();
+        }, 10);
+        
+        // Add event listeners
+        this.setupCategoryDropdownListeners(dropdown, materialCode);
+        
+        // Add show class for animation
+        setTimeout(() => dropdown.classList.add('show'), 10);
+    }
+    
+    /**
+     * Setup event listeners for category dropdown
+     * @param {HTMLElement} dropdown - Dropdown element
+     * @param {string} materialCode - Material code
+     */
+    setupCategoryDropdownListeners(dropdown, materialCode) {
+        const searchInput = dropdown.querySelector('.category-dropdown-search');
+        const optionsContainer = dropdown.querySelector('#categoryDropdownOptions');
+        
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const options = optionsContainer.querySelectorAll('.category-dropdown-option');
+            
+            options.forEach(option => {
+                const groupName = option.dataset.groupName.toLowerCase();
+                if (groupName.includes(searchTerm)) {
+                    option.style.display = 'flex';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+        
+        // Option click handlers
+        const options = optionsContainer.querySelectorAll('.category-dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                const groupId = option.dataset.groupId;
+                this.quickAssignCategory(materialCode, groupId);
+                this.closeCategoryDropdown();
+            });
+        });
+        
+        // Close on outside click
+        setTimeout(() => {
+            document.addEventListener('click', this.closeCategoryDropdownHandler = () => {
+                this.closeCategoryDropdown();
+            }, { once: true });
+        }, 10);
+        
+        // Prevent dropdown from closing when clicking inside
+        dropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Keyboard navigation
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeCategoryDropdown();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const firstVisible = Array.from(options).find(opt => opt.style.display !== 'none');
+                if (firstVisible) firstVisible.focus();
+            }
+        });
+        
+        // Option keyboard navigation
+        options.forEach((option, index) => {
+            option.setAttribute('tabindex', '0');
+            option.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    option.click();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const nextOption = options[index + 1];
+                    if (nextOption) nextOption.focus();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (index === 0) {
+                        searchInput.focus();
+                    } else {
+                        options[index - 1].focus();
+                    }
+                } else if (e.key === 'Escape') {
+                    this.closeCategoryDropdown();
+                }
+            });
+        });
+    }
+    
+    /**
+     * Close category dropdown
+     */
+    closeCategoryDropdown() {
+        const dropdown = document.getElementById('categoryDropdownPopup');
+        if (dropdown) {
+            dropdown.classList.remove('show');
+            setTimeout(() => dropdown.remove(), 200);
+        }
+        
+        // Remove click handler
+        if (this.closeCategoryDropdownHandler) {
+            document.removeEventListener('click', this.closeCategoryDropdownHandler);
+            this.closeCategoryDropdownHandler = null;
+        }
+    }
+
+    /**
+     * Quick assign category to material without opening edit dialog
+     * @param {string} materialCode - Material code
+     * @param {string} groupId - Group ID (empty string for ungrouped)
+     */
+    quickAssignCategory(materialCode, groupId) {
+        const material = this.dataManager.getMaterial(materialCode);
+        if (!material) {
+            this.showToast('Material not found', 'error');
+            return;
+        }
+
+        const oldGroup = material.group;
+        const newGroup = groupId || null;
+
+        // No change
+        if (oldGroup === newGroup) {
+            return;
+        }
+
+        try {
+            // Update material with new group
+            const success = this.dataManager.assignMaterialToGroup(materialCode, newGroup);
+
+            if (success) {
+                // Get group names for feedback
+                const oldGroupName = oldGroup 
+                    ? (this.dataManager.getGroup(oldGroup)?.name || this.t('groupUngrouped'))
+                    : this.t('groupUngrouped');
+                const newGroupName = newGroup 
+                    ? (this.dataManager.getGroup(newGroup)?.name || this.t('groupUngrouped'))
+                    : this.t('groupUngrouped');
+
+                // Show success message
+                const message = `<i class="fa-solid fa-tag"></i> ${materialCode}: ${oldGroupName} → ${newGroupName}`;
+                this.showToast(message, 'success', this.t('categoryUpdated') || 'Category Updated');
+
+                // Update the visual indicator
+                this.updateCategoryIndicator(materialCode, newGroup);
+
+                // Announce to screen readers
+                if (accessibilityManager) {
+                    accessibilityManager.announce(
+                        `Material ${materialCode} moved to ${newGroupName}`,
+                        'polite'
+                    );
+                }
+            } else {
+                this.showToast('Error updating category', 'error');
+                // Revert dropdown to previous value
+                this.revertCategoryDropdown(materialCode, oldGroup);
+            }
+        } catch (error) {
+            console.error('Quick category assignment error:', error);
+            this.showToast('Error: ' + error.message, 'error');
+            // Revert dropdown to previous value
+            this.revertCategoryDropdown(materialCode, oldGroup);
+        }
+    }
+
+    /**
+     * Update the category indicator visual element
+     * @param {string} materialCode - Material code
+     * @param {string|null} groupId - New group ID
+     */
+    updateCategoryIndicator(materialCode, groupId) {
+        const row = document.querySelector(`tr[data-material-code="${materialCode}"]`);
+        if (!row) return;
+
+        const wrapper = row.querySelector('.quick-category-select-wrapper');
+        const button = row.querySelector('.quick-category-select');
+        if (!wrapper || !button) return;
+
+        // Add animation class
+        wrapper.classList.add('category-changed');
+        setTimeout(() => wrapper.classList.remove('category-changed'), 400);
+
+        // Update styling and text based on new group
+        if (groupId) {
+            const group = this.dataManager.getGroup(groupId);
+            if (group) {
+                const color = group.color || '#3b82f6';
+                wrapper.style.setProperty('--category-color', color);
+                wrapper.style.setProperty('--category-bg', `linear-gradient(135deg, ${color}15 0%, ${color}30 100%)`);
+                wrapper.style.setProperty('--category-bg-hover', `linear-gradient(135deg, ${color}25 0%, ${color}40 100%)`);
+                wrapper.style.setProperty('--category-text', this.getContrastColor(color));
+                button.setAttribute('data-has-category', 'true');
+                button.setAttribute('data-current-group', groupId);
+                
+                // Update button text
+                const textSpan = button.querySelector('.category-select-text');
+                if (textSpan) textSpan.textContent = group.name;
+            }
+        } else {
+            // Reset to ungrouped state
+            wrapper.style.setProperty('--category-color', '#94a3b8');
+            wrapper.style.setProperty('--category-bg', '');
+            wrapper.style.setProperty('--category-bg-hover', '');
+            wrapper.style.setProperty('--category-text', '');
+            button.setAttribute('data-has-category', 'false');
+            button.setAttribute('data-current-group', '');
+            
+            // Update button text
+            const textSpan = button.querySelector('.category-select-text');
+            if (textSpan) textSpan.textContent = this.t('groupUngrouped');
+        }
+    }
+
+    /**
+     * Get contrasting text color for a given background color
+     * @param {string} hexColor - Hex color code
+     * @returns {string} - Black or color-adjusted text color
+     */
+    getContrastColor(hexColor) {
+        // Convert hex to RGB
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        
+        // Calculate luminance
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Return darker shade of the color for better readability
+        return luminance > 0.5 ? `rgb(${Math.floor(r * 0.4)}, ${Math.floor(g * 0.4)}, ${Math.floor(b * 0.4)})` : hexColor;
+    }
+
+    /**
+     * Revert category dropdown to previous value on error
+     * @param {string} materialCode - Material code
+     * @param {string|null} groupId - Previous group ID
+     */
+    revertCategoryDropdown(materialCode, groupId) {
+        const select = document.querySelector(`.quick-category-select[data-material-code="${materialCode}"]`);
+        if (select) {
+            select.value = groupId || '';
+        }
+    }
 
 
 }

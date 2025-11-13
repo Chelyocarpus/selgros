@@ -5,3 +5,4 @@ lagerbestand/package-lock.json
 /lagerbestand/.serena
 /.github
 /.serena
+/.playwright-mcp
