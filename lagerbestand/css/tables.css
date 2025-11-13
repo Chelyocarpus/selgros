@@ -26,6 +26,16 @@ tbody tr:hover {
     background-color: var(--bg-color);
 }
 
+/* Highlighted row for edited materials */
+.highlighted-row {
+    transition: background-color 0.3s ease;
+    background-color: var(--primary-color-light, #e3f2fd) !important;
+}
+
+body.dark-mode .highlighted-row {
+    background-color: rgba(33, 150, 243, 0.2) !important;
+}
+
 .alert-row {
     background-color: #fee2e2;
 }

@@ -613,10 +613,137 @@ UIManager.prototype.createCategoryButton = function(material) {
     return wrapper;
 };
 
+/**
+ * Save current DataTable state for restoration after re-render
+ * @returns {Object|null} Saved state object or null if no table exists
+ */
+UIManager.prototype.saveMaterialsTableState = function() {
+    if (!$.fn.DataTable.isDataTable('#materialsTable')) {
+        return null;
+    }
+    
+    const table = $('#materialsTable').DataTable();
+    const pageInfo = table.page.info();
+    
+    // Save selected material codes
+    const selectedMaterials = Array.from(this.selectedItems || []);
+    
+    // Save scroll position
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    
+    return {
+        page: pageInfo.page,
+        search: table.search(),
+        order: table.order(),
+        selectedMaterials: selectedMaterials,
+        scrollPosition: scrollPosition
+    };
+};
+
+/**
+ * Restore DataTable state after re-render
+ * @param {Object} state - Saved state object
+ * @param {string} highlightMaterialCode - Optional material code to highlight after restore
+ */
+UIManager.prototype.restoreMaterialsTableState = function(state, highlightMaterialCode) {
+    if (!state || !$.fn.DataTable.isDataTable('#materialsTable')) {
+        return;
+    }
+    
+    const table = $('#materialsTable').DataTable();
+    
+    // Apply search, order, and page settings before a single draw
+    if (state.search !== undefined && state.search !== null) {
+        table.search(state.search);
+    }
+    
+    if (state.order && state.order.length > 0) {
+        table.order(state.order);
+    }
+    
+    if (state.page !== undefined) {
+        table.page(state.page);
+    }
+    
+    // Single draw to apply all settings
+    table.draw(false); // false = stay on same page
+    
+    // Get current materials for filtering selections
+    const currentMaterials = this.dataManager.getAllMaterials();
+    const currentMaterialCodes = new Set(currentMaterials.map(m => m.code));
+    
+    // Restore checkbox selections - filter to only include materials that still exist
+    if (state.selectedMaterials && state.selectedMaterials.length > 0) {
+        // Filter selected materials to only those present in current data AND have checkboxes
+        const validSelectedMaterials = state.selectedMaterials.filter(code => {
+            if (!currentMaterialCodes.has(code)) {
+                return false; // Material doesn't exist anymore
+            }
+            // Verify checkbox exists in DOM
+            const escapedCode = CSS.escape(code);
+            const checkbox = document.querySelector(`.material-select-checkbox[data-material-code="${escapedCode}"]`);
+            return checkbox !== null;
+        });
+        
+        this.selectedItems = new Set(validSelectedMaterials);
+        
+        validSelectedMaterials.forEach(materialCode => {
+            const escapedCode = CSS.escape(materialCode);
+            const checkbox = document.querySelector(`.material-select-checkbox[data-material-code="${escapedCode}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+        
+        this.updateBulkActionsToolbar();
+        this.updateSelectAllCheckbox();
+    }
+    
+    // Use DataTable's draw event to reliably apply state changes after DOM is updated
+    const handleDrawComplete = () => {
+        // Remove the event listener to ensure it only runs once
+        table.off('draw.stateRestore');
+        
+        if (highlightMaterialCode) {
+            const escapedCode = CSS.escape(highlightMaterialCode);
+            const row = document.querySelector(`tr[data-material-code="${escapedCode}"]`);
+            if (row) {
+                // Add highlight effect using CSS class
+                row.classList.add('highlighted-row');
+                
+                // Scroll to the row if it's not visible
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Remove highlight after 2 seconds
+                setTimeout(() => {
+                    row.classList.remove('highlighted-row');
+                }, 2000);
+            }
+        } else {
+            // Restore scroll position
+            if (state.scrollPosition !== undefined) {
+                window.scrollTo({
+                    top: state.scrollPosition,
+                    behavior: 'auto' // Use 'auto' for instant scroll to avoid jarring effect
+                });
+            }
+        }
+    };
+    
+    // Listen for draw event with namespaced event name for easy removal
+    table.on('draw.stateRestore', handleDrawComplete);
+};
+
 // Render materials list
-UIManager.prototype.renderMaterialsList = function() {
+UIManager.prototype.renderMaterialsList = function(options) {
+    // Ensure options is an object to prevent destructuring errors
+    options = (typeof options === 'object' && options !== null) ? options : {};
+    const { preserveState = false, highlightMaterialCode = null } = options;
     const materials = this.dataManager.getAllMaterials();
     const tbody = document.getElementById('materialsTableBody');
+    
+    // Save state before destroying table
+    const savedState = preserveState ? this.saveMaterialsTableState() : null;
     
     // Destroy existing DataTable if it exists
     if ($.fn.DataTable.isDataTable('#materialsTable')) {
@@ -681,6 +808,11 @@ UIManager.prototype.renderMaterialsList = function() {
             { orderable: false, targets: [0, 7] } // Disable sorting on checkbox and Actions columns
         ]
     });
+    
+    // Restore state if requested
+    if (savedState) {
+        this.restoreMaterialsTableState(savedState, highlightMaterialCode);
+    }
     
     // Update sync status display
     this.updateSyncStatus();
@@ -895,7 +1027,7 @@ UIManager.prototype.undoAction = function() {
     const result = this.dataManager.undo();
     if (result.success) {
         this.showToast(result.message, 'success', this.t('undoSuccess'));
-        this.renderMaterialsList();
+        this.renderMaterialsList({ preserveState: true });
     } else {
         this.showToast(result.message, 'warning');
     }
@@ -907,7 +1039,7 @@ UIManager.prototype.redoAction = function() {
     const result = this.dataManager.redo();
     if (result.success) {
         this.showToast(result.message, 'success', this.t('redoSuccess'));
-        this.renderMaterialsList();
+        this.renderMaterialsList({ preserveState: true });
     } else {
         this.showToast(result.message, 'warning');
     }
@@ -1573,7 +1705,7 @@ UIManager.prototype.deleteGroup = async function(groupId) {
     if (this.dataManager.deleteGroup(groupId)) {
         this.showToast(`Group "${SecurityUtils.escapeHTML(group.name)}" deleted successfully!`, 'success');
         this.renderGroupsList();
-        this.renderMaterialsList(); // Update materials list to reflect changes
+        this.renderMaterialsList({ preserveState: true }); // Update materials list to reflect changes
         this.populateGroupDropdown(); // Update dropdowns
     } else {
         this.showToast('Error deleting group', 'error');
@@ -2052,7 +2184,7 @@ UIManager.prototype.applyBulkEdit = function() {
         this.showToast(`<i class="fa-solid fa-check"></i> ${result.count} materials updated successfully!`, 'success');
         this.closeBulkEditModal();
         this.clearBulkSelection();
-        this.renderMaterialsList();
+        this.renderMaterialsList({ preserveState: true });
     } else {
         this.showToast('Error updating materials: ' + result.error, 'error');
     }
@@ -2096,9 +2228,11 @@ UIManager.prototype.bulkDeleteMaterials = async function() {
     const result = this.dataManager.bulkDeleteMaterials(materialCodes);
     
     if (result.success) {
-        this.showToast(`<i class="fa-solid fa-trash-can"></i> ${result.count} materials deleted successfully!`, 'success');
+        // Clear selection BEFORE re-rendering to prevent deleted items from being restored
         this.clearBulkSelection();
-        this.renderMaterialsList();
+        
+        this.showToast(`<i class="fa-solid fa-trash-can"></i> ${result.count} materials deleted successfully!`, 'success');
+        this.renderMaterialsList({ preserveState: true });
     } else {
         this.showToast('Error deleting materials: ' + result.error, 'error');
     }

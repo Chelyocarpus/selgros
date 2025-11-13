@@ -876,8 +876,11 @@ class UIManager {
 
             this.closeMaterialModal();
 
-            // Refresh materials list if on materials tab
-            this.renderMaterialsList();
+            // Refresh materials list if on materials tab, preserving state
+            this.renderMaterialsList({ 
+                preserveState: true, 
+                highlightMaterialCode: mode === 'edit' ? code : null 
+            });
             
             // Update undo/redo buttons
             if (this.updateUndoRedoButtons) {
@@ -935,7 +938,15 @@ class UIManager {
         }
 
         if (this.dataManager.deleteMaterial(code)) {
-            this.renderMaterialsList();
+            // Remove from selected items if it was selected
+            if (this.selectedItems && this.selectedItems.has(code)) {
+                this.selectedItems.delete(code);
+                this.updateBulkActionsToolbar();
+                this.updateSelectAllCheckbox();
+            }
+            
+            // Preserve state when deleting (but don't highlight anything)
+            this.renderMaterialsList({ preserveState: true });
             
             // Update undo/redo buttons
             if (this.updateUndoRedoButtons) {
