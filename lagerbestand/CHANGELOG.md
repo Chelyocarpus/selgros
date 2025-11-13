@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.1] - 2025-11-13
+
+### Fixed
+
+#### Materials List State Preservation
+- **List Reset After Update**: Fixed materials list resetting to initial state after editing a material
+  - Previously: Scroll position, page number, search filters, and selections were lost after updates
+  - Now: All table state is preserved when editing, deleting, or performing bulk operations
+  - Implemented `saveMaterialsTableState()` method to capture:
+    - Current page number
+    - Search term
+    - Column sorting
+    - Checkbox selections
+    - Scroll position
+  - Implemented `restoreMaterialsTableState()` method to reapply saved state after re-render
+  - Added optional highlighting of edited material with smooth scroll to location
+  - Updated `renderMaterialsList()` to accept `options` parameter with:
+    - `preserveState`: Boolean to enable state preservation
+    - `highlightMaterialCode`: Material code to highlight after restore
+  - Modified `saveMaterialModal()` to preserve state and highlight edited material
+  - Modified `deleteMaterial()` to preserve state when deleting
+  - Updated undo/redo operations to preserve state
+  - Updated bulk edit/delete operations to preserve state
+  - Updated group deletion to preserve state
+  - Improved user experience: workflow continuity maintained when managing multiple materials
+  - Files modified: `js/tab-materials.js`, `js/ui-manager.js`
+
+---
+
 ## [2.5.0] - 2025-01-13
 
 ### Added - Quick Category Selection in Materials List
