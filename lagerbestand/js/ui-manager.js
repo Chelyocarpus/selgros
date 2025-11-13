@@ -617,7 +617,7 @@ class UIManager {
             }, 100);
             
             // Announce to screen readers
-            if (accessibilityManager) {
+            if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                 accessibilityManager.announce(this.t('deleteModalTitle') + ': ' + message.replace(/<[^>]*>/g, ''), 'assertive');
             }
         });
@@ -696,7 +696,7 @@ class UIManager {
             input.addEventListener('keypress', enterHandler);
             
             // Announce to screen readers
-            if (accessibilityManager) {
+            if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                 accessibilityManager.announce(
                     this.t('clearAllModalTitle') + ': ' + message.replace(/<[^>]*>/g, '').replace('{count}', count),
                     'assertive'
@@ -745,7 +745,7 @@ class UIManager {
             input.select();
             
             // Announce error to screen readers
-            if (accessibilityManager) {
+            if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                 accessibilityManager.announce(this.t('clearAllTypeMismatch'), 'assertive');
             }
             
@@ -1333,6 +1333,45 @@ class UIManager {
     // ========================
 
     /**
+     * Create a category option element safely
+     * @param {Object} options - Option configuration
+     * @param {string} options.groupId - Group ID (empty for ungrouped)
+     * @param {string} options.groupName - Group name
+     * @param {string} [options.color] - Group color
+     * @param {boolean} options.isSelected - Whether this option is selected
+     * @returns {HTMLElement} Category option element
+     */
+    createCategoryOption({ groupId, groupName, color, isSelected }) {
+        const option = document.createElement('div');
+        option.className = 'category-dropdown-option';
+        option.dataset.groupId = groupId;
+        option.dataset.groupName = groupName;
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        option.setAttribute('tabindex', '0');
+        
+        const dot = document.createElement('span');
+        dot.className = 'category-option-dot';
+        // Use CSS variable if no color provided
+        dot.style.background = color || 'var(--default-category-color)';
+        
+        const name = document.createElement('span');
+        name.className = 'category-option-name';
+        name.textContent = groupName;
+        
+        option.appendChild(dot);
+        option.appendChild(name);
+        
+        if (isSelected) {
+            const check = document.createElement('i');
+            check.className = 'fa-solid fa-check category-option-check';
+            option.appendChild(check);
+        }
+        
+        return option;
+    }
+
+    /**
      * Open custom category dropdown with search
      * @param {HTMLElement} button - The button that was clicked
      * @param {Event} event - Click event
@@ -1343,64 +1382,116 @@ class UIManager {
         // Close any existing dropdown
         this.closeCategoryDropdown();
         
-        const materialCode = button.dataset.materialCode;
-        const currentGroupId = button.dataset.currentGroup;
+        const { materialCode, currentGroup: currentGroupId } = button.dataset;
         const groups = this.dataManager.getAllGroups();
         
         // Create dropdown container
         const dropdown = document.createElement('div');
         dropdown.className = 'category-dropdown-popup';
         dropdown.id = 'categoryDropdownPopup';
+        dropdown.setAttribute('role', 'listbox');
+        dropdown.setAttribute('aria-label', this.t('selectCategory') || 'Select category');
         
-        // Build options HTML
-        let optionsHtml = `
-            <div class="category-dropdown-option" data-group-id="" data-group-name="${this.t('groupUngrouped')}">
-                <span class="category-option-dot" style="background: #94a3b8;"></span>
-                <span class="category-option-name">${this.t('groupUngrouped')}</span>
-                ${!currentGroupId ? '<i class="fa-solid fa-check category-option-check"></i>' : ''}
-            </div>
-        `;
+        // Create header with search
+        const header = document.createElement('div');
+        header.className = 'category-dropdown-header';
         
+        const searchWrapper = document.createElement('div');
+        searchWrapper.className = 'category-dropdown-search-wrapper';
+        
+        const searchIcon = document.createElement('i');
+        searchIcon.className = 'fa-solid fa-search category-search-icon';
+        
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'category-dropdown-search';
+        searchInput.placeholder = this.t('searchCategories') || 'Search categories...';
+        searchInput.autocomplete = 'off';
+        searchInput.setAttribute('role', 'searchbox');
+        searchInput.setAttribute('aria-label', this.t('searchCategories') || 'Search categories');
+        searchInput.setAttribute('aria-controls', 'categoryDropdownOptions');
+        
+        searchWrapper.appendChild(searchIcon);
+        searchWrapper.appendChild(searchInput);
+        header.appendChild(searchWrapper);
+        
+        // Create options container
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'category-dropdown-options';
+        optionsContainer.id = 'categoryDropdownOptions';
+        optionsContainer.setAttribute('role', 'group');
+        
+        // Add ungrouped option
+        const ungroupedOption = this.createCategoryOption({
+            groupId: '',
+            groupName: this.t('groupUngrouped'),
+            color: null, // Will use CSS variable
+            isSelected: currentGroupId ? false : true
+        });
+        optionsContainer.appendChild(ungroupedOption);
+        
+        // Add group options
         groups.forEach(group => {
-            const isSelected = currentGroupId === group.id;
-            optionsHtml += `
-                <div class="category-dropdown-option" data-group-id="${group.id}" data-group-name="${group.name}">
-                    <span class="category-option-dot" style="background: ${group.color || '#3b82f6'};"></span>
-                    <span class="category-option-name">${group.name}</span>
-                    ${isSelected ? '<i class="fa-solid fa-check category-option-check"></i>' : ''}
-                </div>
-            `;
+            const option = this.createCategoryOption({
+                groupId: group.id,
+                groupName: group.name,
+                color: group.color || null, // Will use CSS variable if no color
+                isSelected: currentGroupId === group.id
+            });
+            optionsContainer.appendChild(option);
         });
         
-        dropdown.innerHTML = `
-            <div class="category-dropdown-header">
-                <div class="category-dropdown-search-wrapper">
-                    <i class="fa-solid fa-search category-search-icon"></i>
-                    <input type="text" 
-                           class="category-dropdown-search" 
-                           placeholder="${this.t('searchCategories') || 'Search categories...'}" 
-                           autocomplete="off">
-                </div>
-            </div>
-            <div class="category-dropdown-options" id="categoryDropdownOptions">
-                ${optionsHtml}
-            </div>
-            <div class="category-dropdown-footer">
-                <button class="category-dropdown-create" onclick="ui.showGroupModal(); ui.closeCategoryDropdown();">
-                    <i class="fa-solid fa-plus"></i> ${this.t('btnCreateGroup') || 'Create New'}
-                </button>
-            </div>
-        `;
+        // Create footer
+        const footer = document.createElement('div');
+        footer.className = 'category-dropdown-footer';
         
-        // Position dropdown
-        const rect = button.getBoundingClientRect();
-        dropdown.style.top = `${rect.bottom + window.scrollY + 4}px`;
-        dropdown.style.left = `${rect.left + window.scrollX}px`;
-        dropdown.style.minWidth = `${Math.max(rect.width, 200)}px`;
+        const createButton = document.createElement('button');
+        createButton.className = 'category-dropdown-create';
+        createButton.type = 'button';
+        createButton.addEventListener('click', () => {
+            this.showGroupModal();
+            this.closeCategoryDropdown();
+        });
+        
+        const createIcon = document.createElement('i');
+        createIcon.className = 'fa-solid fa-plus';
+        
+        const createText = document.createTextNode(' ' + (this.t('btnCreateGroup') || 'Create New'));
+        
+        createButton.appendChild(createIcon);
+        createButton.appendChild(createText);
+        footer.appendChild(createButton);
+        
+        // Assemble dropdown
+        dropdown.appendChild(header);
+        dropdown.appendChild(optionsContainer);
+        dropdown.appendChild(footer);
         
         document.body.appendChild(dropdown);
         
-        // Focus search input
+        // Position dropdown with viewport overflow handling
+        const buttonRect = button.getBoundingClientRect();
+        const dropdownRect = dropdown.getBoundingClientRect();
+        
+        // Default position: below the button, left-aligned
+        let top = buttonRect.bottom + window.scrollY + 4;
+        let left = buttonRect.left + window.scrollX;
+        
+        // Check for right overflow
+        if (left + dropdownRect.width > window.innerWidth) {
+            left = Math.max(8, window.innerWidth - dropdownRect.width - 8);
+        }
+        
+        // Check for bottom overflow
+        if (buttonRect.bottom + dropdownRect.height > window.innerHeight) {
+            // Position above the button
+            top = Math.max(8, buttonRect.top + window.scrollY - dropdownRect.height - 4);
+        }
+        
+        dropdown.style.position = 'absolute';
+        dropdown.style.top = `${top}px`;
+        dropdown.style.left = `${left}px`;
+        dropdown.style.minWidth = `${Math.max(buttonRect.width, 200)}px`;        // Focus search input
         setTimeout(() => {
             const searchInput = dropdown.querySelector('.category-dropdown-search');
             if (searchInput) searchInput.focus();
@@ -1422,6 +1513,9 @@ class UIManager {
         const searchInput = dropdown.querySelector('.category-dropdown-search');
         const optionsContainer = dropdown.querySelector('#categoryDropdownOptions');
         
+        // Update ARIA expanded state
+        searchInput.setAttribute('aria-expanded', 'true');
+        
         // Search functionality
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
@@ -1441,7 +1535,7 @@ class UIManager {
         const options = optionsContainer.querySelectorAll('.category-dropdown-option');
         options.forEach(option => {
             option.addEventListener('click', () => {
-                const groupId = option.dataset.groupId;
+                const { groupId } = option.dataset;
                 this.quickAssignCategory(materialCode, groupId);
                 this.closeCategoryDropdown();
             });
@@ -1553,7 +1647,7 @@ class UIManager {
                 this.updateCategoryIndicator(materialCode, newGroup);
 
                 // Announce to screen readers
-                if (accessibilityManager) {
+                if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                     accessibilityManager.announce(
                         `Material ${materialCode} moved to ${newGroupName}`,
                         'polite'
@@ -1593,7 +1687,7 @@ class UIManager {
         if (groupId) {
             const group = this.dataManager.getGroup(groupId);
             if (group) {
-                const color = group.color || '#3b82f6';
+                const color = group.color || 'var(--default-group-color)';
                 wrapper.style.setProperty('--category-color', color);
                 wrapper.style.setProperty('--category-bg', `linear-gradient(135deg, ${color}15 0%, ${color}30 100%)`);
                 wrapper.style.setProperty('--category-bg-hover', `linear-gradient(135deg, ${color}25 0%, ${color}40 100%)`);
@@ -1607,7 +1701,7 @@ class UIManager {
             }
         } else {
             // Reset to ungrouped state
-            wrapper.style.setProperty('--category-color', '#94a3b8');
+            wrapper.style.setProperty('--category-color', 'var(--default-category-color)');
             wrapper.style.setProperty('--category-bg', '');
             wrapper.style.setProperty('--category-bg-hover', '');
             wrapper.style.setProperty('--category-text', '');
@@ -1626,11 +1720,34 @@ class UIManager {
      * @returns {string} - Black or color-adjusted text color
      */
     getContrastColor(hexColor) {
+        // Validate input
+        if (!hexColor || typeof hexColor !== 'string') {
+            return '#000000'; // Default to black for invalid input
+        }
+        
         // Convert hex to RGB
         const hex = hexColor.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
+        
+        // Validate hex format (must be 3 or 6 characters)
+        if (!/^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex)) {
+            console.warn(`Invalid hex color: ${hexColor}, using default`);
+            return '#000000';
+        }
+        
+        // Expand shorthand format (e.g., '03F' to '0033FF')
+        const fullHex = hex.length === 3 
+            ? hex.split('').map(char => char + char).join('')
+            : hex;
+        
+        const r = parseInt(fullHex.substring(0, 2), 16);
+        const g = parseInt(fullHex.substring(2, 4), 16);
+        const b = parseInt(fullHex.substring(4, 6), 16);
+        
+        // Validate parsed values
+        if (isNaN(r) || isNaN(g) || isNaN(b)) {
+            console.warn(`Failed to parse hex color: ${hexColor}, using default`);
+            return '#000000';
+        }
         
         // Calculate luminance
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
@@ -1645,10 +1762,9 @@ class UIManager {
      * @param {string|null} groupId - Previous group ID
      */
     revertCategoryDropdown(materialCode, groupId) {
-        const select = document.querySelector(`.quick-category-select[data-material-code="${materialCode}"]`);
-        if (select) {
-            select.value = groupId || '';
-        }
+        // Since we're using a custom button dropdown now (not a select element),
+        // we need to update the visual indicator to revert to the previous state
+        this.updateCategoryIndicator(materialCode, groupId);
     }
 
 

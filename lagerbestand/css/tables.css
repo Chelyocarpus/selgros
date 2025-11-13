@@ -468,7 +468,6 @@ table.dataTable tbody tr:hover {
     border: none;
     background: none;
     padding: 6px 12px 6px 28px;
-    border: none;
     border-radius: 16px;
     background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
     color: var(--text-color);
@@ -545,7 +544,11 @@ table.dataTable tbody tr:hover {
     font-style: italic;
 }
 
-/* Options styling */
+/* 
+  Custom styling for <option> elements is not reliably supported across browsers.
+  For consistent appearance, we use a custom dropdown component instead.
+*/
+/* Options styling - COMMENTED OUT: Not consistently supported across browsers
 .quick-category-select option {
     padding: 10px;
     background: white;
@@ -556,6 +559,7 @@ table.dataTable tbody tr:hover {
     font-style: italic;
     color: #9ca3af;
 }
+*/
 
 /* Dark mode adjustments */
 body.dark-mode .quick-category-select {
@@ -741,6 +745,7 @@ body.dark-mode .quick-category-select option {
 }
 
 /* Scrollbar styling */
+/* WebKit browsers (Chrome, Safari, Edge) */
 .category-dropdown-options::-webkit-scrollbar {
     width: 6px;
 }
@@ -756,6 +761,17 @@ body.dark-mode .quick-category-select option {
 
 .category-dropdown-options::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Firefox scrollbar styling */
+.category-dropdown-options {
+    scrollbar-width: thin;
+    scrollbar-color: #b3c2e6 #eff6ff;
+}
+
+/* Dark mode scrollbar adjustments */
+body.dark-mode .category-dropdown-options {
+    scrollbar-color: #475569 #1e293b;
 }
 
 /* Dark mode for dropdown */

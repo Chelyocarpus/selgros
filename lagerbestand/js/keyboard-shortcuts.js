@@ -256,7 +256,7 @@ class KeyboardShortcutManager {
      * Toggle high contrast mode
      */
     toggleHighContrast() {
-        if (accessibilityManager) {
+        if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
             accessibilityManager.toggleHighContrastMode();
         }
     }

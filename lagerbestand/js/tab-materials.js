@@ -397,6 +397,217 @@ UIManager.prototype.addMaterial = function() {
     }
 };
 
+/**
+ * Create a material table row element safely using DOM methods
+ * @param {Object} material - Material object
+ * @returns {HTMLElement} Table row element
+ */
+UIManager.prototype.createMaterialRow = function(material) {
+    const row = document.createElement('tr');
+    row.dataset.materialCode = material.code;
+    
+    // Checkbox column
+    const checkboxCell = document.createElement('td');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'material-select-checkbox';
+    checkbox.dataset.materialCode = material.code;
+    checkbox.addEventListener('change', () => this.toggleMaterialSelection(material.code));
+    checkboxCell.appendChild(checkbox);
+    row.appendChild(checkboxCell);
+    
+    // Code column
+    const codeCell = document.createElement('td');
+    const codeStrong = document.createElement('strong');
+    codeStrong.textContent = material.code;
+    codeCell.appendChild(codeStrong);
+    row.appendChild(codeCell);
+    
+    // Name column
+    const nameCell = document.createElement('td');
+    if (material.name) {
+        nameCell.textContent = material.name;
+    } else {
+        const emptySpan = document.createElement('span');
+        emptySpan.style.color = 'var(--text-secondary)';
+        emptySpan.textContent = '—';
+        nameCell.appendChild(emptySpan);
+    }
+    row.appendChild(nameCell);
+    
+    // Capacity column
+    const capacityCell = document.createElement('td');
+    const isPromoActive = this.isPromotionActive(material);
+    if (material.promoCapacity && isPromoActive) {
+        const promoSpan = document.createElement('span');
+        promoSpan.style.fontWeight = '600';
+        promoSpan.style.color = 'var(--warning-color)';
+        promoSpan.textContent = material.promoCapacity;
+        capacityCell.appendChild(promoSpan);
+        capacityCell.appendChild(document.createTextNode(' '));
+        const normalSpan = document.createElement('small');
+        normalSpan.style.color = 'var(--text-secondary)';
+        normalSpan.textContent = `(${this.t('normal')}: ${material.capacity})`;
+        capacityCell.appendChild(normalSpan);
+    } else {
+        const capacitySpan = document.createElement('span');
+        capacitySpan.style.fontWeight = '600';
+        capacitySpan.style.color = 'var(--success-color)';
+        capacitySpan.textContent = material.capacity;
+        capacityCell.appendChild(capacitySpan);
+    }
+    row.appendChild(capacityCell);
+    
+    // Promo status column
+    const promoCell = document.createElement('td');
+    if (material.promoCapacity) {
+        const badge = document.createElement('span');
+        badge.className = isPromoActive ? 'promo-status-badge active' : 'promo-status-badge inactive';
+        
+        if (isPromoActive) {
+            const icon = document.createElement('i');
+            icon.className = 'fa-solid fa-gift';
+            badge.appendChild(icon);
+            badge.appendChild(document.createTextNode(' ' + this.t('promoActive')));
+        } else {
+            badge.textContent = this.t('promoInactive');
+        }
+        
+        const br = document.createElement('br');
+        badge.appendChild(br);
+        
+        const small = document.createElement('small');
+        small.style.fontSize = '0.8em';
+        small.textContent = `${material.promoCapacity} capacity`;
+        badge.appendChild(small);
+        
+        promoCell.appendChild(badge);
+    } else {
+        const emptySpan = document.createElement('span');
+        emptySpan.style.color = 'var(--text-secondary)';
+        emptySpan.textContent = '—';
+        promoCell.appendChild(emptySpan);
+    }
+    row.appendChild(promoCell);
+    
+    // Group/Category column
+    const groupCell = document.createElement('td');
+    const categoryButton = this.createCategoryButton(material);
+    groupCell.appendChild(categoryButton);
+    row.appendChild(groupCell);
+    
+    // Date column
+    const dateCell = document.createElement('td');
+    dateCell.style.fontSize = '0.9em';
+    const createdDate = new Date(material.createdAt).toLocaleDateString();
+    const updatedDate = material.updatedAt ? new Date(material.updatedAt).toLocaleDateString() : '';
+    dateCell.textContent = createdDate;
+    if (updatedDate && updatedDate !== createdDate) {
+        const br = document.createElement('br');
+        const small = document.createElement('small');
+        small.style.color = 'var(--text-secondary)';
+        small.textContent = `${this.t('updated')}: ${updatedDate}`;
+        dateCell.appendChild(br);
+        dateCell.appendChild(small);
+    }
+    row.appendChild(dateCell);
+    
+    // Actions column
+    const actionsCell = document.createElement('td');
+    
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-primary btn-small';
+    editBtn.style.marginRight = '5px';
+    editBtn.addEventListener('click', () => this.openEditModal(material.code));
+    const editIcon = document.createElement('i');
+    editIcon.className = 'fa-solid fa-pen-to-square';
+    editBtn.appendChild(editIcon);
+    editBtn.appendChild(document.createTextNode(' ' + this.t('btnEdit')));
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-danger btn-small';
+    deleteBtn.addEventListener('click', () => this.deleteMaterial(material.code));
+    const deleteIcon = document.createElement('i');
+    deleteIcon.className = 'fa-solid fa-trash-can';
+    deleteBtn.appendChild(deleteIcon);
+    deleteBtn.appendChild(document.createTextNode(' ' + this.t('btnDelete')));
+    
+    actionsCell.appendChild(editBtn);
+    actionsCell.appendChild(deleteBtn);
+    row.appendChild(actionsCell);
+    
+    return row;
+};
+
+/**
+ * Check if a material's promotion is currently active
+ * @param {Object} material - Material object
+ * @returns {boolean} Whether promotion is active
+ */
+UIManager.prototype.isPromotionActive = function(material) {
+    let isPromoActive = material.promoActive;
+    
+    if (isPromoActive && material.promoEndDate) {
+        const endDate = new Date(material.promoEndDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (endDate < today) {
+            isPromoActive = false;
+        }
+    }
+    
+    return isPromoActive;
+};
+
+/**
+ * Create category assignment button element safely
+ * @param {Object} material - Material object
+ * @returns {HTMLElement} Category button wrapper element
+ */
+UIManager.prototype.createCategoryButton = function(material) {
+    const currentGroup = material.group ? this.dataManager.getGroup(material.group) : null;
+    const categoryColor = currentGroup?.color || 'var(--default-category-color)';
+    const categoryBg = currentGroup ? `linear-gradient(135deg, ${categoryColor}15 0%, ${categoryColor}30 100%)` : '';
+    const categoryBgHover = currentGroup ? `linear-gradient(135deg, ${categoryColor}25 0%, ${categoryColor}40 100%)` : '';
+    const categoryText = currentGroup ? this.getContrastColor(categoryColor) : '';
+    // Use textContent in DOM creation for safety
+    const displayText = currentGroup ? currentGroup.name : this.t('groupUngrouped');
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'quick-category-select-wrapper';
+    wrapper.style.setProperty('--category-color', categoryColor);
+    wrapper.style.setProperty('--category-bg', categoryBg);
+    wrapper.style.setProperty('--category-bg-hover', categoryBgHover);
+    wrapper.style.setProperty('--category-text', categoryText);
+    
+    const button = document.createElement('button');
+    button.className = 'quick-category-select';
+    button.type = 'button';
+    button.dataset.materialCode = material.code;
+    button.dataset.currentGroup = material.group || '';
+    button.dataset.hasCategory = !!currentGroup;
+    button.title = this.t('quickAssignCategory') || 'Quick assign category';
+    button.setAttribute('role', 'combobox');
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-haspopup', 'listbox');
+    button.setAttribute('aria-label', `${this.t('quickAssignCategory') || 'Quick assign category'}: ${displayText}`);
+    button.addEventListener('click', (e) => this.openCategoryDropdown(button, e));
+    
+    const textSpan = document.createElement('span');
+    textSpan.className = 'category-select-text';
+    textSpan.textContent = displayText;
+    
+    const arrow = document.createElement('i');
+    arrow.className = 'fa-solid fa-chevron-down category-select-arrow';
+    
+    button.appendChild(textSpan);
+    button.appendChild(arrow);
+    wrapper.appendChild(button);
+    
+    return wrapper;
+};
+
 // Render materials list
 UIManager.prototype.renderMaterialsList = function() {
     const materials = this.dataManager.getAllMaterials();
@@ -407,95 +618,40 @@ UIManager.prototype.renderMaterialsList = function() {
         $('#materialsTable').DataTable().destroy();
     }
 
+    // Clear tbody
+    tbody.textContent = '';
+
     if (materials.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);"><div class="empty-state-icon" style="font-size: 3em; margin-bottom: 10px;"><i class="fa-solid fa-boxes-stacked"></i></div><p>${this.t('materialsEmpty')}</p></td></tr>`;
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 8;
+        cell.style.textAlign = 'center';
+        cell.style.padding = '40px';
+        cell.style.color = 'var(--text-secondary)';
+        
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-state-icon';
+        iconDiv.style.fontSize = '3em';
+        iconDiv.style.marginBottom = '10px';
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-boxes-stacked';
+        iconDiv.appendChild(icon);
+        
+        const p = document.createElement('p');
+        p.textContent = this.t('materialsEmpty');
+        
+        cell.appendChild(iconDiv);
+        cell.appendChild(p);
+        row.appendChild(cell);
+        tbody.appendChild(row);
         return;
     }
 
-    // Populate table body
-    tbody.innerHTML = materials.map(material => {
-        const createdDate = new Date(material.createdAt).toLocaleDateString();
-        const updatedDate = material.updatedAt ? new Date(material.updatedAt).toLocaleDateString() : '';
-        const dateDisplay = updatedDate && updatedDate !== createdDate 
-            ? `${createdDate}<br><small style="color: var(--text-secondary);">${this.t('updated')}: ${updatedDate}</small>`
-            : createdDate;
-        
-        // Check if promotion is active and not expired
-        let isPromoActive = material.promoActive;
-        
-        if (isPromoActive && material.promoEndDate) {
-            const endDate = new Date(material.promoEndDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            if (endDate < today) {
-                isPromoActive = false;
-            }
-        }
-
-        // Promotional status display
-        const promoStatusHtml = material.promoCapacity 
-            ? (isPromoActive 
-                ? `<span class="promo-status-badge active"><i class="fa-solid fa-gift"></i> ${this.t('promoActive')}<br><small style="font-size: 0.8em;">${material.promoCapacity} capacity</small></span>`
-                : `<span class="promo-status-badge inactive">${this.t('promoInactive')}<br><small style="font-size: 0.8em;">${material.promoCapacity} capacity</small></span>`)
-            : '<span style="color: var(--text-secondary);">—</span>';
-
-        // Capacity display with promo info
-        const capacityHtml = material.promoCapacity && isPromoActive
-            ? `<span style="font-weight: 600; color: var(--warning-color);">${material.promoCapacity}</span> <small style="color: var(--text-secondary);">(${this.t('normal')}: ${material.capacity})</small>`
-            : `<span style="font-weight: 600; color: var(--success-color);">${material.capacity}</span>`;
-        
-        // Group badge display with quick select dropdown
-        let groupHtml = '';
-        const currentGroup = material.group ? this.dataManager.getGroup(material.group) : null;
-        const allGroups = this.dataManager.getAllGroups();
-        
-        // Build dropdown options
-        let groupOptions = `<option value="">${this.t('groupUngrouped')}</option>`;
-        allGroups.forEach(group => {
-            const selected = material.group === group.id ? 'selected' : '';
-            groupOptions += `<option value="${group.id}" ${selected}>${group.name}</option>`;
-        });
-        
-        // Category color variables for styling
-        const categoryColor = currentGroup?.color || '#94a3b8';
-        const categoryBg = currentGroup ? `linear-gradient(135deg, ${categoryColor}15 0%, ${categoryColor}30 100%)` : '';
-        const categoryBgHover = currentGroup ? `linear-gradient(135deg, ${categoryColor}25 0%, ${categoryColor}40 100%)` : '';
-        const categoryText = currentGroup ? this.getContrastColor(categoryColor) : '';
-        const displayText = currentGroup ? currentGroup.name : this.t('groupUngrouped');
-        
-        groupHtml = `
-            <div class="quick-category-select-wrapper" style="--category-color: ${categoryColor}; --category-bg: ${categoryBg}; --category-bg-hover: ${categoryBgHover}; --category-text: ${categoryText};">
-                <button class="quick-category-select" 
-                        data-material-code="${SecurityUtils.escapeHTML(material.code)}" 
-                        data-current-group="${material.group || ''}"
-                        data-has-category="${!!currentGroup}"
-                        onclick="ui.openCategoryDropdown(this, event)"
-                        title="${this.t('quickAssignCategory') || 'Quick assign category'}">
-                    <span class="category-select-text">${displayText}</span>
-                    <i class="fa-solid fa-chevron-down category-select-arrow"></i>
-                </button>
-            </div>
-        `;
-        
-        return `
-            <tr data-material-code="${material.code}">
-                <td>
-                    <input type="checkbox" class="material-select-checkbox" data-material-code="${material.code}" onchange="ui.toggleMaterialSelection('${material.code}')">
-                </td>
-                <td><strong>${material.code}</strong></td>
-                <td>${material.name || '<span style="color: var(--text-secondary);">—</span>'}</td>
-                <td>${capacityHtml}</td>
-                <td>${promoStatusHtml}</td>
-                <td>${groupHtml}</td>
-                <td style="font-size: 0.9em;">${dateDisplay}</td>
-                <td>
-                    <button class="btn-primary btn-small" onclick="ui.openEditModal('${material.code}')" style="margin-right: 5px;"><i class="fa-solid fa-pen-to-square"></i> ${this.t('btnEdit')}</button>
-                    <button class="btn-danger btn-small" onclick="ui.deleteMaterial('${material.code}')"><i class="fa-solid fa-trash-can"></i> ${this.t('btnDelete')}</button>
-                </td>
-            </tr>
-        `;
-    }).join('');
+    // Create rows using DOM methods to prevent XSS
+    materials.forEach(material => {
+        const row = this.createMaterialRow(material);
+        tbody.appendChild(row);
+    });
 
     // Initialize DataTable
     $('#materialsTable').DataTable({
@@ -1025,7 +1181,7 @@ UIManager.prototype.filterByGroup = function(groupId) {
         
         const group = this.dataManager.getGroup(groupId);
         if (group) {
-            this.showToast(`Showing materials in group: ${group.name}`, 'info');
+            this.showToast(`Showing materials in group: ${SecurityUtils.escapeHTML(group.name)}`, 'info');
         }
     }, 300);
 };
@@ -1066,7 +1222,10 @@ UIManager.prototype.populateFilterGroupDropdown = function() {
         const option = document.createElement('option');
         option.value = group.id;
         option.textContent = `■ ${group.name}`;
-        option.style.color = group.color || '#3b82f6';
+        // Use CSS variable if no custom color is set
+        if (group.color) {
+            option.style.color = group.color;
+        }
         select.appendChild(option);
     });
 };
@@ -1092,67 +1251,177 @@ UIManager.prototype.renderGroupsList = function() {
         return;
     }
     
-    container.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
-            ${groups.map(group => {
-                const materialCount = this.dataManager.getMaterialsByGroup(group.id).length;
-                const groupColor = group.color || '#3b82f6';
-                return `
-                    <div class="group-card" style="
-                        background: ${groupColor}10; 
-                        border: 2px solid ${groupColor}; 
-                        border-radius: 12px; 
-                        padding: 20px;
-                        transition: transform 0.2s, box-shadow 0.2s;
-                        cursor: pointer;
-                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px ${groupColor}40';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
-                            <div style="
-                                width: 50px; 
-                                height: 50px; 
-                                border-radius: 10px; 
-                                background: ${groupColor}; 
-                                display: flex; 
-                                align-items: center; 
-                                justify-content: center;
-                                color: white;
-                                font-size: 1.5em;
-                            ">
-                                <i class="fa-solid fa-tag"></i>
-                            </div>
-                            <div style="flex: 1;">
-                                <h4 style="margin: 0; color: ${groupColor}; font-size: 1.1em;">${group.name}</h4>
-                                <small style="color: var(--text-secondary);">
-                                    <i class="fa-solid fa-boxes-stacked"></i> ${materialCount} material${materialCount !== 1 ? 's' : ''}
-                                </small>
-                            </div>
-                        </div>
-                        ${group.description ? `<p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 15px; padding-left: 62px;">${group.description}</p>` : ''}
-                        <div style="display: flex; gap: 8px; justify-content: space-between; padding-top: 10px; border-top: 1px solid ${groupColor}30;">
-                            <button class="btn-small" onclick="event.stopPropagation(); ui.filterByGroup('${group.id}')" style="background: ${groupColor}20; color: ${groupColor}; border: 1px solid ${groupColor}; flex: 1;">
-                                <i class="fa-solid fa-filter"></i> ${this.t('viewMaterials') || 'View Materials'} (${materialCount})
-                            </button>
-                            <button class="btn-primary btn-small" onclick="event.stopPropagation(); ui.editGroup('${group.id}')" style="background: ${groupColor}; border-color: ${groupColor};">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button class="btn-danger btn-small" onclick="event.stopPropagation(); ui.deleteGroup('${group.id}')">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </div>
-                        <div style="font-size: 0.75em; color: var(--text-secondary); margin-top: 10px; text-align: right;">
-                            ${this.t('created')}: ${new Date(group.createdAt).toLocaleDateString()}
-                        </div>
-                    </div>
-                `;
-            }).join('')}
-        </div>
+    // Get default group color from CSS variable
+    const defaultGroupColor = getComputedStyle(document.documentElement)
+        .getPropertyValue('--default-group-color').trim() || '#3b82f6';
+    
+    // Clear container
+    container.textContent = '';
+    
+    // Create grid container
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+    grid.style.gap = '15px';
+    
+    // Create cards for each group
+    groups.forEach(group => {
+        const card = this.createGroupCard(group, defaultGroupColor);
+        grid.appendChild(card);
+    });
+    
+    container.appendChild(grid);
+};
+
+/**
+ * Create a group card element
+ * @param {Object} group - Group object
+ * @param {string} defaultGroupColor - Default color fallback
+ * @returns {HTMLElement} Group card element
+ */
+UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
+    const materialCount = this.dataManager.getMaterialsByGroup(group.id).length;
+    
+    // Validate color format to prevent XSS
+    const groupColor = (group.color && /^#[0-9A-Fa-f]{6}$/.test(group.color)) 
+        ? group.color 
+        : defaultGroupColor;
+    
+    // Create card container
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    card.style.cssText = `
+        background: ${groupColor}10; 
+        border: 2px solid ${groupColor}; 
+        border-radius: 12px; 
+        padding: 20px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
     `;
+    
+    // Add hover effects
+    card.addEventListener('mouseenter', () => {
+        card.style.transform = 'translateY(-2px)';
+        card.style.boxShadow = `0 4px 12px ${groupColor}40`;
+    });
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'translateY(0)';
+        card.style.boxShadow = 'none';
+    });
+    
+    // Create header section
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; align-items: center; gap: 12px; margin-bottom: 15px;';
+    
+    const iconDiv = document.createElement('div');
+    iconDiv.style.cssText = `
+        width: 50px; 
+        height: 50px; 
+        border-radius: 10px; 
+        background: ${groupColor}; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        color: white;
+        font-size: 1.5em;
+    `;
+    const icon = document.createElement('i');
+    icon.className = 'fa-solid fa-tag';
+    iconDiv.appendChild(icon);
+    
+    const textDiv = document.createElement('div');
+    textDiv.style.flex = '1';
+    
+    const title = document.createElement('h4');
+    title.style.cssText = `margin: 0; color: ${groupColor}; font-size: 1.1em;`;
+    title.textContent = group.name;
+    
+    const count = document.createElement('small');
+    count.style.color = 'var(--text-secondary)';
+    const countIcon = document.createElement('i');
+    countIcon.className = 'fa-solid fa-boxes-stacked';
+    count.appendChild(countIcon);
+    count.appendChild(document.createTextNode(` ${materialCount} material${materialCount !== 1 ? 's' : ''}`));
+    
+    textDiv.appendChild(title);
+    textDiv.appendChild(count);
+    header.appendChild(iconDiv);
+    header.appendChild(textDiv);
+    card.appendChild(header);
+    
+    // Add description if present
+    if (group.description) {
+        const desc = document.createElement('p');
+        desc.style.cssText = 'color: var(--text-secondary); font-size: 0.9em; margin-bottom: 15px; padding-left: 62px;';
+        desc.textContent = group.description;
+        card.appendChild(desc);
+    }
+    
+    // Create action buttons section
+    const actions = document.createElement('div');
+    actions.style.cssText = `display: flex; gap: 8px; justify-content: space-between; padding-top: 10px; border-top: 1px solid ${groupColor}30;`;
+    
+    // View materials button
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'btn-small';
+    viewBtn.style.cssText = `background: ${groupColor}20; color: ${groupColor}; border: 1px solid ${groupColor}; flex: 1;`;
+    viewBtn.type = 'button';
+    viewBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.filterByGroup(group.id);
+    });
+    const viewIcon = document.createElement('i');
+    viewIcon.className = 'fa-solid fa-filter';
+    viewBtn.appendChild(viewIcon);
+    viewBtn.appendChild(document.createTextNode(` ${this.t('viewMaterials') || 'View Materials'} (${materialCount})`));
+    
+    // Edit button
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-primary btn-small';
+    editBtn.style.cssText = `background: ${groupColor}; border-color: ${groupColor};`;
+    editBtn.type = 'button';
+    editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.editGroup(group.id);
+    });
+    const editIcon = document.createElement('i');
+    editIcon.className = 'fa-solid fa-pen-to-square';
+    editBtn.appendChild(editIcon);
+    
+    // Delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-danger btn-small';
+    deleteBtn.type = 'button';
+    deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.deleteGroup(group.id);
+    });
+    const deleteIcon = document.createElement('i');
+    deleteIcon.className = 'fa-solid fa-trash-can';
+    deleteBtn.appendChild(deleteIcon);
+    
+    actions.appendChild(viewBtn);
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+    card.appendChild(actions);
+    
+    // Add timestamp footer
+    const footer = document.createElement('div');
+    footer.style.cssText = 'font-size: 0.75em; color: var(--text-secondary); margin-top: 10px; text-align: right;';
+    footer.textContent = `${this.t('created')}: ${new Date(group.createdAt).toLocaleDateString()}`;
+    card.appendChild(footer);
+    
+    return card;
 };
 
 // Show group modal for creating/editing
 UIManager.prototype.showGroupModal = function(groupId = null) {
     const isEdit = groupId !== null;
     const group = isEdit ? this.dataManager.getGroup(groupId) : null;
+    
+    // Get default group color from CSS variable
+    const defaultGroupColor = getComputedStyle(document.documentElement)
+        .getPropertyValue('--default-group-color').trim() || '#3b82f6';
     
     const modalHtml = `
         <div class="modal active" id="groupModal">
@@ -1181,7 +1450,7 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
                             </button>
                         `).join('')}
                     </div>
-                    <input type="hidden" id="groupColor" value="${group?.color || '#3b82f6'}">
+                    <input type="hidden" id="groupColor" value="${group?.color || defaultGroupColor}">
                 </div>
                 
                 <div class="form-group">
@@ -1281,10 +1550,10 @@ UIManager.prototype.deleteGroup = async function(groupId) {
     let message;
     if (materialCount > 0) {
         message = this.t('deleteGroupWithMaterialsMessage')
-            .replace('{name}', group.name)
+            .replace('{name}', SecurityUtils.escapeHTML(group.name))
             .replace('{count}', materialCount);
     } else {
-        message = this.t('deleteGroupMessage').replace('{name}', group.name);
+        message = this.t('deleteGroupMessage').replace('{name}', SecurityUtils.escapeHTML(group.name));
     }
     
     const confirmed = await this.showDeleteModal(message);
@@ -1294,7 +1563,7 @@ UIManager.prototype.deleteGroup = async function(groupId) {
     }
     
     if (this.dataManager.deleteGroup(groupId)) {
-        this.showToast(`Group "${group.name}" deleted successfully!`, 'success');
+        this.showToast(`Group "${SecurityUtils.escapeHTML(group.name)}" deleted successfully!`, 'success');
         this.renderGroupsList();
         this.renderMaterialsList(); // Update materials list to reflect changes
         this.populateGroupDropdown(); // Update dropdowns
@@ -1697,7 +1966,7 @@ UIManager.prototype.showBulkEditModal = function() {
                     <div id="bulkEditGroupField" style="display: none; margin-top: 10px;">
                         <select id="bulkEditGroup">
                             <option value="">${this.t('groupUngrouped')}</option>
-                            ${groups.map(group => `<option value="${group.id}">${group.name}</option>`).join('')}
+                            ${groups.map(group => `<option value="${SecurityUtils.escapeHTML(group.id)}">${SecurityUtils.escapeHTML(group.name)}</option>`).join('')}
                         </select>
                     </div>
                 </div>

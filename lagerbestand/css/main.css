@@ -13,6 +13,10 @@
     --text-color: #1e293b;
     --text-secondary: #64748b;
     
+    /* Category colors */
+    --default-category-color: #94a3b8;
+    --default-group-color: #3b82f6;
+    
     /* Focus colors */
     --focus-color: #2563eb;
     --focus-width: 3px;
@@ -29,6 +33,10 @@ body.dark-mode {
     --danger-color: #ef4444;
     --warning-color: #fbbf24;
     --success-color: #22c55e;
+    
+    /* Category colors for dark mode */
+    --default-category-color: #94a3b8;
+    --default-group-color: #60a5fa;
 }
 
 /* High Contrast Mode */
@@ -42,6 +50,10 @@ body.high-contrast {
     --border-color: #ffffff;
     --text-color: #ffffff;
     --text-secondary: #ffff00;
+    
+    /* Category colors for high contrast */
+    --default-category-color: #ffff00;
+    --default-group-color: #00ffff;
 }
 
 body.high-contrast * {
