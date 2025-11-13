@@ -800,6 +800,9 @@ class UIManager {
             // Store mode before closing modal (as closeMaterialModal resets it)
             const mode = this.currentModalMode;
             
+            // Get old material data for comparison (if editing)
+            const oldMaterial = mode === 'edit' ? this.dataManager.getMaterial(code) : null;
+            
             this.dataManager.addMaterial(
                 code,
                 capacity,
@@ -847,7 +850,28 @@ class UIManager {
 
             // Different toast messages based on mode
             if (mode === 'edit') {
-                this.showToast(`<i class="fa-solid fa-pen-to-square"></i> Material ${code} updated successfully! Capacity set to ${capacity}.`, 'success', 'Updated');
+                // Determine what was changed to provide contextual feedback
+                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${code} updated successfully!`;
+                const changes = [];
+                
+                if (oldMaterial) {
+                    if (parseInt(oldMaterial.capacity) !== capacityNum) {
+                        changes.push(`Capacity: ${capacity}`);
+                    }
+                    if ((oldMaterial.group || null) !== (group || null)) {
+                        const groupName = group ? this.dataManager.getGroup(group)?.name || group : 'None';
+                        changes.push(`Group: ${groupName}`);
+                    }
+                    if ((oldMaterial.name || '') !== name) {
+                        changes.push(`Name updated`);
+                    }
+                    
+                    if (changes.length > 0) {
+                        toastMessage += ` ${changes.join(', ')}.`;
+                    }
+                }
+                
+                this.showToast(toastMessage, 'success', 'Updated');
             } else if (mode === 'quickadd') {
                 this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${code} quickly added! Capacity set to ${capacity}.`, 'success', 'Quick Added');
             } else {
