@@ -412,6 +412,7 @@ UIManager.prototype.createMaterialRow = function(material) {
     checkbox.type = 'checkbox';
     checkbox.className = 'material-select-checkbox';
     checkbox.dataset.materialCode = material.code;
+    checkbox.setAttribute('aria-label', `Select material ${material.code}${material.name ? ` - ${material.name}` : ''}`);
     checkbox.addEventListener('change', () => this.toggleMaterialSelection(material.code));
     checkboxCell.appendChild(checkbox);
     row.appendChild(checkboxCell);
@@ -1833,7 +1834,9 @@ UIManager.prototype.closeNoteModal = function() {
 
 // Toggle material selection
 UIManager.prototype.toggleMaterialSelection = function(materialCode) {
-    const checkbox = document.querySelector(`.material-select-checkbox[data-material-code="${materialCode}"]`);
+    // Escape materialCode to prevent selector injection
+    const escapedCode = CSS.escape(materialCode);
+    const checkbox = document.querySelector(`.material-select-checkbox[data-material-code="${escapedCode}"]`);
     if (!checkbox) return;
     
     if (checkbox.checked) {

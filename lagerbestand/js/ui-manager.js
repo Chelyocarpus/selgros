@@ -1498,7 +1498,9 @@ class UIManager {
         dropdown.style.position = 'absolute';
         dropdown.style.top = `${top}px`;
         dropdown.style.left = `${left}px`;
-        dropdown.style.minWidth = `${Math.max(buttonRect.width, 200)}px`;        // Focus search input
+        dropdown.style.minWidth = `${Math.max(buttonRect.width, 200)}px`;
+        
+        // Focus search input
         setTimeout(() => {
             const searchInput = dropdown.querySelector('.category-dropdown-search');
             if (searchInput) searchInput.focus();
@@ -1563,8 +1565,6 @@ class UIManager {
         this.categoryDropdownHandlers.optionHandlers = [];
         
         options.forEach((option, index) => {
-            option.setAttribute('tabindex', '0');
-            
             // Click handler
             const clickHandler = () => {
                 const { groupId } = option.dataset;
@@ -1580,14 +1580,21 @@ class UIManager {
                     option.click();
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    const nextOption = options[index + 1];
-                    if (nextOption) nextOption.focus();
+                    // Find next visible option
+                    const visibleOptions = Array.from(options).filter(opt => opt.style.display !== 'none');
+                    const currentVisibleIndex = visibleOptions.indexOf(option);
+                    const nextVisible = visibleOptions[currentVisibleIndex + 1];
+                    if (nextVisible) nextVisible.focus();
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    if (index === 0) {
+                    // Find previous visible option or return to search
+                    const visibleOptions = Array.from(options).filter(opt => opt.style.display !== 'none');
+                    const currentVisibleIndex = visibleOptions.indexOf(option);
+                    if (currentVisibleIndex === 0) {
                         searchInput.focus();
                     } else {
-                        options[index - 1].focus();
+                        const previousVisible = visibleOptions[currentVisibleIndex - 1];
+                        if (previousVisible) previousVisible.focus();
                     }
                 } else if (e.key === 'Escape') {
                     this.closeCategoryDropdown();
@@ -1745,7 +1752,9 @@ class UIManager {
      * @param {string|null} groupId - New group ID
      */
     updateCategoryIndicator(materialCode, groupId) {
-        const row = document.querySelector(`tr[data-material-code="${materialCode}"]`);
+        // Escape materialCode to prevent selector injection
+        const escapedCode = CSS.escape(materialCode);
+        const row = document.querySelector(`tr[data-material-code="${escapedCode}"]`);
         if (!row) return;
 
         const wrapper = row.querySelector('.quick-category-select-wrapper');
