@@ -767,6 +767,53 @@ class UIManager {
         }
     }
 
+    // Helper method to detect material changes and build change summary
+    detectMaterialChanges(oldMaterial, newData) {
+        if (!oldMaterial) {
+            return { hasChanges: true, changes: [] };
+        }
+
+        const changes = [];
+        const newCapacityNum = parseInt(newData.capacity);
+
+        // Check capacity change (capacity is already stored as a number in data model)
+        if (oldMaterial.capacity !== newCapacityNum) {
+            changes.push(`Capacity: ${oldMaterial.capacity} → ${newCapacityNum}`);
+        }
+
+        // Check group/category change
+        const oldGroup = oldMaterial.group || null;
+        const newGroup = newData.group || null;
+        if (oldGroup !== newGroup) {
+            const oldGroupName = oldGroup ? this.dataManager.getGroup(oldGroup)?.name || oldGroup : 'None';
+            const newGroupName = newGroup ? this.dataManager.getGroup(newGroup)?.name || newGroup : 'None';
+            changes.push(`Group: ${oldGroupName} → ${newGroupName}`);
+        }
+
+        // Check name change (trim whitespace for comparison)
+        const oldName = (oldMaterial.name || '').trim();
+        const newName = (newData.name || '').trim();
+        if (oldName !== newName) {
+            const oldDisplay = oldName || '(empty)';
+            const newDisplay = newName || '(empty)';
+            changes.push(`Name: ${oldDisplay} → ${newDisplay}`);
+        }
+
+        // Check promo capacity change
+        const oldPromoCapacity = oldMaterial.promoCapacity || null;
+        const newPromoCapacity = newData.promoCapacity ? parseInt(newData.promoCapacity) : null;
+        if (oldPromoCapacity !== newPromoCapacity) {
+            const oldDisplay = oldPromoCapacity || 'None';
+            const newDisplay = newPromoCapacity || 'None';
+            changes.push(`Promo Capacity: ${oldDisplay} → ${newDisplay}`);
+        }
+
+        return {
+            hasChanges: changes.length > 0,
+            changes: changes
+        };
+    }
+
     // Save material from modal
     saveMaterialModal() {
         const code = document.getElementById('modalMaterialCode').value.trim();
@@ -850,32 +897,27 @@ class UIManager {
 
             // Different toast messages based on mode
             if (mode === 'edit') {
-                // Determine what was changed to provide contextual feedback
-                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${code} updated successfully!`;
-                const changes = [];
+                // Detect changes and build contextual feedback
+                const changeDetection = this.detectMaterialChanges(oldMaterial, {
+                    capacity: capacityNum,
+                    group: group,
+                    name: name,
+                    promoCapacity: promoCapacity
+                });
                 
-                if (oldMaterial) {
-                    if (parseInt(oldMaterial.capacity) !== capacityNum) {
-                        changes.push(`Capacity: ${capacity}`);
-                    }
-                    if ((oldMaterial.group || null) !== (group || null)) {
-                        const groupName = group ? this.dataManager.getGroup(group)?.name || group : 'None';
-                        changes.push(`Group: ${groupName}`);
-                    }
-                    if ((oldMaterial.name || '') !== name) {
-                        changes.push(`Name updated`);
-                    }
-                    
-                    if (changes.length > 0) {
-                        toastMessage += ` ${changes.join(', ')}.`;
-                    }
+                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${code} updated successfully!`;
+                
+                if (changeDetection.hasChanges) {
+                    toastMessage += ` ${changeDetection.changes.join(', ')}.`;
+                } else {
+                    toastMessage += ' No changes detected.';
                 }
                 
                 this.showToast(toastMessage, 'success', 'Updated');
             } else if (mode === 'quickadd') {
-                this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${code} quickly added! Capacity set to ${capacity}.`, 'success', 'Quick Added');
+                this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${code} quickly added! Capacity set to ${capacityNum}.`, 'success', 'Quick Added');
             } else {
-                this.showToast(`<i class="fa-solid fa-plus"></i> Material ${code} added successfully! Capacity set to ${capacity}.`, 'success', 'Added');
+                this.showToast(`<i class="fa-solid fa-plus"></i> Material ${code} added successfully! Capacity set to ${capacityNum}.`, 'success', 'Added');
             }
 
         } catch (error) {
