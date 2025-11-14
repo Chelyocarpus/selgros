@@ -376,12 +376,17 @@ class AccessibilityManager {
      * Toggle reduced motion mode
      */
     toggleReducedMotionMode() {
-        this.reducedMotionMode = !this.reducedMotionMode;
+        // If null (system default), check current applied state from DOM
+        if (this.reducedMotionMode === null) {
+            this.reducedMotionMode = !document.body.classList.contains('reduced-motion');
+        } else {
+            this.reducedMotionMode = !this.reducedMotionMode;
+        }
+        
         this.saveReducedMotionMode();
-        this.applyReducedMotionMode();
+        this.applyReducedMotionMode(true); // Pass true to announce to user
         
         const status = this.reducedMotionMode ? 'enabled' : 'disabled';
-        this.announce(`Reduced motion mode ${status}`, 'polite');
         
         if (window.ui) {
             window.ui.showToast(
@@ -393,13 +398,19 @@ class AccessibilityManager {
 
     /**
      * Apply reduced motion mode
+     * @param {boolean} announceToUser - Whether to announce the change to screen readers (default: false)
      */
-    applyReducedMotionMode() {
+    applyReducedMotionMode(announceToUser = false) {
         if (this.reducedMotionMode) {
             document.body.classList.add('reduced-motion');
-            this.announce('Reduced motion mode enabled', 'polite');
+            if (announceToUser) {
+                this.announce('Reduced motion mode enabled', 'polite');
+            }
         } else {
             document.body.classList.remove('reduced-motion');
+            if (announceToUser) {
+                this.announce('Reduced motion mode disabled', 'polite');
+            }
         }
         
         // Update button state if it exists

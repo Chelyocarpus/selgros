@@ -103,6 +103,14 @@
     --z-modal: 1050;
     --z-popover: 1060;
     --z-tooltip: 1070;
+    
+    /* ===== COMPONENT-SPECIFIC ===== */
+    /* Pagination */
+    --pagination-button-padding: 8px 14px;
+    --pagination-button-margin: 0 3px;
+    --pagination-button-radius: var(--radius-lg);
+    --pagination-ripple-size: 200px;
+    --pagination-ripple-color: rgba(79, 70, 229, 0.15);
 }
 
 /* Dark Mode Overrides */
@@ -121,6 +129,9 @@ body.dark-mode {
     --gradient-neutral-hover: linear-gradient(135deg, rgba(51, 65, 85, 1) 0%, rgba(30, 41, 59, 1) 100%);
     --gradient-category-blue: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
     --gradient-gray-fade: linear-gradient(135deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%);
+    
+    /* Pagination dark mode */
+    --pagination-ripple-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Reduced Motion Preferences */
@@ -165,7 +176,8 @@ body.reduced-motion *::after {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-    transform: none !important;
+    /* Note: transform: none removed to preserve layout positioning (e.g., translate(-50%, -50%) for centering) */
+    /* Transforms are already non-animated due to transition-duration: 0.01ms */
 }
 
 body.reduced-motion .shimmer-animation,

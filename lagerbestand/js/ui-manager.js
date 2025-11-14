@@ -54,6 +54,9 @@ class UIManager {
         
         // Recently added materials (session-based tracking)
         this.recentlyAddedMaterials = [];
+        
+        // Track the currently active report ID for accurate archive fallback
+        this.currentReportId = null;
         this.loadRecentlyAdded();
     }
 
@@ -434,6 +437,10 @@ class UIManager {
         // Update tab content
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         document.getElementById(`${tabName}Tab`).classList.add('active');
+
+        // Invalidate cached DOM references when switching tabs
+        // as tab content may be re-rendered
+        this.invalidateCachedElements();
 
         // Refresh content based on tab
         if (tabName === 'materials') {
@@ -831,6 +838,13 @@ class UIManager {
         }
         
         const resultsTableContainer = this.cachedElements.resultsTableContainer;
+        
+        // Validate cached reference is still in DOM
+        if (resultsTableContainer && !document.body.contains(resultsTableContainer)) {
+            this.invalidateCachedElements();
+            return false;
+        }
+        
         if (!resultsTableContainer) {
             return false;
         }
@@ -838,10 +852,26 @@ class UIManager {
         // Try to get input data from memory or archive
         let inputData = this.currentInputData;
         if (!inputData) {
-            // Fallback: get from most recent archive entry
-            const archive = this.dataManager.getArchive();
-            if (archive && archive.length > 0) {
-                inputData = archive[0].rawData;
+            // Fallback: get from archive using tracked report ID
+            // This ensures we refresh with the correct report data
+            if (this.currentReportId) {
+                const archiveEntry = this.dataManager.getArchiveEntryById(this.currentReportId);
+                if (archiveEntry) {
+                    const { rawData } = archiveEntry;
+                    inputData = rawData;
+                }
+            }
+            
+            // Final fallback: if no tracked ID or entry not found, use most recent
+            // This handles edge cases like page reload
+            if (!inputData) {
+                const archive = this.dataManager.getArchive();
+                if (archive && archive.length > 0) {
+                    const { rawData, id } = archive[0];
+                    inputData = rawData;
+                    // Update tracking to match the fallback entry
+                    this.currentReportId = id;
+                }
             }
         }
         
@@ -865,6 +895,41 @@ class UIManager {
         }
         
         return false;
+    }
+
+    /**
+     * Invalidate all cached DOM element references
+     * Call this when DOM structure changes (e.g., tab switching, re-rendering)
+     */
+    invalidateCachedElements() {
+        this.cachedElements = {
+            resultsTableContainer: null
+        };
+    }
+
+    /**
+     * Get a cached DOM element reference with validation
+     * @param {string} key - Cache key for the element
+     * @param {string} elementId - DOM element ID to query if not cached
+     * @returns {HTMLElement|null} The element or null if not found
+     */
+    getCachedElement(key, elementId) {
+        // Check if we have a cached reference
+        let element = this.cachedElements[key];
+        
+        // Validate cached reference is still in DOM
+        if (element && !document.body.contains(element)) {
+            this.cachedElements[key] = null;
+            element = null;
+        }
+        
+        // Fetch fresh reference if needed
+        if (!element) {
+            element = document.getElementById(elementId);
+            this.cachedElements[key] = element;
+        }
+        
+        return element;
     }
 
     // Save material from modal

@@ -136,8 +136,9 @@ UIManager.prototype.processReport = function() {
         // Analyze stock
         const analysis = this.reportProcessor.analyzeStock(parsedData);
 
-        // Save to archive
-        this.dataManager.addToArchive(inputData, analysis);
+        // Save to archive and track the report ID
+        const { id } = this.dataManager.addToArchive(inputData, analysis);
+        this.currentReportId = id;
 
         // Display results
         this.displayResults(analysis);
@@ -327,6 +328,7 @@ UIManager.prototype.clearResults = function() {
     
     this.currentAnalysis = null;
     this.currentInputData = null;
+    this.currentReportId = null;
     const alertFilter = document.getElementById('alertFilter');
     if (alertFilter) {
         alertFilter.value = 'all';
@@ -481,8 +483,9 @@ UIManager.prototype.processFileAsync = function(file) {
                 const parsedData = this.reportProcessor.parseReport(tsvData);
                 const analysis = this.reportProcessor.analyzeStock(parsedData);
                 
-                // Save to archive
-                this.dataManager.addToArchive(tsvData, analysis, file.name);
+                // Save to archive and track the report ID
+                const { id } = this.dataManager.addToArchive(tsvData, analysis, file.name);
+                this.currentReportId = id;
                 
                 resolve(analysis);
             } catch (error) {
