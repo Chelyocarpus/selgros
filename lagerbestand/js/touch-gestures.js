@@ -1,6 +1,6 @@
 /**
  * Touch Gestures Handler
- * Implements swipe gestures for mobile navigation using Hammer.js
+ * Implements swipe gestures for mobile navigation using native touch events
  */
 
 // Initialize touch gestures when DOM is ready
@@ -12,12 +12,6 @@ document.addEventListener('DOMContentLoaded', function() {
  * Initialize touch gestures for tab navigation
  */
 function initTouchGestures() {
-    // Check if Hammer.js is available
-    if (typeof Hammer === 'undefined') {
-        console.warn('Hammer.js not loaded - touch gestures disabled');
-        return;
-    }
-
     // Get the tabs container
     const tabsContainer = document.querySelector('.tabs');
     const tabContentsContainer = document.querySelector('.container');
@@ -27,23 +21,13 @@ function initTouchGestures() {
         return;
     }
 
-    // Initialize Hammer on the main container
-    const hammer = new Hammer(tabContentsContainer);
-    
-    // Configure swipe recognition
-    hammer.get('swipe').set({
-        direction: Hammer.DIRECTION_HORIZONTAL,
-        threshold: 50,
-        velocity: 0.3
-    });
-
     // Track current tab
     const tabs = ['check', 'materials', 'archive', 'dashboard'];
     
     /**
      * Check if the swipe started on a scrollable element
      */
-    function isSwipeOnScrollableElement(event) {
+    const isSwipeOnScrollableElement = (event) => {
         const target = event.target;
         
         // Check if target or any parent is a scrollable table wrapper
@@ -76,12 +60,12 @@ function initTouchGestures() {
         }
         
         return false;
-    }
+    };
     
     /**
      * Get current active tab index
      */
-    function getCurrentTabIndex() {
+    const getCurrentTabIndex = () => {
         for (let i = 0; i < tabs.length; i++) {
             const tabContent = document.getElementById(`${tabs[i]}Tab`);
             if (tabContent && tabContent.classList.contains('active')) {
@@ -89,24 +73,28 @@ function initTouchGestures() {
             }
         }
         return 0;
-    }
+    };
 
     /**
      * Switch to a specific tab
      */
-    function switchToTab(tabName) {
+    const switchToTab = (tabName) => {
         if (typeof window.switchTab === 'function') {
             window.switchTab(tabName);
         }
-    }
-
-    // Handle swipe left (next tab)
-    hammer.on('swipeleft', function(event) {
-        // Don't switch tabs if swiping on a scrollable element
-        if (isSwipeOnScrollableElement(event)) {
-            return;
-        }
-        
+    };
+    
+    /**
+     * Check if swipe should be prevented based on start element
+     */
+    const shouldPreventSwipe = (target) => {
+        return isSwipeOnScrollableElement({ target });
+    };
+    
+    /**
+     * Handle swipe left (next tab)
+     */
+    const handleSwipeLeft = () => {
         const currentIndex = getCurrentTabIndex();
         const nextIndex = currentIndex + 1;
         
@@ -121,15 +109,12 @@ function initTouchGestures() {
             // Announce to screen readers
             announceTabChange(tabs[nextIndex]);
         }
-    });
-
-    // Handle swipe right (previous tab)
-    hammer.on('swiperight', function(event) {
-        // Don't switch tabs if swiping on a scrollable element
-        if (isSwipeOnScrollableElement(event)) {
-            return;
-        }
-        
+    };
+    
+    /**
+     * Handle swipe right (previous tab)
+     */
+    const handleSwipeRight = () => {
         const currentIndex = getCurrentTabIndex();
         const prevIndex = currentIndex - 1;
         
@@ -144,6 +129,15 @@ function initTouchGestures() {
             // Announce to screen readers
             announceTabChange(tabs[prevIndex]);
         }
+    };
+    
+    // Create swipe handler using shared utility
+    TouchGestureUtils.createSwipeHandler(tabContentsContainer, {
+        onSwipeLeft: handleSwipeLeft,
+        onSwipeRight: handleSwipeRight,
+        shouldPreventSwipe: shouldPreventSwipe,
+        minSwipeDistance: 50,
+        maxVerticalDistance: 100
     });
 
     // Initialize swipe gestures for horizontal scrolling in tables

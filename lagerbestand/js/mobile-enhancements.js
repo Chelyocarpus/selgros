@@ -266,29 +266,22 @@ function preventZoomOnInputFocus() {
  * Add swipe-to-delete functionality for list items (if needed)
  */
 function addSwipeToDelete(itemSelector, deleteCallback) {
-    if (typeof Hammer === 'undefined') return;
-    
     const items = document.querySelectorAll(itemSelector);
     
     items.forEach(item => {
-        const hammer = new Hammer(item);
-        
-        hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
-        
-        let startX = 0;
-        
-        hammer.on('swipeleft', function(e) {
-            item.style.transform = 'translateX(-80px)';
-            item.classList.add('swiped');
-            
-            // Show delete button
-            showDeleteButton(item, deleteCallback);
-        });
-        
-        hammer.on('swiperight', function(e) {
-            item.style.transform = 'translateX(0)';
-            item.classList.remove('swiped');
-            hideDeleteButton(item);
+        TouchGestureUtils.createSwipeHandler(item, {
+            onSwipeLeft: () => {
+                item.style.transform = 'translateX(-80px)';
+                item.classList.add('swiped');
+                showDeleteButton(item, deleteCallback);
+            },
+            onSwipeRight: () => {
+                item.style.transform = 'translateX(0)';
+                item.classList.remove('swiped');
+                hideDeleteButton(item);
+            },
+            minSwipeDistance: 50,
+            maxVerticalDistance: 30
         });
     });
 }
