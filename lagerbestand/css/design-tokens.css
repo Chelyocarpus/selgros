@@ -1,0 +1,177 @@
+/* ===========================
+   DESIGN TOKENS
+   Centralized design system values for consistency and easy theming
+   =========================== */
+
+:root {
+    /* ===== SHADOWS ===== */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-2xl: 0 8px 32px rgba(0, 0, 0, 0.15);
+    
+    /* Colored shadows */
+    --shadow-primary-sm: 0 4px 12px -2px rgba(79, 70, 229, 0.3);
+    --shadow-primary-md: 0 4px 12px rgba(79, 70, 229, 0.3);
+    --shadow-primary-lg: 0 6px 16px rgba(79, 70, 229, 0.4);
+    --shadow-primary-subtle: 0 2px 8px -2px rgba(99, 102, 241, 0.15);
+    --shadow-primary-ring: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    
+    /* Focus shadows */
+    --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    --shadow-focus-strong: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    --shadow-focus-white: 0 0 0 2px rgba(255, 255, 255, 0.8);
+    
+    /* ===== GRADIENTS ===== */
+    /* Primary gradients */
+    --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #8b5cf6 100%);
+    --gradient-primary-hover: linear-gradient(135deg, #4338ca 0%, #4f46e5 50%, #6366f1 100%);
+    --gradient-primary-dark: linear-gradient(135deg, #3730a3 0%, #4c1d95 50%, #5b21b6 100%);
+    
+    /* Subtle gradients */
+    --gradient-purple-subtle: linear-gradient(135deg, #6366f1, #8b5cf6);
+    --gradient-purple-light: linear-gradient(to right, #f5f3ff 0%, #faf5ff 100%);
+    --gradient-purple-bg: linear-gradient(to right, rgba(79, 70, 229, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
+    --gradient-purple-bg-hover: linear-gradient(to right, rgba(79, 70, 229, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
+    
+    /* Neutral gradients */
+    --gradient-neutral-light: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    --gradient-neutral-medium: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    --gradient-neutral-card: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+    --gradient-neutral-hover: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    --gradient-white-fade: linear-gradient(to right, #fafbff 0%, #ffffff 100%);
+    --gradient-gray-fade: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    
+    /* Category gradients */
+    --gradient-category-blue: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    --gradient-category-blue-hover: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+    
+    /* Animation gradients */
+    --gradient-shimmer: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.4) 50%, 
+        transparent 100%);
+    
+    /* ===== BORDER RADIUS ===== */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
+    
+    /* ===== SPACING ===== */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 20px;
+    --space-2xl: 24px;
+    --space-3xl: 32px;
+    
+    /* ===== TRANSITIONS ===== */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-medium: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Specific transitions */
+    --transition-colors: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    --transition-shadow: box-shadow 0.2s ease;
+    --transition-transform: transform 0.2s ease;
+    --transition-all: all 0.2s ease;
+    
+    /* ===== TYPOGRAPHY ===== */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    /* ===== Z-INDEX ===== */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+}
+
+/* Dark Mode Overrides */
+body.dark-mode {
+    /* Shadows for dark mode */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3);
+    --shadow-xl: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-2xl: 0 8px 32px rgba(0, 0, 0, 0.4);
+    
+    /* Dark mode gradients */
+    --gradient-neutral-light: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    --gradient-neutral-medium: linear-gradient(135deg, #475569 0%, #334155 100%);
+    --gradient-neutral-card: linear-gradient(135deg, rgba(51, 65, 85, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%);
+    --gradient-neutral-hover: linear-gradient(135deg, rgba(51, 65, 85, 1) 0%, rgba(30, 41, 59, 1) 100%);
+    --gradient-category-blue: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+    --gradient-gray-fade: linear-gradient(135deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%);
+}
+
+/* Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-fast: 0.01ms;
+        --transition-base: 0.01ms;
+        --transition-medium: 0.01ms;
+        --transition-slow: 0.01ms;
+        --transition-colors: none;
+        --transition-shadow: none;
+        --transition-transform: none;
+        --transition-all: none;
+    }
+    
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Manual Reduced Motion Mode */
+body.reduced-motion {
+    --transition-fast: 0.01ms;
+    --transition-base: 0.01ms;
+    --transition-medium: 0.01ms;
+    --transition-slow: 0.01ms;
+    --transition-colors: none;
+    --transition-shadow: none;
+    --transition-transform: none;
+    --transition-all: none;
+}
+
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transform: none !important;
+}
+
+body.reduced-motion .shimmer-animation,
+body.reduced-motion .ripple,
+body.reduced-motion [class*="animate-"],
+body.reduced-motion [class*="transition-"] {
+    animation: none !important;
+    transition: none !important;
+}

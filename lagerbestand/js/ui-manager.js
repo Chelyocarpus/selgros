@@ -36,6 +36,11 @@ class UIManager {
         // DataTable cache for performance
         this.dataTableCache = new Map();
         
+        // Cached DOM references for performance
+        this.cachedElements = {
+            resultsTableContainer: null
+        };
+        
         // Auto-save draft timer
         this.autoSaveDraftTimer = null;
         this.draftMaterial = null;
@@ -814,6 +819,54 @@ class UIManager {
         };
     }
 
+    /**
+     * Refresh results table with updated material configuration
+     * Retrieves input data from memory or archive and re-analyzes stock
+     * @returns {boolean} True if refresh was successful, false otherwise
+     */
+    refreshResultsTable() {
+        // Get cached or fresh container reference
+        if (!this.cachedElements.resultsTableContainer) {
+            this.cachedElements.resultsTableContainer = document.getElementById('resultsTableContainer');
+        }
+        
+        const resultsTableContainer = this.cachedElements.resultsTableContainer;
+        if (!resultsTableContainer) {
+            return false;
+        }
+        
+        // Try to get input data from memory or archive
+        let inputData = this.currentInputData;
+        if (!inputData) {
+            // Fallback: get from most recent archive entry
+            const archive = this.dataManager.getArchive();
+            if (archive && archive.length > 0) {
+                inputData = archive[0].rawData;
+            }
+        }
+        
+        // Refresh if we have both input data and container element
+        // Note: Container must exist, but visibility state is not checked
+        if (inputData) {
+            try {
+                // Store it back for next time
+                this.currentInputData = inputData;
+                
+                // Re-parse and re-analyze with updated material configuration
+                const parsedData = this.reportProcessor.parseReport(inputData);
+                const analysis = this.reportProcessor.analyzeStock(parsedData);
+                this.displayResults(analysis);
+                
+                return true;
+            } catch (error) {
+                console.error('Error refreshing results table:', error);
+                return false;
+            }
+        }
+        
+        return false;
+    }
+
     // Save material from modal
     saveMaterialModal() {
         const code = document.getElementById('modalMaterialCode').value.trim();
@@ -874,34 +927,8 @@ class UIManager {
                 this.addToRecentlyAdded(material);
             }
 
-            // Refresh results if we have data displayed (for any mode)
-            // Use stored input data, or fallback to most recent archive entry
-            const resultsTableContainer = document.getElementById('resultsTableContainer');
-            
-            // Try to get input data from memory or archive
-            let inputData = this.currentInputData;
-            if (!inputData) {
-                // Fallback: get from most recent archive entry
-                const archive = this.dataManager.getArchive();
-                if (archive && archive.length > 0) {
-                    inputData = archive[0].rawData;
-                }
-            }
-            
-            // Force refresh if we have the data, regardless of container visibility state
-            if (inputData && resultsTableContainer) {
-                try {
-                    // Store it back for next time
-                    this.currentInputData = inputData;
-                    
-                    // Re-parse and re-analyze with updated material configuration
-                    const parsedData = this.reportProcessor.parseReport(inputData);
-                    const analysis = this.reportProcessor.analyzeStock(parsedData);
-                    this.displayResults(analysis);
-                } catch (error) {
-                    console.error('[Material Save] Error refreshing results:', error);
-                }
-            }
+            // Refresh results table with updated material configuration
+            this.refreshResultsTable();
 
             // Close modal after refresh is complete
             this.closeMaterialModal();

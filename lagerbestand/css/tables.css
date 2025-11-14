@@ -982,7 +982,8 @@ body.dark-mode .category-dropdown-options::-webkit-scrollbar-thumb:hover {
         font-size: 16px;
     }
 
-    /* Disable hover effects on rows but keep button gradients */
+    /* Disable hover effects on table rows for better mobile performance
+       Pagination and action button hover effects are intentionally kept for interactivity */
     tbody tr:hover {
         background-color: transparent;
     }

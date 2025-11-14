@@ -115,6 +115,12 @@ function toggleHighContrast() {
     }
 }
 
+function toggleReducedMotion() {
+    if (accessibilityManager && typeof accessibilityManager.toggleReducedMotionMode === 'function') {
+        accessibilityManager.toggleReducedMotionMode();
+    }
+}
+
 function showKeyboardShortcuts() {
     if (keyboardShortcuts && typeof keyboardShortcuts.showKeyboardHelp === 'function') {
         keyboardShortcuts.showKeyboardHelp();
