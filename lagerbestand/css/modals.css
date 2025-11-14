@@ -211,27 +211,6 @@ body.high-contrast .shortcut-item kbd {
     border-top: 1px solid var(--border-color);
 }
 
-.btn-danger {
-    background: var(--danger-color);
-    color: white;
-    transition: all 0.2s;
-}
-
-.btn-danger:hover {
-    background: var(--danger-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
-}
-
-.btn-secondary {
-    background: var(--text-secondary);
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: var(--text-color);
-}
-
 /* Dark mode adjustments for delete modal */
 body.dark-mode .delete-warning {
     background: rgba(255, 193, 7, 0.15);
@@ -246,10 +225,6 @@ body.high-contrast .delete-modal-content .modal-header {
 
 body.high-contrast .modal-footer {
     border-width: 2px;
-}
-
-body.high-contrast .btn-danger {
-    border: 2px solid var(--danger-color);
 }
 
 /* Clear All Confirmation Modal */

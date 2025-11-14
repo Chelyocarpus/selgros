@@ -127,6 +127,9 @@ UIManager.prototype.processReport = function() {
     }
 
     try {
+        // Store input data for later refresh
+        this.currentInputData = inputData;
+        
         // Parse report
         const parsedData = this.reportProcessor.parseReport(inputData);
         
@@ -321,6 +324,9 @@ UIManager.prototype.clearResults = function() {
     if (filterControls) {
         filterControls.style.display = 'none';
     }
+    
+    this.currentAnalysis = null;
+    this.currentInputData = null;
     const alertFilter = document.getElementById('alertFilter');
     if (alertFilter) {
         alertFilter.value = 'all';

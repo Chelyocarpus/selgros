@@ -31,11 +31,12 @@ class ReportProcessor {
             isFirstLine = false;
 
             // Extract fields based on LX02 format
-            // Artikel | Artikelkurztext | Basismengeneinheit | Lagertyp | Verfügbarer Bestand | ... | Gesamtbestand
+            // Artikel | Artikelkurztext | Verfügbarer Bestand | Basismengeneinheit (ST) | Lagertyp | Lagerplatz | ...
             const material = cols[0]?.trim();
             const materialDesc = cols[1]?.trim();
-            const storageType = cols[3]?.trim();
-            const availableStock = parseInt(cols[4]?.trim()) || 0;
+            const availableStock = parseInt(cols[2]?.trim()) || 0; // Verfügbarer Bestand (Available Stock)
+            const unit = cols[3]?.trim(); // ST - Base unit of measurement (Basismengeneinheit)
+            const storageType = cols[4]?.trim(); // Lagertyp (e.g., MKT, LAG, 916, etc.)
             const totalStock = parseInt(cols[cols.length - 1]?.trim()) || 0;
 
             // Skip lines without material code or storage type
