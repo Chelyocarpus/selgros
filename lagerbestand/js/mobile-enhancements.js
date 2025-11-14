@@ -266,30 +266,47 @@ function preventZoomOnInputFocus() {
  * Add swipe-to-delete functionality for list items (if needed)
  */
 function addSwipeToDelete(itemSelector, deleteCallback) {
-    if (typeof Hammer === 'undefined') return;
-    
     const items = document.querySelectorAll(itemSelector);
     
     items.forEach(item => {
-        const hammer = new Hammer(item);
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
         
-        hammer.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+        const minSwipeDistance = 50;
+        const maxVerticalDistance = 30;
         
-        let startX = 0;
+        item.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
         
-        hammer.on('swipeleft', function(e) {
-            item.style.transform = 'translateX(-80px)';
-            item.classList.add('swiped');
+        item.addEventListener('touchend', function(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
             
-            // Show delete button
-            showDeleteButton(item, deleteCallback);
-        });
-        
-        hammer.on('swiperight', function(e) {
-            item.style.transform = 'translateX(0)';
-            item.classList.remove('swiped');
-            hideDeleteButton(item);
-        });
+            const horizontalDistance = touchEndX - touchStartX;
+            const verticalDistance = Math.abs(touchEndY - touchStartY);
+            
+            // Ignore if vertical movement is too large
+            if (verticalDistance > maxVerticalDistance) {
+                return;
+            }
+            
+            // Swipe left
+            if (horizontalDistance < -minSwipeDistance) {
+                item.style.transform = 'translateX(-80px)';
+                item.classList.add('swiped');
+                showDeleteButton(item, deleteCallback);
+            }
+            // Swipe right
+            else if (horizontalDistance > minSwipeDistance) {
+                item.style.transform = 'translateX(0)';
+                item.classList.remove('swiped');
+                hideDeleteButton(item);
+            }
+        }, { passive: true });
     });
 }
 

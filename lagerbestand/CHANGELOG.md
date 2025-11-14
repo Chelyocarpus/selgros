@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Removed
+
+#### Hammer.js Dependency
+- **Removed External Dependency**: Replaced Hammer.js with native touch events
+  - Removed Hammer.js CDN script from `index.html`
+  - Implemented native touch event handlers in `js/touch-gestures.js`
+  - Replaced swipe gesture detection with native `touchstart` and `touchend` events
+  - Updated swipe-to-delete functionality in `js/mobile-enhancements.js` to use native events
+  - Benefits:
+    - Reduced external dependencies
+    - Smaller page load size
+    - No breaking changes to functionality
+    - Maintained all touch gesture features (tab navigation, swipe-to-delete)
+  - Files modified: `index.html`, `js/touch-gestures.js`, `js/mobile-enhancements.js`
+
+---
+
 ## [2.5.1] - 2025-11-13
 
 ### Fixed
