@@ -269,44 +269,20 @@ function addSwipeToDelete(itemSelector, deleteCallback) {
     const items = document.querySelectorAll(itemSelector);
     
     items.forEach(item => {
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchEndX = 0;
-        let touchEndY = 0;
-        
-        const minSwipeDistance = 50;
-        const maxVerticalDistance = 30;
-        
-        item.addEventListener('touchstart', function(e) {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-        
-        item.addEventListener('touchend', function(e) {
-            touchEndX = e.changedTouches[0].screenX;
-            touchEndY = e.changedTouches[0].screenY;
-            
-            const horizontalDistance = touchEndX - touchStartX;
-            const verticalDistance = Math.abs(touchEndY - touchStartY);
-            
-            // Ignore if vertical movement is too large
-            if (verticalDistance > maxVerticalDistance) {
-                return;
-            }
-            
-            // Swipe left
-            if (horizontalDistance < -minSwipeDistance) {
+        TouchGestureUtils.createSwipeHandler(item, {
+            onSwipeLeft: () => {
                 item.style.transform = 'translateX(-80px)';
                 item.classList.add('swiped');
                 showDeleteButton(item, deleteCallback);
-            }
-            // Swipe right
-            else if (horizontalDistance > minSwipeDistance) {
+            },
+            onSwipeRight: () => {
                 item.style.transform = 'translateX(0)';
                 item.classList.remove('swiped');
                 hideDeleteButton(item);
-            }
-        }, { passive: true });
+            },
+            minSwipeDistance: 50,
+            maxVerticalDistance: 30
+        });
     });
 }
 

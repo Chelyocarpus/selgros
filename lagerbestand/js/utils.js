@@ -904,6 +904,132 @@ class FormatUtils {
 }
 
 /**
+ * Touch Gesture Utilities
+ */
+class TouchGestureUtils {
+    /**
+     * Create a swipe gesture handler
+     * @param {HTMLElement} element - Element to attach gesture handler to
+     * @param {Object} options - Configuration options
+     * @param {Function} options.onSwipeLeft - Callback for left swipe
+     * @param {Function} options.onSwipeRight - Callback for right swipe
+     * @param {number} options.minSwipeDistance - Minimum distance for swipe (default: 50)
+     * @param {number} options.maxVerticalDistance - Max vertical movement allowed (default: 100)
+     * @returns {Object} Object with cleanup method
+     */
+    static createSwipeHandler(element, options = {}) {
+        const {
+            onSwipeLeft = null,
+            onSwipeRight = null,
+            minSwipeDistance = 50,
+            maxVerticalDistance = 100,
+            shouldPreventSwipe = null
+        } = options;
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        let touchStartTarget = null;
+        let shouldIgnoreSwipe = false;
+
+        const handleTouchStart = (event) => {
+            // Only process single-touch gestures
+            if (event.touches.length !== 1) return;
+            
+            touchStartX = event.changedTouches[0].clientX;
+            touchStartY = event.changedTouches[0].clientY;
+            touchStartTarget = event.target;
+            
+            // Check if swipe should be prevented based on where it started
+            shouldIgnoreSwipe = shouldPreventSwipe ? shouldPreventSwipe(touchStartTarget) : false;
+        };
+
+        const handleTouchEnd = (event) => {
+            // Only process single-touch gestures
+            if (event.changedTouches.length !== 1) return;
+            
+            // Ignore if swipe started on an excluded element
+            if (shouldIgnoreSwipe) {
+                shouldIgnoreSwipe = false;
+                return;
+            }
+            
+            touchEndX = event.changedTouches[0].clientX;
+            touchEndY = event.changedTouches[0].clientY;
+
+            this._handleSwipe(
+                touchStartX,
+                touchStartY,
+                touchEndX,
+                touchEndY,
+                minSwipeDistance,
+                maxVerticalDistance,
+                onSwipeLeft,
+                onSwipeRight,
+                touchStartTarget
+            );
+        };
+
+        const handleTouchCancel = () => {
+            // Reset coordinates on touch cancel
+            touchStartX = 0;
+            touchStartY = 0;
+            touchEndX = 0;
+            touchEndY = 0;
+            touchStartTarget = null;
+            shouldIgnoreSwipe = false;
+        };
+
+        element.addEventListener('touchstart', handleTouchStart, { passive: true });
+        element.addEventListener('touchend', handleTouchEnd, { passive: true });
+        element.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+
+        // Return cleanup function
+        return {
+            cleanup: () => {
+                element.removeEventListener('touchstart', handleTouchStart);
+                element.removeEventListener('touchend', handleTouchEnd);
+                element.removeEventListener('touchcancel', handleTouchCancel);
+            }
+        };
+    }
+
+    /**
+     * Internal method to handle swipe detection
+     * @private
+     */
+    static _handleSwipe(
+        startX,
+        startY,
+        endX,
+        endY,
+        minSwipeDistance,
+        maxVerticalDistance,
+        onSwipeLeft,
+        onSwipeRight,
+        touchStartTarget
+    ) {
+        const horizontalDistance = endX - startX;
+        const verticalDistance = Math.abs(endY - startY);
+
+        // Ignore if vertical movement is too large (likely scrolling)
+        if (verticalDistance > maxVerticalDistance) {
+            return;
+        }
+
+        // Swipe left
+        if (horizontalDistance < -minSwipeDistance && onSwipeLeft) {
+            onSwipeLeft(touchStartTarget);
+        }
+        // Swipe right
+        else if (horizontalDistance > minSwipeDistance && onSwipeRight) {
+            onSwipeRight(touchStartTarget);
+        }
+    }
+}
+
+/**
  * Storage Utilities
  */
 class StorageUtils {

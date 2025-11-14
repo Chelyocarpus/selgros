@@ -21,22 +21,13 @@ function initTouchGestures() {
         return;
     }
 
-    // Initialize native touch event handlers
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchEndX = 0;
-    let touchEndY = 0;
-    
-    const minSwipeDistance = 50;
-    const maxVerticalDistance = 100;
-
     // Track current tab
     const tabs = ['check', 'materials', 'archive', 'dashboard'];
     
     /**
      * Check if the swipe started on a scrollable element
      */
-    function isSwipeOnScrollableElement(event) {
+    const isSwipeOnScrollableElement = (event) => {
         const target = event.target;
         
         // Check if target or any parent is a scrollable table wrapper
@@ -69,12 +60,12 @@ function initTouchGestures() {
         }
         
         return false;
-    }
+    };
     
     /**
      * Get current active tab index
      */
-    function getCurrentTabIndex() {
+    const getCurrentTabIndex = () => {
         for (let i = 0; i < tabs.length; i++) {
             const tabContent = document.getElementById(`${tabs[i]}Tab`);
             if (tabContent && tabContent.classList.contains('active')) {
@@ -82,91 +73,72 @@ function initTouchGestures() {
             }
         }
         return 0;
-    }
+    };
 
     /**
      * Switch to a specific tab
      */
-    function switchToTab(tabName) {
+    const switchToTab = (tabName) => {
         if (typeof window.switchTab === 'function') {
             window.switchTab(tabName);
         }
-    }
+    };
     
     /**
-     * Handle touch start
+     * Check if swipe should be prevented based on start element
      */
-    function handleTouchStart(event) {
-        touchStartX = event.changedTouches[0].screenX;
-        touchStartY = event.changedTouches[0].screenY;
-    }
+    const shouldPreventSwipe = (target) => {
+        return isSwipeOnScrollableElement({ target });
+    };
     
     /**
-     * Handle touch end and detect swipe
+     * Handle swipe left (next tab)
      */
-    function handleTouchEnd(event) {
-        touchEndX = event.changedTouches[0].screenX;
-        touchEndY = event.changedTouches[0].screenY;
+    const handleSwipeLeft = () => {
+        const currentIndex = getCurrentTabIndex();
+        const nextIndex = currentIndex + 1;
         
-        // Don't switch tabs if swiping on a scrollable element
-        if (isSwipeOnScrollableElement(event)) {
-            return;
-        }
-        
-        handleSwipe();
-    }
-    
-    /**
-     * Determine swipe direction and handle accordingly
-     */
-    function handleSwipe() {
-        const horizontalDistance = touchEndX - touchStartX;
-        const verticalDistance = Math.abs(touchEndY - touchStartY);
-        
-        // Ignore if vertical movement is too large (likely scrolling)
-        if (verticalDistance > maxVerticalDistance) {
-            return;
-        }
-        
-        // Swipe left (next tab)
-        if (horizontalDistance < -minSwipeDistance) {
-            const currentIndex = getCurrentTabIndex();
-            const nextIndex = currentIndex + 1;
+        if (nextIndex < tabs.length) {
+            switchToTab(tabs[nextIndex]);
             
-            if (nextIndex < tabs.length) {
-                switchToTab(tabs[nextIndex]);
-                
-                // Provide haptic feedback if available
-                if (navigator.vibrate) {
-                    navigator.vibrate(10);
-                }
-                
-                // Announce to screen readers
-                announceTabChange(tabs[nextIndex]);
+            // Provide haptic feedback if available
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
             }
-        }
-        // Swipe right (previous tab)
-        else if (horizontalDistance > minSwipeDistance) {
-            const currentIndex = getCurrentTabIndex();
-            const prevIndex = currentIndex - 1;
             
-            if (prevIndex >= 0) {
-                switchToTab(tabs[prevIndex]);
-                
-                // Provide haptic feedback if available
-                if (navigator.vibrate) {
-                    navigator.vibrate(10);
-                }
-                
-                // Announce to screen readers
-                announceTabChange(tabs[prevIndex]);
-            }
+            // Announce to screen readers
+            announceTabChange(tabs[nextIndex]);
         }
-    }
+    };
     
-    // Add native touch event listeners
-    tabContentsContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-    tabContentsContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+    /**
+     * Handle swipe right (previous tab)
+     */
+    const handleSwipeRight = () => {
+        const currentIndex = getCurrentTabIndex();
+        const prevIndex = currentIndex - 1;
+        
+        if (prevIndex >= 0) {
+            switchToTab(tabs[prevIndex]);
+            
+            // Provide haptic feedback if available
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+            
+            // Announce to screen readers
+            announceTabChange(tabs[prevIndex]);
+        }
+    };
+    
+    // Create swipe handler using shared utility
+    TouchGestureUtils.createSwipeHandler(tabContentsContainer, {
+        onSwipeLeft: handleSwipeLeft,
+        onSwipeRight: handleSwipeRight,
+        shouldPreventSwipe: shouldPreventSwipe,
+        minSwipeDistance: 50,
+        maxVerticalDistance: 100
+    });
 
     // Initialize swipe gestures for horizontal scrolling in tables
     initTableSwipeGestures();
