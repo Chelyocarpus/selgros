@@ -116,15 +116,41 @@ input[type="checkbox"] {
 button {
     padding: 12px 24px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 1em;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+    pointer-events: none;
+}
+
+button:hover:not(:disabled)::before {
+    width: 300px;
+    height: 300px;
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 /* Icons in buttons don't need extra margin */
@@ -132,49 +158,77 @@ button .fa-solid,
 button .fa-regular, 
 button .fa-brands {
     margin-right: 0;
+    transition: transform 0.2s ease;
+}
+
+button:hover:not(:disabled) .fa-solid,
+button:hover:not(:disabled) .fa-regular,
+button:hover:not(:disabled) .fa-brands {
+    transform: scale(1.1);
 }
 
 .btn-primary {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%);
     color: white;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3),
+                0 2px 6px rgba(79, 70, 229, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.btn-primary:hover {
-    background-color: #1d4ed8;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4338ca 0%, #4f46e5 50%, #6366f1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4),
+                0 3px 8px rgba(79, 70, 229, 0.25);
 }
 
 .btn-success {
-    background-color: var(--success-color);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
 }
 
-.btn-success:hover {
-    background-color: #15803d;
+.btn-success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
 }
 
 .btn-danger {
-    background-color: var(--danger-color);
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
 }
 
-.btn-danger:hover {
-    background-color: #b91c1c;
+.btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
 }
 
 .btn-secondary {
-    background-color: var(--text-secondary);
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.25);
 }
 
-.btn-secondary:hover {
-    background-color: #475569;
+.btn-secondary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(71, 85, 105, 0.35);
 }
 
 .btn-small {
-    padding: 6px 12px;
-    font-size: 0.9em;
+    padding: 8px 16px;
+    font-size: 0.875em;
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    gap: 6px;
+}\n\n.btn-small:hover:not(:disabled) {
+    transform: translateY(-1px);\n}\n\n.btn-small .fa-solid,
+.btn-small .fa-regular {
+    font-size: 0.95em;
 }
 
 .button-group {
@@ -379,25 +433,72 @@ body.dark-mode .promo-section {
 
 /* Quick Add Button */
 .quick-add-btn {
-    padding: 4px 8px;
-    font-size: 0.85em;
-    background-color: var(--success-color);
+    padding: 8px 16px;
+    font-size: 0.875em;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quick-add-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+    pointer-events: none;
 }
 
 .quick-add-btn:hover {
-    background-color: #15803d;
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.quick-add-btn:hover::before {
+    width: 200px;
+    height: 200px;
+}
+
+.quick-add-btn:active {
+    transform: scale(0.98);
 }
 
 .quick-add-btn:disabled {
-    background-color: var(--text-secondary);
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: 0.6;
+    box-shadow: none;
+}
+
+.quick-add-btn:disabled:hover {
+    transform: none;
+}
+
+.quick-add-btn .fa-solid,
+.quick-add-btn .fa-regular {
+    transition: transform 0.2s ease;
+}
+
+.quick-add-btn:hover:not(:disabled) .fa-solid,
+.quick-add-btn:hover:not(:disabled) .fa-regular {
+    transform: scale(1.1);
 }
 
 /* Empty State */
@@ -1390,9 +1491,9 @@ body.high-contrast .fab:hover {
 
     /* Quick Add Button Mobile */
     .quick-add-btn {
-        padding: 6px 10px;
-        font-size: 0.85em;
-        min-height: 36px;
+        padding: 10px 14px;
+        font-size: 0.875em;
+        min-height: 40px;
     }
 
     /* Toast Mobile - Already in main.css */

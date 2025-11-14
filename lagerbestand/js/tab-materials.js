@@ -742,6 +742,11 @@ UIManager.prototype.renderMaterialsList = function(options) {
     const materials = this.dataManager.getAllMaterials();
     const tbody = document.getElementById('materialsTableBody');
     
+    // If tbody doesn't exist (e.g., user is on a different tab), skip rendering
+    if (!tbody) {
+        return;
+    }
+    
     // Save state before destroying table
     const savedState = preserveState ? this.saveMaterialsTableState() : null;
     
