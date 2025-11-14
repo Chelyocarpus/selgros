@@ -225,13 +225,8 @@ button:hover:not(:disabled) .fa-brands {
     font-weight: 600;
     letter-spacing: 0.02em;
     gap: 6px;
-}
-
-.btn-small:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-.btn-small .fa-solid,
+}\n\n.btn-small:hover:not(:disabled) {
+    transform: translateY(-1px);\n}\n\n.btn-small .fa-solid,
 .btn-small .fa-regular {
     font-size: 0.95em;
 }

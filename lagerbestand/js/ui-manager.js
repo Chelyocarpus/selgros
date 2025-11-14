@@ -927,8 +927,34 @@ class UIManager {
                 this.addToRecentlyAdded(material);
             }
 
-            // Refresh results table with updated material configuration
-            this.refreshResultsTable();
+            // Refresh results if we have data displayed (for any mode)
+            // Use stored input data, or fallback to most recent archive entry
+            const resultsTableContainer = document.getElementById('resultsTableContainer');
+            
+            // Try to get input data from memory or archive
+            let inputData = this.currentInputData;
+            if (!inputData) {
+                // Fallback: get from most recent archive entry
+                const archive = this.dataManager.getArchive();
+                if (archive && archive.length > 0) {
+                    inputData = archive[0].rawData;
+                }
+            }
+            
+            // Force refresh if we have the data, regardless of container visibility state
+            if (inputData && resultsTableContainer) {
+                try {
+                    // Store it back for next time
+                    this.currentInputData = inputData;
+                    
+                    // Re-parse and re-analyze with updated material configuration
+                    const parsedData = this.reportProcessor.parseReport(inputData);
+                    const analysis = this.reportProcessor.analyzeStock(parsedData);
+                    this.displayResults(analysis);
+                } catch (error) {
+                    console.error('[Material Save] Error refreshing results:', error);
+                }
+            }
 
             // Close modal after refresh is complete
             this.closeMaterialModal();
