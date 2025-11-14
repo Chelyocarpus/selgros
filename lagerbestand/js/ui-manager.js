@@ -36,6 +36,11 @@ class UIManager {
         // DataTable cache for performance
         this.dataTableCache = new Map();
         
+        // Cached DOM references for performance
+        this.cachedElements = {
+            resultsTableContainer: null
+        };
+        
         // Auto-save draft timer
         this.autoSaveDraftTimer = null;
         this.draftMaterial = null;
@@ -49,6 +54,9 @@ class UIManager {
         
         // Recently added materials (session-based tracking)
         this.recentlyAddedMaterials = [];
+        
+        // Track the currently active report ID for accurate archive fallback
+        this.currentReportId = null;
         this.loadRecentlyAdded();
     }
 
@@ -429,6 +437,10 @@ class UIManager {
         // Update tab content
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         document.getElementById(`${tabName}Tab`).classList.add('active');
+
+        // Invalidate cached DOM references when switching tabs
+        // as tab content may be re-rendered
+        this.invalidateCachedElements();
 
         // Refresh content based on tab
         if (tabName === 'materials') {
@@ -812,6 +824,112 @@ class UIManager {
             hasChanges: changes.length > 0,
             changes: changes
         };
+    }
+
+    /**
+     * Refresh results table with updated material configuration
+     * Retrieves input data from memory or archive and re-analyzes stock
+     * @returns {boolean} True if refresh was successful, false otherwise
+     */
+    refreshResultsTable() {
+        // Get cached or fresh container reference
+        if (!this.cachedElements.resultsTableContainer) {
+            this.cachedElements.resultsTableContainer = document.getElementById('resultsTableContainer');
+        }
+        
+        const resultsTableContainer = this.cachedElements.resultsTableContainer;
+        
+        // Validate cached reference is still in DOM
+        if (resultsTableContainer && !document.body.contains(resultsTableContainer)) {
+            this.invalidateCachedElements();
+            return false;
+        }
+        
+        if (!resultsTableContainer) {
+            return false;
+        }
+        
+        // Try to get input data from memory or archive
+        let inputData = this.currentInputData;
+        if (!inputData) {
+            // Fallback: get from archive using tracked report ID
+            // This ensures we refresh with the correct report data
+            if (this.currentReportId) {
+                const archiveEntry = this.dataManager.getArchiveEntryById(this.currentReportId);
+                if (archiveEntry) {
+                    const { rawData } = archiveEntry;
+                    inputData = rawData;
+                }
+            }
+            
+            // Final fallback: if no tracked ID or entry not found, use most recent
+            // This handles edge cases like page reload
+            if (!inputData) {
+                const archive = this.dataManager.getArchive();
+                if (archive && archive.length > 0) {
+                    const { rawData, id } = archive[0];
+                    inputData = rawData;
+                    // Update tracking to match the fallback entry
+                    this.currentReportId = id;
+                }
+            }
+        }
+        
+        // Refresh if we have both input data and container element
+        // Note: Container must exist, but visibility state is not checked
+        if (inputData) {
+            try {
+                // Store it back for next time
+                this.currentInputData = inputData;
+                
+                // Re-parse and re-analyze with updated material configuration
+                const parsedData = this.reportProcessor.parseReport(inputData);
+                const analysis = this.reportProcessor.analyzeStock(parsedData);
+                this.displayResults(analysis);
+                
+                return true;
+            } catch (error) {
+                console.error('Error refreshing results table:', error);
+                return false;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Invalidate all cached DOM element references
+     * Call this when DOM structure changes (e.g., tab switching, re-rendering)
+     */
+    invalidateCachedElements() {
+        this.cachedElements = {
+            resultsTableContainer: null
+        };
+    }
+
+    /**
+     * Get a cached DOM element reference with validation
+     * @param {string} key - Cache key for the element
+     * @param {string} elementId - DOM element ID to query if not cached
+     * @returns {HTMLElement|null} The element or null if not found
+     */
+    getCachedElement(key, elementId) {
+        // Check if we have a cached reference
+        let element = this.cachedElements[key];
+        
+        // Validate cached reference is still in DOM
+        if (element && !document.body.contains(element)) {
+            this.cachedElements[key] = null;
+            element = null;
+        }
+        
+        // Fetch fresh reference if needed
+        if (!element) {
+            element = document.getElementById(elementId);
+            this.cachedElements[key] = element;
+        }
+        
+        return element;
     }
 
     // Save material from modal

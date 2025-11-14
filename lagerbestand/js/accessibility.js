@@ -12,6 +12,7 @@ class AccessibilityManager {
         this.focusTrapElements = [];
         this.lastFocusedElement = null;
         this.highContrastMode = this.loadHighContrastMode();
+        this.reducedMotionMode = this.loadReducedMotionMode();
         
         this.init();
     }
@@ -21,8 +22,10 @@ class AccessibilityManager {
      */
     init() {
         this.applyHighContrastMode();
+        this.applyReducedMotionMode();
         this.setupKeyboardNavigation();
         this.observeModalChanges();
+        this.detectSystemPreferences();
     }
 
     /**
@@ -329,6 +332,95 @@ class AccessibilityManager {
 
         const currentIndex = focusableElements.indexOf(currentElement);
         return focusableElements[currentIndex - 1] || focusableElements[focusableElements.length - 1];
+    }
+
+    /**
+     * Detect system preferences for accessibility
+     */
+    detectSystemPreferences() {
+        // Detect system prefers-reduced-motion
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        
+        // If user has system preference and hasn't manually set reduced motion, apply it
+        if (prefersReducedMotion.matches && this.reducedMotionMode === null) {
+            this.reducedMotionMode = true;
+            this.applyReducedMotionMode();
+        }
+        
+        // Listen for changes to system preference
+        prefersReducedMotion.addEventListener('change', (e) => {
+            if (this.reducedMotionMode === null) {
+                this.reducedMotionMode = e.matches;
+                this.applyReducedMotionMode();
+            }
+        });
+    }
+
+    /**
+     * Load reduced motion preference
+     * @returns {boolean|null} Reduced motion state or null if not set
+     */
+    loadReducedMotionMode() {
+        const stored = localStorage.getItem('reducedMotionMode');
+        return stored === null ? null : stored === 'true';
+    }
+
+    /**
+     * Save reduced motion preference
+     */
+    saveReducedMotionMode() {
+        localStorage.setItem('reducedMotionMode', this.reducedMotionMode);
+    }
+
+    /**
+     * Toggle reduced motion mode
+     */
+    toggleReducedMotionMode() {
+        // If null (system default), check current applied state from DOM
+        if (this.reducedMotionMode === null) {
+            this.reducedMotionMode = !document.body.classList.contains('reduced-motion');
+        } else {
+            this.reducedMotionMode = !this.reducedMotionMode;
+        }
+        
+        this.saveReducedMotionMode();
+        this.applyReducedMotionMode(true); // Pass true to announce to user
+        
+        const status = this.reducedMotionMode ? 'enabled' : 'disabled';
+        
+        if (window.ui) {
+            window.ui.showToast(
+                `<i class="fa-solid fa-${this.reducedMotionMode ? 'pause' : 'play'}"></i> Reduced motion ${status}`,
+                'success'
+            );
+        }
+    }
+
+    /**
+     * Apply reduced motion mode
+     * @param {boolean} announceToUser - Whether to announce the change to screen readers (default: false)
+     */
+    applyReducedMotionMode(announceToUser = false) {
+        if (this.reducedMotionMode) {
+            document.body.classList.add('reduced-motion');
+            if (announceToUser) {
+                this.announce('Reduced motion mode enabled', 'polite');
+            }
+        } else {
+            document.body.classList.remove('reduced-motion');
+            if (announceToUser) {
+                this.announce('Reduced motion mode disabled', 'polite');
+            }
+        }
+        
+        // Update button state if it exists
+        const reducedMotionBtn = document.getElementById('reducedMotionBtn');
+        if (reducedMotionBtn) {
+            reducedMotionBtn.setAttribute('aria-pressed', this.reducedMotionMode);
+            reducedMotionBtn.title = this.reducedMotionMode 
+                ? 'Disable Reduced Motion' 
+                : 'Enable Reduced Motion (for better performance)';
+        }
     }
 }
 

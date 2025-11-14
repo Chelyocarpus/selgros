@@ -611,12 +611,18 @@ class DataManager {
         };
 
         this.archive.unshift(archiveEntry); // Add to beginning
-        return this.saveArchive();
+        this.saveArchive();
+        return archiveEntry; // Return entry so caller can track the ID
     }
 
     // Get archive
     getArchive() {
         return this.archive;
+    }
+
+    // Get specific archive entry by ID
+    getArchiveEntryById(id) {
+        return this.archive.find(entry => entry.id === id);
     }
 
     // Clear all archive entries
