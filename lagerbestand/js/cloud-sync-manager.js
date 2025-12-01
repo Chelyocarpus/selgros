@@ -13,7 +13,7 @@ class CloudSyncManager {
         this.syncErrors = [];
         
         // Generate unique tab ID for cross-tab communication
-        this.tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        this.tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
         
         // Cross-tab sync channel
         this.cloudSyncChannel = null;
@@ -91,9 +91,27 @@ class CloudSyncManager {
     }
 
     updateSettings(newSettings) {
+        const previousProvider = this.settings.provider;
+        const previousEnabled = this.settings.enabled;
+        
         this.settings = { ...this.settings, ...newSettings };
         this.saveSettings();
         this.setupAutoSync();
+        
+        // Log the settings change
+        this.addSyncLogEntry('info', 'settings_changed', {
+            provider: this.settings.provider,
+            enabled: this.settings.enabled,
+            autoSync: this.settings.autoSync,
+            previousProvider,
+            previousEnabled
+        });
+        
+        // Broadcast to other tabs so they reload settings
+        this.broadcastCloudSyncEvent('settings_changed', {
+            provider: this.settings.provider,
+            enabled: this.settings.enabled
+        });
     }
 
     getSettings() {
@@ -281,7 +299,7 @@ class CloudSyncManager {
             throw new Error(`File "${filename}" not found in gist`);
         }
 
-        const content = response.files[filename].content;
+        const { content } = response.files[filename];
         const backupData = JSON.parse(content);
 
         // Validate and import
@@ -418,7 +436,36 @@ class CloudSyncManager {
                     throw new Error(`Server error (${response.status}): ${errorMessage}`);
                 }
 
-                return await response.json();
+                // Handle empty responses (204 No Content, etc.)
+                if (response.status === 204 || response.headers.get('content-length') === '0') {
+                    return null;
+                }
+
+                // Check Content-Type to determine how to parse the response
+                const contentType = response.headers.get('content-type') || '';
+                
+                if (contentType.includes('application/json')) {
+                    const text = await response.text();
+                    // Handle empty body even with JSON content-type
+                    if (!text || text.trim() === '') {
+                        return null;
+                    }
+                    return JSON.parse(text);
+                }
+                
+                // For non-JSON responses, return the raw text or null if empty
+                const text = await response.text();
+                if (!text || text.trim() === '') {
+                    return null;
+                }
+                
+                // Try to parse as JSON anyway (some servers don't set proper content-type)
+                try {
+                    return JSON.parse(text);
+                } catch {
+                    // Return raw text wrapped in an object for consistency
+                    return { rawResponse: text, contentType };
+                }
 
             } catch (error) {
                 lastError = error;
@@ -670,7 +717,7 @@ class CloudSyncManager {
         try {
             const log = this.getSyncLog();
             const entry = {
-                id: Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                id: Date.now() + '-' + Math.random().toString(36).substring(2, 11),
                 timestamp: new Date().toISOString(),
                 level: level, // 'info', 'success', 'warning', 'error'
                 type: type,

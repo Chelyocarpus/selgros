@@ -2,7 +2,7 @@
 
 ## Overview
 
-The warehouse system now supports cloud synchronization for cross-device data access. This feature allows you to backup your data to cloud services and restore it on any device.
+The warehouse system now supports cloud synchronization for cross-device data access. This feature allows you to back up your data to cloud services and restore it on any device.
 
 ## Location
 
@@ -44,7 +44,7 @@ Store your warehouse data as a private or public GitHub Gist.
 **Setup:**
 1. Go to [GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)](https://github.com/settings/tokens)
 2. Generate a new token with the `gist` scope
-3. In the app, go to Materials tab > Cloud Sync > Settings
+3. In the app, go to the **Sync** tab and click **Settings**
 4. Select "GitHub Gist" as provider
 5. Paste your token
 6. (Optional) Enter an existing Gist ID, or leave empty to create a new one
@@ -60,17 +60,29 @@ Store your warehouse data as a private or public GitHub Gist.
 Sync to your own server endpoint (useful for self-hosted solutions, enterprise environments, or local network sync).
 
 **Setup:**
-1. In the app, go to Materials tab > Cloud Sync > Settings
+1. In the app, go to the **Sync** tab and click **Settings**
 2. Select "Local Server" as provider
 3. Enter your upload URL (POST endpoint)
 4. Enter your download URL (GET endpoint)
 5. (Optional) Add authentication headers
 6. Click Save
 
+**Supported Endpoints:**
+- Any HTTPS endpoint (e.g., `https://your-server.com/api/backup`)
+- Local development servers: `http://localhost:*` and `http://127.0.0.1:*`
+- Same-origin endpoints
+
+> **Note:** HTTP endpoints (except localhost) are blocked by the Content Security Policy for security reasons. Always use HTTPS for production servers.
+
 **Server Requirements:**
-- Upload endpoint: Accept POST with JSON body
+- Upload endpoint: Accept POST with JSON body, return JSON or 204 No Content
 - Download endpoint: Return JSON backup data
-- CORS headers if serving from different domain
+- CORS headers required if serving from a different domain:
+  ```
+  Access-Control-Allow-Origin: <your-app-origin>
+  Access-Control-Allow-Methods: GET, POST, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization
+  ```
 
 **Example Server Response Format:**
 ```json

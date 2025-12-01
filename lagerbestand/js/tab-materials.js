@@ -1143,25 +1143,26 @@ UIManager.prototype.renderUndoHistory = function(container, actionHistory, curre
     }).join('');
 };
 
-// Get action description
+// Get action description (HTML escaped for safe rendering)
 UIManager.prototype.getActionDescription = function(action) {
     if (!action) return '';
     
     const actionType = action.type ? action.type.toUpperCase() : '';
+    const esc = (str) => SecurityUtils.escapeHTML(str);
     
     switch (actionType) {
         case 'ADD':
         case 'ADD_MATERIAL':
             const addCode = action.data?.material?.code || action.data?.code || 'Material';
-            return `${this.t('undoActionAdd')}: ${addCode}`;
+            return `${this.t('undoActionAdd')}: ${esc(addCode)}`;
         case 'EDIT':
         case 'EDIT_MATERIAL':
             const editCode = action.data?.newMaterial?.code || action.data?.newData?.code || action.data?.oldData?.code || 'Material';
-            return `${this.t('undoActionEdit')}: ${editCode}`;
+            return `${this.t('undoActionEdit')}: ${esc(editCode)}`;
         case 'DELETE':
         case 'DELETE_MATERIAL':
             const deleteCode = action.data?.material?.code || action.data?.code || 'Material';
-            return `${this.t('undoActionDelete')}: ${deleteCode}`;
+            return `${this.t('undoActionDelete')}: ${esc(deleteCode)}`;
         case 'BULKIMPORT':
         case 'BULK_IMPORT':
             const count = action.data?.materials?.length || action.data?.imported?.length || 0;
@@ -1170,7 +1171,7 @@ UIManager.prototype.getActionDescription = function(action) {
         case 'CLEAR_ALL':
             return `${this.t('undoActionClearAll')}`;
         default:
-            return action.type || 'Unknown action';
+            return esc(action.type) || 'Unknown action';
     }
 };
 

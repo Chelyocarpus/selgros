@@ -1587,10 +1587,11 @@ class UIManager {
             this.showLoading(this.t('cloudSyncInProgress'));
             this.renderCloudSyncStatus();
 
-            const result = await this.cloudSyncManager.sync('upload');
+            const result = await this.cloudSyncManager.syncWithLogging('upload');
             
             this.hideLoading();
             this.renderCloudSyncStatus();
+            this.renderSyncLog();
 
             let message = this.t('cloudSyncUploadSuccess');
             if (result.gistUrl) {
@@ -1601,6 +1602,7 @@ class UIManager {
         } catch (error) {
             this.hideLoading();
             this.renderCloudSyncStatus();
+            this.renderSyncLog();
             this.showToast(
                 `${this.t('cloudSyncUploadError')}: ${error.message}`,
                 'error',
@@ -1626,10 +1628,11 @@ class UIManager {
             this.showLoading(this.t('cloudSyncInProgress'));
             this.renderCloudSyncStatus();
 
-            const result = await this.cloudSyncManager.sync('download');
+            const result = await this.cloudSyncManager.syncWithLogging('download');
             
             this.hideLoading();
             this.renderCloudSyncStatus();
+            this.renderSyncLog();
 
             // Refresh UI
             this.renderMaterialsList();
@@ -1643,6 +1646,7 @@ class UIManager {
         } catch (error) {
             this.hideLoading();
             this.renderCloudSyncStatus();
+            this.renderSyncLog();
             this.showToast(
                 `${this.t('cloudSyncDownloadError')}: ${error.message}`,
                 'error',
@@ -1875,18 +1879,22 @@ class UIManager {
      * Get message for sync log entry
      */
     getSyncLogMessage(type, data) {
+        // Escape user-provided data to prevent XSS
+        const esc = (str) => SecurityUtils.escapeHTML(str);
+        const errorMsg = data?.error ? esc(String(data.error)) : 'Unknown error';
+        
         const messages = {
             'upload_started': this.t('syncLogUploadStarted') || 'Upload started',
             'upload_success': this.t('syncLogUploadSuccess') || 'Upload completed successfully',
-            'upload_error': `${this.t('syncLogUploadError') || 'Upload failed'}: ${data?.error || 'Unknown error'}`,
+            'upload_error': `${this.t('syncLogUploadError') || 'Upload failed'}: ${errorMsg}`,
             'download_started': this.t('syncLogDownloadStarted') || 'Download started',
             'download_success': this.t('syncLogDownloadSuccess') || 'Download completed successfully',
-            'download_error': `${this.t('syncLogDownloadError') || 'Download failed'}: ${data?.error || 'Unknown error'}`,
+            'download_error': `${this.t('syncLogDownloadError') || 'Download failed'}: ${errorMsg}`,
             'cloud_sync_from_tab': this.t('syncLogFromOtherTab') || 'Sync received from another tab',
             'sync_started_other_tab': this.t('syncLogOtherTabStarted') || 'Another tab started syncing',
             'settings_changed': this.t('syncLogSettingsChanged') || 'Sync settings changed'
         };
-        return messages[type] || type;
+        return messages[type] || esc(String(type));
     }
 
     /**
@@ -2072,35 +2080,39 @@ class UIManager {
         
         card.style.display = 'block';
         
+        // Helper function to escape HTML
+        const esc = (str) => SecurityUtils.escapeHTML(str);
+        
         // Render list items
         list.innerHTML = this.recentlyAddedMaterials.map((item, index) => {
             const timeAgo = this.getTimeAgo(item.addedAt);
             const isJustAdded = index === 0 && (Date.now() - new Date(item.addedAt).getTime()) < 5000; // Within 5 seconds
+            const groupName = item.group ? (this.dataManager.getGroup(item.group)?.name || item.group) : '';
             
             return `
-                <div class="recently-added-item ${isJustAdded ? 'just-added' : ''}" data-material-code="${item.code}">
+                <div class="recently-added-item ${isJustAdded ? 'just-added' : ''}" data-material-code="${esc(item.code)}">
                     <div class="recently-added-item-content">
                         <div class="recently-added-item-header">
                             <span class="recently-added-item-code">
-                                <i class="fa-solid fa-box"></i> ${item.code}
+                                <i class="fa-solid fa-box"></i> ${esc(item.code)}
                             </span>
-                            ${item.name ? `<span class="recently-added-item-name">${item.name}</span>` : ''}
+                            ${item.name ? `<span class="recently-added-item-name">${esc(item.name)}</span>` : ''}
                         </div>
                         <div class="recently-added-item-details">
                             <div class="recently-added-item-detail">
                                 <i class="fa-solid fa-warehouse"></i>
-                                <strong>${this.t('mktCapacity') || 'Capacity'}:</strong> ${item.capacity}
+                                <strong>${this.t('mktCapacity') || 'Capacity'}:</strong> ${esc(String(item.capacity))}
                             </div>
                             ${item.promoCapacity ? `
                                 <div class="recently-added-item-detail">
                                     <i class="fa-solid fa-gift"></i>
-                                    <strong>${this.t('promoCapacity') || 'Promo'}:</strong> ${item.promoCapacity}
+                                    <strong>${this.t('promoCapacity') || 'Promo'}:</strong> ${esc(String(item.promoCapacity))}
                                 </div>
                             ` : ''}
                             ${item.group ? `
                                 <div class="recently-added-item-detail">
                                     <i class="fa-solid fa-tag"></i>
-                                    <strong>${this.t('materialGroup') || 'Group'}:</strong> ${this.dataManager.getGroup(item.group)?.name || item.group}
+                                    <strong>${this.t('materialGroup') || 'Group'}:</strong> ${esc(groupName)}
                                 </div>
                             ` : ''}
                         </div>
@@ -2109,16 +2121,24 @@ class UIManager {
                         </div>
                     </div>
                     <div class="recently-added-item-actions">
-                        <button class="btn-primary btn-small" onclick="ui.openEditModal('${item.code}')" title="${this.t('btnEdit') || 'Edit'}">
+                        <button class="btn-primary btn-small recently-added-edit-btn" data-code="${esc(item.code)}" title="${this.t('btnEdit') || 'Edit'}">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
-                        <button class="btn-danger btn-small" onclick="ui.removeFromRecentlyAdded('${item.code}')" title="${this.t('btnRemove') || 'Remove from list'}">
+                        <button class="btn-danger btn-small recently-added-remove-btn" data-code="${esc(item.code)}" title="${this.t('btnRemove') || 'Remove from list'}">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
                 </div>
             `;
         }).join('');
+        
+        // Add event listeners for action buttons (safer than inline onclick)
+        list.querySelectorAll('.recently-added-edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => ui.openEditModal(btn.dataset.code));
+        });
+        list.querySelectorAll('.recently-added-remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => ui.removeFromRecentlyAdded(btn.dataset.code));
+        });
         
         // Scroll to top of the recently added card to show the new item
         if (this.recentlyAddedMaterials.length > 0) {

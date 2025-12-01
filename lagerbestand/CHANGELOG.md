@@ -21,6 +21,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quick-add buttons**: Converted ripple to gradient overlay for smoother animation
 - **DataTable pagination**: Replaced ripple with opacity-based gradient overlay
 
+#### Cloud Sync Improvements
+- **Consistent logging**: Updated `cloudSyncUpload` and `cloudSyncDownload` to use `syncWithLogging()` instead of calling `sync()` directly
+- **Cross-tab notifications**: User-initiated syncs now emit `cloud_sync_started` and `cloud_sync_completed` BroadcastChannel events
+- **Activity log**: Manual sync operations now appear in the sync activity log
+- **UI refresh**: Sync log is now refreshed after upload/download operations
+- **Settings synchronization**: `updateSettings()` now broadcasts `settings_changed` event to other tabs and logs the change, keeping all tabs in sync
+- **Robust response handling**: `fetchWithRetry()` now handles non-JSON and empty responses (204 No Content, empty body, non-JSON content-types) without throwing parse errors
+- **CSP relaxed for local-server**: Updated `connect-src` to allow any HTTPS endpoint and localhost for local-server sync provider
+- **Documentation updated**: Clarified supported endpoints, CORS requirements, and CSP limitations in CLOUD-SYNC.md
+
+#### Security Improvements (XSS Prevention)
+- **HTML escaping**: Added `SecurityUtils.escapeHTML()` calls to escape user-controlled data before inserting into innerHTML
+- **Data attributes**: Replaced inline `onclick` handlers with data attributes and event listeners to prevent XSS via malicious material codes/names
+- **Fixed in tab-check-stock.js**: Material codes, names, alert messages, storage types now properly escaped
+- **Fixed in ui-manager.js**: Recently added materials list, sync log error messages now properly escaped
+- **Fixed in tab-materials.js**: Undo history action descriptions now properly escaped
+- **Fixed in tab-archive.js**: Archived report viewer and comparison analysis now escape material codes, names, alert messages, and storage types
+
 ### Removed
 
 #### Dashboard Feature
