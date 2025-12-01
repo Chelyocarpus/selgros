@@ -141,6 +141,11 @@ Welcome to the Warehouse Early Warning System documentation! This file helps you
 - [FILE-MAP.md](#file-map) - Translation system
 - [README.md](#readme) - Adding languages
 
+### Data Sync & Backup
+- [DATA-PERSISTENCE.md](DATA-PERSISTENCE.md) - Local storage layers
+- [CLOUD-SYNC.md](CLOUD-SYNC.md) - Cloud synchronization setup
+- [CROSS-TAB-SYNC.md](CROSS-TAB-SYNC.md) - Multi-tab synchronization
+
 ---
 
 ## 📋 Documentation Checklist

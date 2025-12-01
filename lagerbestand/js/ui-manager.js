@@ -602,6 +602,11 @@ class UIManager {
         }
     }
 
+    // Alias for closing the material modal (used by cloud sync settings)
+    closeModal() {
+        this.closeMaterialModal();
+    }
+
     /**
      * Show delete confirmation modal
      * @param {string} message - The confirmation message (can contain HTML)
@@ -1262,6 +1267,688 @@ class UIManager {
     }
 
     // ========================
+    // Cloud Sync Operations
+    // ========================
+
+    /**
+     * Initialize cloud sync manager
+     */
+    initCloudSync() {
+        if (!this.cloudSyncManager) {
+            this.cloudSyncManager = new CloudSyncManager(this.dataManager);
+            this.setupCrossTabSyncListeners();
+        }
+        this.renderCloudSyncStatus();
+    }
+
+    /**
+     * Render cloud sync status in the UI
+     */
+    renderCloudSyncStatus() {
+        const container = document.getElementById('cloudSyncStatus');
+        if (!container || !this.cloudSyncManager) return;
+
+        const status = this.cloudSyncManager.getSyncStatus();
+        const isConfigured = status.enabled && status.provider !== 'none';
+
+        // Update button states
+        const uploadBtn = document.getElementById('cloudSyncUploadBtn');
+        const downloadBtn = document.getElementById('cloudSyncDownloadBtn');
+        const testBtn = document.getElementById('cloudSyncTestBtn');
+
+        if (uploadBtn) uploadBtn.disabled = !isConfigured || status.syncInProgress;
+        if (downloadBtn) downloadBtn.disabled = !isConfigured || status.syncInProgress;
+        if (testBtn) testBtn.disabled = !isConfigured || status.syncInProgress;
+
+        // Get provider display name
+        let providerName = this.t('cloudSyncProviderNone');
+        if (status.provider === 'github-gist') {
+            providerName = this.t('cloudSyncProviderGitHub');
+        } else if (status.provider === 'local-server') {
+            providerName = this.t('cloudSyncProviderLocal');
+        }
+
+        // Format last sync time
+        let lastSyncDisplay = this.t('cloudSyncNever');
+        if (status.lastSync) {
+            const lastSyncDate = new Date(status.lastSync);
+            lastSyncDisplay = lastSyncDate.toLocaleString();
+        }
+
+        // Status badge
+        let statusBadge = '';
+        if (isConfigured) {
+            if (status.syncInProgress) {
+                statusBadge = `<span class="badge badge-warning"><i class="fa-solid fa-spinner fa-spin"></i> ${this.t('cloudSyncInProgress')}</span>`;
+            } else if (status.lastSyncStatus === 'success') {
+                statusBadge = `<span class="badge badge-success"><i class="fa-solid fa-check"></i> ${this.t('cloudSyncStatusSuccess')}</span>`;
+            } else if (status.lastSyncStatus === 'error') {
+                statusBadge = `<span class="badge badge-danger"><i class="fa-solid fa-exclamation-triangle"></i> ${this.t('cloudSyncStatusError')}</span>`;
+            } else {
+                statusBadge = `<span class="badge badge-secondary"><i class="fa-solid fa-clock"></i> ${this.t('cloudSyncStatusPending')}</span>`;
+            }
+        }
+
+        container.innerHTML = `
+            <div class="sync-status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                <div class="sync-status-item">
+                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                        <i class="fa-solid fa-toggle-${status.enabled ? 'on' : 'off'}"></i> Status
+                    </div>
+                    <div style="font-weight: 600; color: ${status.enabled ? 'var(--success-color)' : 'var(--text-secondary)'};">
+                        ${status.enabled ? this.t('cloudSyncEnabled') : this.t('cloudSyncDisabled')}
+                    </div>
+                </div>
+                <div class="sync-status-item">
+                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                        <i class="fa-solid fa-cloud"></i> ${this.t('cloudSyncProvider')}
+                    </div>
+                    <div style="font-weight: 600;">
+                        ${providerName}
+                    </div>
+                </div>
+                <div class="sync-status-item">
+                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> ${this.t('cloudSyncLastSync')}
+                    </div>
+                    <div style="font-weight: 600;">
+                        ${lastSyncDisplay}
+                    </div>
+                </div>
+                ${statusBadge ? `
+                <div class="sync-status-item">
+                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                        <i class="fa-solid fa-signal"></i> ${this.t('cloudSyncStatus')}
+                    </div>
+                    <div>
+                        ${statusBadge}
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+            ${status.autoSync && isConfigured ? `
+            <div style="margin-top: 10px; padding: 8px 12px; background: var(--info-bg); border-radius: 6px; font-size: 0.85em;">
+                <i class="fa-solid fa-sync"></i> ${this.t('cloudSyncAutoSyncLabel')}: ${status.autoSyncInterval} min
+            </div>
+            ` : ''}
+        `;
+    }
+
+    /**
+     * Show cloud sync settings modal
+     */
+    showCloudSyncSettings() {
+        if (!this.cloudSyncManager) {
+            this.initCloudSync();
+        }
+
+        const settings = this.cloudSyncManager.getSettings();
+        const modal = document.getElementById('materialModal');
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-cloud-arrow-up"></i> ${this.t('cloudSyncSettingsTitle')}</h2>
+                    <button class="modal-close" onclick="ui.closeModal()" aria-label="${this.t('btnCancel')}">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning" style="margin-bottom: 20px;">
+                        <i class="fa-solid fa-shield-halved"></i> ${this.t('cloudSyncTokenWarning')}
+                    </div>
+
+                    <!-- Enable/Disable -->
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="cloudSyncEnabled" ${settings.enabled ? 'checked' : ''}>
+                            <span>${this.t('cloudSyncEnableLabel')}</span>
+                        </label>
+                    </div>
+
+                    <!-- Provider Selection -->
+                    <div class="form-group">
+                        <label for="cloudSyncProvider">${this.t('cloudSyncProviderLabel')}</label>
+                        <select id="cloudSyncProvider" onchange="ui.toggleCloudSyncProviderSettings()">
+                            <option value="none" ${settings.provider === 'none' ? 'selected' : ''}>${this.t('cloudSyncProviderNone')}</option>
+                            <option value="github-gist" ${settings.provider === 'github-gist' ? 'selected' : ''}>${this.t('cloudSyncProviderGitHub')}</option>
+                            <option value="local-server" ${settings.provider === 'local-server' ? 'selected' : ''}>${this.t('cloudSyncProviderLocal')}</option>
+                        </select>
+                    </div>
+
+                    <!-- GitHub Gist Settings -->
+                    <div id="githubGistSettings" class="provider-settings" style="display: ${settings.provider === 'github-gist' ? 'block' : 'none'}; padding: 15px; background: var(--card-bg-secondary); border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="margin-top: 0; margin-bottom: 15px;"><i class="fa-brands fa-github"></i> ${this.t('githubGistTitle')}</h4>
+                        
+                        <div class="form-group">
+                            <label for="githubToken">${this.t('githubTokenLabel')} *</label>
+                            <input type="password" id="githubToken" value="${settings.github?.token || ''}" 
+                                   placeholder="${this.t('githubTokenPlaceholder')}"
+                                   autocomplete="off">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
+                                ${this.t('githubTokenHelp')}
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="githubGistId">${this.t('githubGistIdLabel')}</label>
+                            <input type="text" id="githubGistId" value="${settings.github?.gistId || ''}" 
+                                   placeholder="${this.t('githubGistIdPlaceholder')}">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
+                                ${this.t('githubGistIdHelp')}
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="githubFilename">${this.t('githubFilenameLabel')}</label>
+                            <input type="text" id="githubFilename" value="${settings.github?.filename || 'warehouse-backup.json'}">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
+                                ${this.t('githubFilenameHelp')}
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="githubPublic" ${settings.github?.isPublic ? 'checked' : ''}>
+                                <span>${this.t('githubPublicLabel')}</span>
+                            </label>
+                            <small style="color: var(--text-secondary); display: block; margin-top: 4px; margin-left: 24px;">
+                                ${this.t('githubPublicHelp')}
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Local Server Settings -->
+                    <div id="localServerSettings" class="provider-settings" style="display: ${settings.provider === 'local-server' ? 'block' : 'none'}; padding: 15px; background: var(--card-bg-secondary); border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="margin-top: 0; margin-bottom: 15px;"><i class="fa-solid fa-server"></i> ${this.t('localServerTitle')}</h4>
+                        
+                        <div class="form-group">
+                            <label for="localServerUploadUrl">${this.t('localServerUploadUrl')} *</label>
+                            <input type="url" id="localServerUploadUrl" value="${settings.localServer?.uploadUrl || ''}" 
+                                   placeholder="${this.t('localServerUploadUrlPlaceholder')}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="localServerDownloadUrl">${this.t('localServerDownloadUrl')} *</label>
+                            <input type="url" id="localServerDownloadUrl" value="${settings.localServer?.downloadUrl || ''}" 
+                                   placeholder="${this.t('localServerDownloadUrlPlaceholder')}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="localServerAuthHeader">${this.t('localServerAuthHeader')}</label>
+                            <input type="text" id="localServerAuthHeader" value="${settings.localServer?.authHeader || ''}" 
+                                   placeholder="${this.t('localServerAuthHeaderPlaceholder')}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="localServerAuthValue">${this.t('localServerAuthValue')}</label>
+                            <input type="password" id="localServerAuthValue" value="${settings.localServer?.authValue || ''}" 
+                                   placeholder="${this.t('localServerAuthValuePlaceholder')}"
+                                   autocomplete="off">
+                        </div>
+                        
+                        <small style="color: var(--text-secondary); display: block;">
+                            <i class="fa-solid fa-info-circle"></i> ${this.t('localServerHelp')}
+                        </small>
+                    </div>
+
+                    <!-- Auto Sync Settings -->
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="cloudSyncAutoSync" ${settings.autoSync ? 'checked' : ''}>
+                            <span>${this.t('cloudSyncAutoSyncLabel')}</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group" id="autoSyncIntervalGroup" style="display: ${settings.autoSync ? 'block' : 'none'};">
+                        <label for="cloudSyncAutoSyncInterval">${this.t('cloudSyncAutoSyncInterval')}</label>
+                        <input type="number" id="cloudSyncAutoSyncInterval" value="${settings.autoSyncIntervalMinutes || 30}" min="5" max="1440">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="ui.closeModal()">
+                        <i class="fa-solid fa-times"></i> ${this.t('btnCancel')}
+                    </button>
+                    <button class="btn-primary" onclick="ui.saveCloudSyncSettings()">
+                        <i class="fa-solid fa-save"></i> ${this.t('btnSave')}
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.classList.add('active');
+
+        // Add event listener for auto-sync checkbox
+        document.getElementById('cloudSyncAutoSync')?.addEventListener('change', (e) => {
+            document.getElementById('autoSyncIntervalGroup').style.display = e.target.checked ? 'block' : 'none';
+        });
+    }
+
+    /**
+     * Toggle cloud sync provider settings visibility
+     */
+    toggleCloudSyncProviderSettings() {
+        const provider = document.getElementById('cloudSyncProvider')?.value;
+        const githubSettings = document.getElementById('githubGistSettings');
+        const localSettings = document.getElementById('localServerSettings');
+
+        if (githubSettings) {
+            githubSettings.style.display = provider === 'github-gist' ? 'block' : 'none';
+        }
+        if (localSettings) {
+            localSettings.style.display = provider === 'local-server' ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * Save cloud sync settings
+     */
+    saveCloudSyncSettings() {
+        if (!this.cloudSyncManager) return;
+
+        const enabled = document.getElementById('cloudSyncEnabled')?.checked || false;
+        const provider = document.getElementById('cloudSyncProvider')?.value || 'none';
+        const autoSync = document.getElementById('cloudSyncAutoSync')?.checked || false;
+        const autoSyncIntervalMinutes = parseInt(document.getElementById('cloudSyncAutoSyncInterval')?.value) || 30;
+
+        const settings = {
+            enabled,
+            provider,
+            autoSync,
+            autoSyncIntervalMinutes,
+            github: {
+                token: document.getElementById('githubToken')?.value || '',
+                gistId: document.getElementById('githubGistId')?.value || '',
+                filename: document.getElementById('githubFilename')?.value || 'warehouse-backup.json',
+                isPublic: document.getElementById('githubPublic')?.checked || false
+            },
+            localServer: {
+                uploadUrl: document.getElementById('localServerUploadUrl')?.value || '',
+                downloadUrl: document.getElementById('localServerDownloadUrl')?.value || '',
+                authHeader: document.getElementById('localServerAuthHeader')?.value || '',
+                authValue: document.getElementById('localServerAuthValue')?.value || ''
+            }
+        };
+
+        this.cloudSyncManager.updateSettings(settings);
+        this.closeModal();
+        this.renderCloudSyncStatus();
+        this.showToast(this.t('cloudSyncSettingsSaved'), 'success', '<i class="fa-solid fa-gear"></i>');
+    }
+
+    /**
+     * Upload data to cloud
+     */
+    async cloudSyncUpload() {
+        if (!this.cloudSyncManager) {
+            this.showToast(this.t('cloudSyncNotConfigured'), 'error');
+            return;
+        }
+
+        try {
+            this.showLoading(this.t('cloudSyncInProgress'));
+            this.renderCloudSyncStatus();
+
+            const result = await this.cloudSyncManager.syncWithLogging('upload');
+            
+            this.hideLoading();
+            this.renderCloudSyncStatus();
+            this.renderSyncLog();
+
+            let message = this.t('cloudSyncUploadSuccess');
+            if (result.gistUrl) {
+                message += ` (${result.gistUrl})`;
+            }
+            this.showToast(message, 'success', '<i class="fa-solid fa-cloud-arrow-up"></i>');
+
+        } catch (error) {
+            this.hideLoading();
+            this.renderCloudSyncStatus();
+            this.renderSyncLog();
+            this.showToast(
+                `${this.t('cloudSyncUploadError')}: ${error.message}`,
+                'error',
+                '<i class="fa-solid fa-cloud-exclamation"></i>'
+            );
+        }
+    }
+
+    /**
+     * Download data from cloud
+     */
+    async cloudSyncDownload() {
+        if (!this.cloudSyncManager) {
+            this.showToast(this.t('cloudSyncNotConfigured'), 'error');
+            return;
+        }
+
+        // Confirm before overwriting local data
+        const confirmed = await this.showDeleteModal(this.t('cloudSyncConfirmDownload'));
+        if (!confirmed) return;
+
+        try {
+            this.showLoading(this.t('cloudSyncInProgress'));
+            this.renderCloudSyncStatus();
+
+            const result = await this.cloudSyncManager.syncWithLogging('download');
+            
+            this.hideLoading();
+            this.renderCloudSyncStatus();
+            this.renderSyncLog();
+
+            // Refresh UI
+            this.renderMaterialsList();
+            if (typeof this.renderArchiveList === 'function') {
+                this.renderArchiveList();
+            }
+
+            const message = `${this.t('cloudSyncDownloadSuccess')}: ${result.imported?.materialCount || 0} materials`;
+            this.showToast(message, 'success', '<i class="fa-solid fa-cloud-arrow-down"></i>');
+
+        } catch (error) {
+            this.hideLoading();
+            this.renderCloudSyncStatus();
+            this.renderSyncLog();
+            this.showToast(
+                `${this.t('cloudSyncDownloadError')}: ${error.message}`,
+                'error',
+                '<i class="fa-solid fa-cloud-exclamation"></i>'
+            );
+        }
+    }
+
+    /**
+     * Test cloud sync connection
+     */
+    async cloudSyncTest() {
+        if (!this.cloudSyncManager) {
+            this.showToast(this.t('cloudSyncNotConfigured'), 'error');
+            return;
+        }
+
+        try {
+            this.showLoading(this.t('cloudSyncInProgress'));
+
+            const result = await this.cloudSyncManager.testConnection();
+            
+            this.hideLoading();
+            this.showToast(
+                `${this.t('cloudSyncConnectionSuccess')}: ${result.message}`,
+                'success',
+                '<i class="fa-solid fa-plug-circle-check"></i>'
+            );
+
+        } catch (error) {
+            this.hideLoading();
+            this.showToast(
+                `${this.t('cloudSyncConnectionError')}: ${error.message}`,
+                'error',
+                '<i class="fa-solid fa-plug-circle-exclamation"></i>'
+            );
+        }
+    }
+
+    // ========================
+    // Settings Tab Status Rendering
+    // ========================
+
+    /**
+     * Render all status sections in the Settings tab
+     */
+    renderSettingsTabStatus() {
+        this.renderCloudSyncStatus();
+        this.renderCrossTabSyncStatus();
+        this.renderIndexedDBStatus();
+        this.renderDataStats();
+        this.renderSyncLog();
+    }
+
+    /**
+     * Render cross-tab sync status
+     */
+    renderCrossTabSyncStatus() {
+        const container = document.getElementById('crossTabSyncStatus');
+        if (!container) return;
+
+        const hasBroadcastChannel = 'BroadcastChannel' in window;
+        const tabId = this.cloudSyncManager?.tabId || 'unknown';
+
+        container.innerHTML = `
+            <div class="sync-status-item">
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                    <i class="fa-solid fa-browser"></i> ${this.t('crossTabStatus') || 'Browser Support'}
+                </div>
+                <div style="font-weight: 600;">
+                    ${hasBroadcastChannel 
+                        ? `<span class="badge badge-success"><i class="fa-solid fa-check"></i> ${this.t('supported') || 'Supported'}</span>`
+                        : `<span class="badge badge-warning"><i class="fa-solid fa-exclamation-triangle"></i> ${this.t('notSupported') || 'Not Supported'}</span>`
+                    }
+                </div>
+            </div>
+            <div class="sync-status-item">
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                    <i class="fa-solid fa-fingerprint"></i> ${this.t('tabIdentifier') || 'Tab ID'}
+                </div>
+                <div style="font-weight: 600; font-family: monospace; font-size: 0.85em;">
+                    ${tabId.substring(0, 15)}...
+                </div>
+            </div>
+            <div class="sync-status-item">
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                    <i class="fa-solid fa-arrows-rotate"></i> ${this.t('syncMethod') || 'Sync Method'}
+                </div>
+                <div style="font-weight: 600;">
+                    ${hasBroadcastChannel ? 'BroadcastChannel + IndexedDB' : 'IndexedDB only'}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render IndexedDB status
+     */
+    renderIndexedDBStatus() {
+        const container = document.getElementById('indexedDBStatus');
+        if (!container) return;
+
+        const dbManager = this.dataManager?.dbManager;
+        const isAvailable = dbManager?.checkAvailability?.() || false;
+
+        container.innerHTML = `
+            <div class="sync-status-item">
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                    <i class="fa-solid fa-database"></i> Status
+                </div>
+                <div style="font-weight: 600;">
+                    ${isAvailable 
+                        ? `<span class="badge badge-success"><i class="fa-solid fa-check"></i> ${this.t('syncStatusActive')}</span>`
+                        : `<span class="badge badge-warning"><i class="fa-solid fa-exclamation-triangle"></i> ${this.t('syncStatusInactive')}</span>`
+                    }
+                </div>
+            </div>
+            <div class="sync-status-item">
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                    <i class="fa-solid fa-hard-drive"></i> ${this.t('database') || 'Database'}
+                </div>
+                <div style="font-weight: 600;">
+                    ${dbManager?.dbName || 'WarehouseDB'}
+                </div>
+            </div>
+            <div class="sync-status-item">
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                    <i class="fa-solid fa-layer-group"></i> ${this.t('storageEngine') || 'Engine'}
+                </div>
+                <div style="font-weight: 600;">
+                    Dexie.js + IndexedDB
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render data statistics
+     */
+    renderDataStats() {
+        const container = document.getElementById('dataStatsContainer');
+        if (!container) return;
+
+        const materialsCount = Object.keys(this.dataManager?.materials || {}).length;
+        const archiveCount = (this.dataManager?.archive || []).length;
+        const groupsCount = Object.keys(this.dataManager?.groups || {}).length;
+        const notesCount = Object.keys(this.dataManager?.notes || {}).length;
+
+        container.innerHTML = `
+            <div class="sync-status-item" style="text-align: center;">
+                <div style="font-size: 2em; font-weight: 700; color: var(--primary-color);">${materialsCount}</div>
+                <div style="font-size: 0.85em; color: var(--text-secondary);">
+                    <i class="fa-solid fa-boxes-stacked"></i> ${this.t('totalMaterials') || 'Materials'}
+                </div>
+            </div>
+            <div class="sync-status-item" style="text-align: center;">
+                <div style="font-size: 2em; font-weight: 700; color: var(--success-color);">${archiveCount}</div>
+                <div style="font-size: 0.85em; color: var(--text-secondary);">
+                    <i class="fa-solid fa-folder-open"></i> ${this.t('archivedReports') || 'Reports'}
+                </div>
+            </div>
+            <div class="sync-status-item" style="text-align: center;">
+                <div style="font-size: 2em; font-weight: 700; color: var(--warning-color);">${groupsCount}</div>
+                <div style="font-size: 0.85em; color: var(--text-secondary);">
+                    <i class="fa-solid fa-tags"></i> ${this.t('groupsTitle') || 'Groups'}
+                </div>
+            </div>
+            <div class="sync-status-item" style="text-align: center;">
+                <div style="font-size: 2em; font-weight: 700; color: var(--info-color, #3b82f6);">${notesCount}</div>
+                <div style="font-size: 0.85em; color: var(--text-secondary);">
+                    <i class="fa-solid fa-note-sticky"></i> ${this.t('notesTitle') || 'Notes'}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render sync log
+     */
+    renderSyncLog() {
+        const container = document.getElementById('syncLogContainer');
+        if (!container || !this.cloudSyncManager) return;
+
+        const log = this.cloudSyncManager.getSyncLog();
+
+        if (log.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 2em; margin-bottom: 10px; opacity: 0.5;"></i>
+                    <p style="margin: 0;">${this.t('noSyncActivity') || 'No sync activity yet'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = log.map(entry => {
+            const time = new Date(entry.timestamp).toLocaleString();
+            const icon = this.getSyncLogIcon(entry.level);
+            const message = this.getSyncLogMessage(entry.type, entry.data);
+            const levelClass = entry.level === 'error' ? 'danger' : entry.level === 'warning' ? 'warning' : entry.level === 'success' ? 'success' : 'info';
+
+            return `
+                <div class="sync-log-entry" style="display: flex; gap: 12px; padding: 10px; border-bottom: 1px solid var(--border-color); align-items: flex-start;">
+                    <div style="flex-shrink: 0;">
+                        <span class="badge badge-${levelClass}">${icon}</span>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 500;">${message}</div>
+                        <div style="font-size: 0.8em; color: var(--text-secondary);">${time}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Get icon for sync log entry
+     */
+    getSyncLogIcon(level) {
+        const icons = {
+            'success': '<i class="fa-solid fa-check"></i>',
+            'error': '<i class="fa-solid fa-times"></i>',
+            'warning': '<i class="fa-solid fa-exclamation"></i>',
+            'info': '<i class="fa-solid fa-info"></i>'
+        };
+        return icons[level] || icons.info;
+    }
+
+    /**
+     * Get message for sync log entry
+     */
+    getSyncLogMessage(type, data) {
+        // Escape user-provided data to prevent XSS
+        const esc = (str) => SecurityUtils.escapeHTML(str);
+        const errorMsg = data?.error ? esc(String(data.error)) : 'Unknown error';
+        
+        const messages = {
+            'upload_started': this.t('syncLogUploadStarted') || 'Upload started',
+            'upload_success': this.t('syncLogUploadSuccess') || 'Upload completed successfully',
+            'upload_error': `${this.t('syncLogUploadError') || 'Upload failed'}: ${errorMsg}`,
+            'download_started': this.t('syncLogDownloadStarted') || 'Download started',
+            'download_success': this.t('syncLogDownloadSuccess') || 'Download completed successfully',
+            'download_error': `${this.t('syncLogDownloadError') || 'Download failed'}: ${errorMsg}`,
+            'cloud_sync_from_tab': this.t('syncLogFromOtherTab') || 'Sync received from another tab',
+            'sync_started_other_tab': this.t('syncLogOtherTabStarted') || 'Another tab started syncing',
+            'settings_changed': this.t('syncLogSettingsChanged') || 'Sync settings changed'
+        };
+        return messages[type] || esc(String(type));
+    }
+
+    /**
+     * Clear sync log
+     */
+    clearSyncLog() {
+        if (this.cloudSyncManager) {
+            this.cloudSyncManager.clearSyncLog();
+            this.renderSyncLog();
+            this.showToast(this.t('syncLogCleared') || 'Sync log cleared', 'success');
+        }
+    }
+
+    /**
+     * Setup cross-tab sync listeners
+     */
+    setupCrossTabSyncListeners() {
+        if (!this.cloudSyncManager) return;
+
+        // Listen for remote sync completions
+        this.cloudSyncManager.setOnRemoteSync(async (data) => {
+            // Reload data from storage
+            await this.dataManager.initializeData();
+            
+            // Refresh UI
+            this.renderMaterialsList();
+            if (typeof this.renderArchiveList === 'function') {
+                this.renderArchiveList();
+            }
+
+            // Show notification
+            this.showToast(
+                this.t('dataUpdatedFromOtherTab') || 'Data updated from another tab/device',
+                'info',
+                '<i class="fa-solid fa-arrows-rotate"></i>'
+            );
+
+            // Update settings tab if visible
+            this.renderSettingsTabStatus();
+        });
+
+        // Listen for settings changes
+        this.cloudSyncManager.setOnSettingsChanged(() => {
+            this.renderCloudSyncStatus();
+            this.renderSettingsTabStatus();
+        });
+
+        // Listen for log updates
+        this.cloudSyncManager.setOnLogUpdate(() => {
+            this.renderSyncLog();
+        });
+    }
+
+    // ========================
     // Recently Added Materials Management
     // ========================
 
@@ -1393,35 +2080,39 @@ class UIManager {
         
         card.style.display = 'block';
         
+        // Helper function to escape HTML
+        const esc = (str) => SecurityUtils.escapeHTML(str);
+        
         // Render list items
         list.innerHTML = this.recentlyAddedMaterials.map((item, index) => {
             const timeAgo = this.getTimeAgo(item.addedAt);
             const isJustAdded = index === 0 && (Date.now() - new Date(item.addedAt).getTime()) < 5000; // Within 5 seconds
+            const groupName = item.group ? (this.dataManager.getGroup(item.group)?.name || item.group) : '';
             
             return `
-                <div class="recently-added-item ${isJustAdded ? 'just-added' : ''}" data-material-code="${item.code}">
+                <div class="recently-added-item ${isJustAdded ? 'just-added' : ''}" data-material-code="${esc(item.code)}">
                     <div class="recently-added-item-content">
                         <div class="recently-added-item-header">
                             <span class="recently-added-item-code">
-                                <i class="fa-solid fa-box"></i> ${item.code}
+                                <i class="fa-solid fa-box"></i> ${esc(item.code)}
                             </span>
-                            ${item.name ? `<span class="recently-added-item-name">${item.name}</span>` : ''}
+                            ${item.name ? `<span class="recently-added-item-name">${esc(item.name)}</span>` : ''}
                         </div>
                         <div class="recently-added-item-details">
                             <div class="recently-added-item-detail">
                                 <i class="fa-solid fa-warehouse"></i>
-                                <strong>${this.t('mktCapacity') || 'Capacity'}:</strong> ${item.capacity}
+                                <strong>${this.t('mktCapacity') || 'Capacity'}:</strong> ${esc(String(item.capacity))}
                             </div>
                             ${item.promoCapacity ? `
                                 <div class="recently-added-item-detail">
                                     <i class="fa-solid fa-gift"></i>
-                                    <strong>${this.t('promoCapacity') || 'Promo'}:</strong> ${item.promoCapacity}
+                                    <strong>${this.t('promoCapacity') || 'Promo'}:</strong> ${esc(String(item.promoCapacity))}
                                 </div>
                             ` : ''}
                             ${item.group ? `
                                 <div class="recently-added-item-detail">
                                     <i class="fa-solid fa-tag"></i>
-                                    <strong>${this.t('materialGroup') || 'Group'}:</strong> ${this.dataManager.getGroup(item.group)?.name || item.group}
+                                    <strong>${this.t('materialGroup') || 'Group'}:</strong> ${esc(groupName)}
                                 </div>
                             ` : ''}
                         </div>
@@ -1430,16 +2121,24 @@ class UIManager {
                         </div>
                     </div>
                     <div class="recently-added-item-actions">
-                        <button class="btn-primary btn-small" onclick="ui.openEditModal('${item.code}')" title="${this.t('btnEdit') || 'Edit'}">
+                        <button class="btn-primary btn-small recently-added-edit-btn" data-code="${esc(item.code)}" title="${this.t('btnEdit') || 'Edit'}">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
-                        <button class="btn-danger btn-small" onclick="ui.removeFromRecentlyAdded('${item.code}')" title="${this.t('btnRemove') || 'Remove from list'}">
+                        <button class="btn-danger btn-small recently-added-remove-btn" data-code="${esc(item.code)}" title="${this.t('btnRemove') || 'Remove from list'}">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
                 </div>
             `;
         }).join('');
+        
+        // Add event listeners for action buttons (safer than inline onclick)
+        list.querySelectorAll('.recently-added-edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => ui.openEditModal(btn.dataset.code));
+        });
+        list.querySelectorAll('.recently-added-remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => ui.removeFromRecentlyAdded(btn.dataset.code));
+        });
         
         // Scroll to top of the recently added card to show the new item
         if (this.recentlyAddedMaterials.length > 0) {

@@ -2007,43 +2007,5 @@ class DataManager {
     setLastBackupTimestamp() {
         localStorage.setItem('warehouse_last_backup', new Date().toISOString());
     }
-
-    // Dashboard Layout Management
-    saveDashboardLayout(widgets) {
-        try {
-            const layout = {
-                widgets: widgets,
-                timestamp: new Date().toISOString()
-            };
-            localStorage.setItem('warehouse_dashboard_layout', JSON.stringify(layout));
-            return true;
-        } catch (error) {
-            console.error('Error saving dashboard layout:', error);
-            return false;
-        }
-    }
-
-    getDashboardLayout() {
-        try {
-            const layoutData = localStorage.getItem('warehouse_dashboard_layout');
-            if (!layoutData) return null;
-            
-            const layout = JSON.parse(layoutData);
-            return layout.widgets || null;
-        } catch (error) {
-            console.error('Error loading dashboard layout:', error);
-            return null;
-        }
-    }
-
-    clearDashboardLayout() {
-        try {
-            localStorage.removeItem('warehouse_dashboard_layout');
-            return true;
-        } catch (error) {
-            console.error('Error clearing dashboard layout:', error);
-            return false;
-        }
-    }
 }
 

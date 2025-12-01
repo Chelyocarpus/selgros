@@ -42,8 +42,7 @@ höchstmenge/
 │   ├── main.css              # Core styles, variables, layout, dark mode
 │   ├── components.css        # UI components (cards, forms, buttons, badges)
 │   ├── tables.css            # DataTables styling and customization
-│   ├── modals.css            # Modal dialog styles
-│   └── dashboard.css         # Dashboard and widget styles
+│   └── modals.css            # Modal dialog styles
 │
 ├── js/                        # JavaScript modules
 │   ├── utils.js              # Core utilities (validation, security, performance)
@@ -58,7 +57,7 @@ höchstmenge/
 │   ├── tab-check-stock.js    # Check Stock tab functionality
 │   ├── tab-materials.js      # Manage Materials tab functionality
 │   ├── tab-archive.js        # Report Archive tab functionality
-│   ├── tab-dashboard.js      # Interactive Dashboard tab functionality
+│   ├── tab-settings.js       # Settings and Sync tab functionality
 │   └── app.js                # Application initialization
 │
 ├── docs/                      # Documentation
@@ -85,7 +84,7 @@ höchstmenge/
 - **Material Management**: Configure materials with capacity thresholds and jump values
 - **Promotional Support**: Set temporary higher capacities with activation dates
 - **Report Archive**: Automatically save and review past reports (last 50)
-- **Interactive Dashboards**: Customizable drag-and-drop dashboard with widgets
+- **Cloud Sync**: Synchronize data across devices via GitHub Gist
 - **Bilingual**: Full German and English language support
 
 ### Security Features 🔒
@@ -186,36 +185,6 @@ höchstmenge/
 - **Delete**: Remove individual reports
 - **Clear All**: Clear entire archive (with confirmation)
 
-### Dashboard Tab
-
-The **Dashboard** tab provides a customizable, drag-and-drop interface for monitoring your warehouse at a glance.
-
-**Features:**
-- **Drag & Drop**: Rearrange widgets by dragging their headers
-- **Resize**: Adjust widget sizes using resize handles on corners/edges
-- **Add Widgets**: Click "Add Widget" to choose from available widgets
-- **Auto-Save**: Layout automatically saved as you make changes
-- **Reset Layout**: Restore default widget arrangement
-
-**Available Widgets:**
-1. **Total Alerts** - Current alert count with status indicator
-2. **Total Materials** - Material count overview
-3. **Capacity Overview** - Visual capacity utilization gauge
-4. **Recent Alerts** - Last 5 alerts with details
-5. **Storage Distribution** - Stock distribution by storage type
-6. **Capacity Trends** - Historical capacity trends chart
-7. **Top Materials by Alerts** - Most frequently alerted materials
-8. **Analytics Summary** - Overall statistics snapshot
-
-**Usage:**
-1. Click "Add Widget" to open the widget selection menu
-2. Click on any widget to add it to your dashboard
-3. Drag widgets by their header to rearrange
-4. Resize using corner/edge handles
-5. Remove widgets using the X button
-6. "Reset Layout" to restore defaults
-7. "Save Layout" to manually persist (auto-saves on changes)
-
 ## 🎨 Customization
 
 ### Changing Colors
@@ -245,8 +214,6 @@ Edit the `translations` object in `js/translations.js` to add new languages or m
 - **DataTables 1.13.7**: Enhanced tables with sorting and pagination
 - **DataTables Scroller 2.3.0**: Virtual scrolling for large datasets
 - **Dexie.js 4.0.10**: Modern IndexedDB wrapper
-- **Gridstack 10.3.1**: Drag-and-drop dashboard grid layout
-- **Chart.js** (included via ui-manager.js): Charting for widgets
 
 All dependencies are loaded via CDN - no installation required!
 

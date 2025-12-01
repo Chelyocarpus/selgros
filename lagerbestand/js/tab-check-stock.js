@@ -193,6 +193,9 @@ UIManager.prototype.renderResultsTable = function(materialGroups) {
         return;
     }
 
+    // Helper function to escape HTML
+    const esc = (str) => SecurityUtils.escapeHTML(str);
+
     materialGroups.forEach(group => {
         const { material, materialName, rows, hasMultipleStorageTypes } = group;
 
@@ -201,8 +204,8 @@ UIManager.prototype.renderResultsTable = function(materialGroups) {
             const headerRow = document.createElement('tr');
             headerRow.className = 'material-group-header';
             const materialDisplay = materialName 
-                ? `<strong>${material}</strong> • ${materialName}`
-                : `<strong>${material}</strong>`;
+                ? `<strong>${esc(material)}</strong> • ${esc(materialName)}`
+                : `<strong>${esc(material)}</strong>`;
             
             const groupAlerts = rows.filter(r => r.alerts && r.alerts.length > 0).length;
             const alertIndicator = groupAlerts > 0 
@@ -236,19 +239,19 @@ UIManager.prototype.renderResultsTable = function(materialGroups) {
 
             const alertsHtml = row.alerts && row.alerts.length > 0
                 ? row.alerts.map(alert => 
-                    `<span class="alert-badge ${alert.type}">${alert.message}</span>`
+                    `<span class="alert-badge ${esc(alert.type)}">${esc(alert.message)}</span>`
                 ).join(' ')
                 : '-';
 
             const materialDisplay = hasMultipleStorageTypes
                 ? ''
                 : (materialName 
-                    ? `<strong>${material}</strong><br><small style="color: var(--text-secondary);">${materialName}</small>`
-                    : material);
+                    ? `<strong>${esc(material)}</strong><br><small style="color: var(--text-secondary);">${esc(materialName)}</small>`
+                    : esc(material));
 
             const storageTypeBadge = row.storageType !== 'Total'
-                ? `<span class="storage-type-badge ${row.storageType.toLowerCase()}">${row.storageType}</span>`
-                : row.storageType;
+                ? `<span class="storage-type-badge ${esc(row.storageType.toLowerCase())}">${esc(row.storageType)}</span>`
+                : esc(row.storageType);
 
             // Get material capacity
             const materialConfig = this.dataManager.getMaterial(material);
@@ -283,10 +286,11 @@ UIManager.prototype.renderResultsTable = function(materialGroups) {
                 : `<span class="capacity-display no-capacity">—</span>`;
 
             const showQuickAdd = row.storageType === 'MKT' && !materialConfig;
+            // Use data attributes instead of inline onclick with user data to prevent XSS
             const actionButton = showQuickAdd
-                ? `<button class="quick-add-btn" onclick="ui.quickAddMaterial('${material}', '${materialName}', ${row.qty})"><i class="fa-solid fa-plus"></i> ${this.t('btnQuickAdd')}</button>`
+                ? `<button class="quick-add-btn" data-action="quick-add" data-material="${esc(material)}" data-name="${esc(materialName || '')}" data-qty="${row.qty}"><i class="fa-solid fa-plus"></i> ${this.t('btnQuickAdd')}</button>`
                 : (materialConfig && row.storageType === 'MKT' 
-                    ? `<button class="quick-add-btn" onclick="ui.openEditModal('${material}')"><i class="fa-solid fa-pen-to-square"></i> ${this.t('btnEdit')}</button>`
+                    ? `<button class="quick-add-btn" data-action="edit" data-material="${esc(material)}"><i class="fa-solid fa-pen-to-square"></i> ${this.t('btnEdit')}</button>`
                     : '—');
 
             tr.innerHTML = `
@@ -297,6 +301,23 @@ UIManager.prototype.renderResultsTable = function(materialGroups) {
                 <td>${alertsHtml}</td>
                 <td>${actionButton}</td>
             `;
+
+            // Add event listeners for action buttons
+            const actionBtn = tr.querySelector('.quick-add-btn[data-action]');
+            if (actionBtn) {
+                actionBtn.addEventListener('click', (e) => {
+                    const btn = e.currentTarget;
+                    const action = btn.dataset.action;
+                    const materialCode = btn.dataset.material;
+                    if (action === 'quick-add') {
+                        const name = btn.dataset.name;
+                        const qty = parseInt(btn.dataset.qty, 10);
+                        ui.quickAddMaterial(materialCode, name, qty);
+                    } else if (action === 'edit') {
+                        ui.openEditModal(materialCode);
+                    }
+                });
+            }
 
             tbody.appendChild(tr);
         });

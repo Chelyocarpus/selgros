@@ -293,6 +293,9 @@ UIManager.prototype.viewArchivedReport = function(id) {
 
     const date = new Date(entry.timestamp).toLocaleString();
     
+    // Helper function to escape HTML
+    const esc = (str) => SecurityUtils.escapeHTML(str);
+    
     // Create results display
     const resultsHtml = `
         <div style="margin-bottom: 20px;">
@@ -320,8 +323,8 @@ UIManager.prototype.viewArchivedReport = function(id) {
                     // Add header row for grouped materials
                     if (hasMultipleStorageTypes) {
                         const materialDisplay = materialName 
-                            ? `<strong>${material}</strong> • ${materialName}`
-                            : `<strong>${material}</strong>`;
+                            ? `<strong>${esc(material)}</strong> • ${esc(materialName)}`
+                            : `<strong>${esc(material)}</strong>`;
                         
                         const groupAlerts = rows.filter(r => r.alerts && r.alerts.length > 0).length;
                         const alertIndicator = groupAlerts > 0 
@@ -346,19 +349,19 @@ UIManager.prototype.viewArchivedReport = function(id) {
                     rows.forEach(row => {
                         const alertsHtml = row.alerts && row.alerts.length > 0
                             ? row.alerts.map(alert => 
-                                `<span class="alert-badge ${alert.type}">${alert.message}</span>`
+                                `<span class="alert-badge ${esc(alert.type)}">${esc(alert.message)}</span>`
                             ).join(' ')
                             : '-';
 
                         const materialDisplay = hasMultipleStorageTypes
                             ? ''
                             : (materialName 
-                                ? `<strong>${material}</strong><br><small style="color: var(--text-secondary);">${materialName}</small>`
-                                : material);
+                                ? `<strong>${esc(material)}</strong><br><small style="color: var(--text-secondary);">${esc(materialName)}</small>`
+                                : esc(material));
 
                         const storageTypeBadge = row.storageType !== 'Total'
-                            ? `<span class="storage-type-badge ${row.storageType.toLowerCase()}">${row.storageType}</span>`
-                            : row.storageType;
+                            ? `<span class="storage-type-badge ${esc(row.storageType.toLowerCase())}">${esc(row.storageType)}</span>`
+                            : esc(row.storageType);
 
                         const materialConfig = this.dataManager.getMaterial(material);
                         const capacityDisplay = materialConfig 
@@ -601,8 +604,11 @@ UIManager.prototype.compareSelectedReports = function() {
 UIManager.prototype.showReportComparison = function(reportA, reportB) {
     const modal = document.getElementById('viewReportModal');
     
-    // Create comparison analysis
+    // Create comparison analysis (returns pre-escaped strings)
     const comparison = this.analyzeReportDifferences(reportA, reportB);
+    
+    // Helper function to escape HTML
+    const esc = (str) => SecurityUtils.escapeHTML(str);
     
     const comparisonHtml = `
         <div class="comparison-container">
@@ -678,10 +684,13 @@ UIManager.prototype.showReportComparison = function(reportA, reportB) {
     modal.classList.add('active');
 };
 
-// Analyze differences between two reports
+// Analyze differences between two reports (returns escaped HTML strings)
 UIManager.prototype.analyzeReportDifferences = function(reportA, reportB) {
     const materialsA = {};
     const materialsB = {};
+    
+    // Helper function to escape HTML
+    const esc = (str) => SecurityUtils.escapeHTML(str);
     
     // Index materials from both reports
     reportA.results.materialGroups.forEach(group => {
@@ -711,17 +720,17 @@ UIManager.prototype.analyzeReportDifferences = function(reportA, reportB) {
     const newMaterials = [];
     const removedMaterials = [];
     
-    // Find new materials
+    // Find new materials (escape for HTML display)
     Object.keys(materialsB).forEach(material => {
         if (!materialsA[material]) {
-            newMaterials.push(material);
+            newMaterials.push(esc(material));
         }
     });
     
-    // Find removed materials
+    // Find removed materials (escape for HTML display)
     Object.keys(materialsA).forEach(material => {
         if (!materialsB[material]) {
-            removedMaterials.push(material);
+            removedMaterials.push(esc(material));
         }
     });
     
@@ -730,12 +739,13 @@ UIManager.prototype.analyzeReportDifferences = function(reportA, reportB) {
         if (materialsB[material]) {
             const dataA = materialsA[material];
             const dataB = materialsB[material];
+            const escapedMaterial = esc(material);
             
             // Stock changes
             if (dataA.qty !== dataB.qty) {
                 const change = dataB.qty - dataA.qty;
                 const changeStr = change > 0 ? `+${change}` : `${change}`;
-                stockChanges.push(`${material}: ${dataA.qty} → ${dataB.qty} (${changeStr})`);
+                stockChanges.push(`${escapedMaterial}: ${dataA.qty} → ${dataB.qty} (${changeStr})`);
             }
             
             // Alert changes
@@ -744,13 +754,14 @@ UIManager.prototype.analyzeReportDifferences = function(reportA, reportB) {
             
             if (alertsA !== alertsB) {
                 if (alertsA === 0 && alertsB > 0) {
-                    alertChanges.push(`${material}: New alert (${dataB.alerts[0].message})`);
+                    const alertMsg = dataB.alerts[0]?.message ? esc(dataB.alerts[0].message) : 'Unknown';
+                    alertChanges.push(`${escapedMaterial}: New alert (${alertMsg})`);
                 } else if (alertsA > 0 && alertsB === 0) {
-                    alertChanges.push(`${material}: Alert resolved`);
+                    alertChanges.push(`${escapedMaterial}: Alert resolved`);
                 } else if (alertsB > alertsA) {
-                    alertChanges.push(`${material}: More alerts (${alertsA} → ${alertsB})`);
+                    alertChanges.push(`${escapedMaterial}: More alerts (${alertsA} → ${alertsB})`);
                 } else {
-                    alertChanges.push(`${material}: Fewer alerts (${alertsA} → ${alertsB})`);
+                    alertChanges.push(`${escapedMaterial}: Fewer alerts (${alertsA} → ${alertsB})`);
                 }
             }
         }
