@@ -43,17 +43,29 @@ body.dark-mode .modal {
 
 .modal-close {
     background: none;
-    border: none;
+    border: 2px solid transparent;
+    border-radius: 8px;
     font-size: 1.5em;
     cursor: pointer;
     color: var(--text-secondary);
-    padding: 0;
-    width: 30px;
-    height: 30px;
+    padding: 4px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
 .modal-close:hover {
-    color: var(--text-color);
+    color: var(--danger-color);
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+    transform: scale(1.1);
+}
+
+.modal-close:active {
+    transform: scale(0.95);
 }
 
 /* Keyboard Help Modal */
@@ -760,7 +772,9 @@ body.dark-mode .modal-close {
 }
 
 body.dark-mode .modal-close:hover {
-    background: rgba(255, 255, 255, 0.1);
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.25);
 }
 
 /* High contrast modal improvements for mobile */

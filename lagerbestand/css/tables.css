@@ -101,76 +101,9 @@ body.dark-mode .material-group-header {
         rgba(255, 255, 255, 0) 100%);
 }
 
+/* Base material-group-row - simplified, actual styling in #resultsTable section */
 .material-group-row {
-    background: linear-gradient(to right, #fafbff 0%, #ffffff 100%);
     position: relative;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    border-left: 4px solid transparent;
-}
-
-.material-group-row td {
-    border-left: 4px solid #6366f1 !important;
-    border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
-    padding: 14px 12px !important;
-    transition: all 0.2s ease;
-}
-
-.material-group-row td:first-child {
-    padding-left: 24px !important;
-    position: relative;
-}
-
-.material-group-row td:first-child::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 6px;
-    height: 6px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-radius: 50%;
-    opacity: 0.6;
-    transition: all 0.2s ease;
-}
-
-.material-group-row:hover {
-    background: linear-gradient(to right, #f5f3ff 0%, #faf5ff 100%) !important;
-    box-shadow: 0 2px 8px -2px rgba(99, 102, 241, 0.15);
-    transform: translateX(2px);
-}
-
-.material-group-row:hover td:first-child::before {
-    opacity: 1;
-    transform: translateY(-50%) scale(1.2);
-}
-
-/* Dark mode group row */
-body.dark-mode .material-group-row {
-    background: linear-gradient(to right, rgba(79, 70, 229, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
-}
-
-body.dark-mode .material-group-row:hover {
-    background: linear-gradient(to right, rgba(79, 70, 229, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%) !important;
-    box-shadow: 0 2px 8px -2px rgba(99, 102, 241, 0.25);
-}
-
-body.dark-mode .material-group-row td {
-    border-left-color: #6366f1 !important;
-    border-bottom-color: rgba(99, 102, 241, 0.15) !important;
-}
-
-body.dark-mode .material-group-row td:first-child::before {
-    background: linear-gradient(135deg, #818cf8, #a78bfa);
-}
-
-.material-group-row:last-of-type {
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 12px -4px rgba(99, 102, 241, 0.15);
-}
-
-.material-group-row:last-of-type td {
-    border-bottom: 2px solid rgba(99, 102, 241, 0.2) !important;
 }
 
 .material-group-separator {
@@ -270,26 +203,26 @@ table.dataTable tbody tr:hover {
 .dataTables_wrapper .dataTables_paginate .paginate_button::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: var(--radius-full);
-    background: var(--pagination-ripple-color);
-    transform: translate(-50%, -50%);
-    transition: width var(--transition-medium), height var(--transition-medium);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+    opacity: 0;
+    transition: opacity var(--transition-base);
     pointer-events: none;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
     background: var(--gradient-neutral-medium);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-xl);
+    filter: brightness(1.03);
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover::before {
-    width: var(--pagination-ripple-size);
-    height: var(--pagination-ripple-size);
+    opacity: 1;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button.current {
@@ -1022,3 +955,186 @@ body.dark-mode table.sticky-first-col th:first-child {
     background-color: var(--card-bg);
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.3);
 }
+
+/* ===========================
+   RESULTS TABLE ENHANCED STYLING
+   =========================== */
+
+/* Results Table - Clean modern structure */
+#resultsTable {
+    border-collapse: collapse;
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+#resultsTable thead th {
+    background: var(--bg-color);
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+body.dark-mode #resultsTable thead th {
+    background: rgba(30, 41, 59, 0.95);
+}
+
+#resultsTable tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Column alignment */
+#resultsTable td:nth-child(2),
+#resultsTable thead th:nth-child(2) {
+    text-align: center;
+}
+
+#resultsTable td:nth-child(3),
+#resultsTable thead th:nth-child(3) {
+    text-align: right;
+    font-weight: 600;
+}
+
+#resultsTable td:nth-child(4),
+#resultsTable thead th:nth-child(4) {
+    text-align: center;
+}
+
+#resultsTable td:nth-child(6),
+#resultsTable thead th:nth-child(6) {
+    text-align: right;
+}
+
+/* Simple row hover */
+#resultsTable tbody tr:not(.material-group-header):not(.material-group-separator):hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+body.dark-mode #resultsTable tbody tr:not(.material-group-header):not(.material-group-separator):hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ===========================
+   MATERIAL GROUP STYLING - Card Style
+   =========================== */
+
+/* Group Header - Bold standalone bar */
+#resultsTable .material-group-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+}
+
+#resultsTable .material-group-header td {
+    padding: 10px 16px !important;
+    border: none !important;
+    color: white;
+    font-weight: 600;
+}
+
+body.dark-mode #resultsTable .material-group-header {
+    background: linear-gradient(135deg, #4338ca 0%, #5b21b6 100%);
+}
+
+/* Group Rows - Indented with subtle background */
+#resultsTable .material-group-row {
+    background-color: rgba(99, 102, 241, 0.03);
+}
+
+#resultsTable .material-group-row td {
+    border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
+}
+
+#resultsTable .material-group-row td:first-child {
+    padding-left: 32px !important;
+}
+
+#resultsTable .material-group-row:hover {
+    background-color: rgba(99, 102, 241, 0.06);
+}
+
+#resultsTable .material-group-row:last-of-type td,
+#resultsTable .material-group-row + .material-group-separator + tr:not(.material-group-row) td {
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+body.dark-mode #resultsTable .material-group-row {
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+body.dark-mode #resultsTable .material-group-row td {
+    border-bottom-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+body.dark-mode #resultsTable .material-group-row:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
+/* Separator - Larger gap between groups */
+#resultsTable .material-group-separator {
+    height: 20px;
+    background: var(--bg-color);
+}
+
+#resultsTable .material-group-separator td {
+    padding: 0 !important;
+    border: none !important;
+    background: var(--bg-color) !important;
+}
+
+body.dark-mode #resultsTable .material-group-separator,
+body.dark-mode #resultsTable .material-group-separator td {
+    background: var(--bg-color) !important;
+}
+
+/* ===========================
+   SINGLE ROW STYLING (non-grouped)
+   =========================== */
+#resultsTable tbody tr:not(.material-group-header):not(.material-group-row):not(.material-group-separator):not(.alert-row) {
+    background-color: var(--card-bg);
+}
+
+/* ===========================
+   ALERT ROW STYLING
+   =========================== */
+#resultsTable .alert-row {
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+#resultsTable .alert-row:hover {
+    background-color: rgba(239, 68, 68, 0.08);
+}
+
+#resultsTable .alert-row td {
+    border-bottom-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+body.dark-mode #resultsTable .alert-row {
+    background-color: rgba(239, 68, 68, 0.08);
+}
+
+body.dark-mode #resultsTable .alert-row:hover {
+    background-color: rgba(239, 68, 68, 0.12);
+}
+
+/* Alert row within a group */
+#resultsTable .alert-row.material-group-row {
+    background-color: rgba(239, 68, 68, 0.06);
+}
+
+#resultsTable .alert-row.material-group-row:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+body.dark-mode #resultsTable .alert-row.material-group-row {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+

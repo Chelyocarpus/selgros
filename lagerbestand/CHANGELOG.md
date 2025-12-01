@@ -7,6 +7,199 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.7.1] - 2025-12-01
+
+### Changed
+
+#### Improved Button Hover Effects
+- **Base buttons**: Replaced jarring 300px ripple animation with smooth gradient overlay and brightness filter
+- **Primary/Success/Danger/Secondary buttons**: Enhanced shadows on hover for better depth perception, added focus-visible outlines for accessibility
+- **Header buttons**: Added scale transform and box-shadow for more noticeable hover feedback
+- **Widget buttons**: Added border, subtle transform and shadow for better visual response
+- **Modal close buttons**: Redesigned with danger color feedback on hover and scale animation
+- **Tab buttons**: Added gradient background and subtle lift effect on hover
+- **Quick-add buttons**: Converted ripple to gradient overlay for smoother animation
+- **DataTable pagination**: Replaced ripple with opacity-based gradient overlay
+
+### Removed
+
+#### Dashboard Feature
+- Removed the Dashboard tab and all associated functionality
+- Removed Gridstack library dependency
+- Removed dashboard CSS (`css/dashboard.css`)
+- Removed dashboard JavaScript (`js/tab-dashboard.js`)
+- Removed dashboard documentation (`docs/DASHBOARD.md`)
+- Removed dashboard layout persistence methods from data-manager
+- Removed dashboard-related translations
+
+---
+
+## [2.7.0] - 2025-12-01
+
+### Added
+
+#### New Sync Tab
+- **Dedicated Sync Tab**: Moved cloud synchronization to its own tab for better organization
+  - Cloud sync settings and status
+  - Cross-tab synchronization status
+  - Sync activity log
+  - Local backup options
+  - IndexedDB status
+  - Data statistics overview
+
+#### Enhanced Cross-Tab/Cross-Device Synchronization
+- **BroadcastChannel Integration**: Real-time sync between browser tabs
+  - Automatic UI refresh when data changes in another tab
+  - Unique tab ID generation for conflict resolution
+  - Toast notifications for sync events from other tabs
+
+- **Cross-Device Sync via Cloud**: 
+  - Changes sync to cloud and propagate to other devices
+  - Conflict resolution based on timestamp (newest wins)
+  - Sync log tracks all sync activity across tabs/devices
+
+- **Sync Activity Log**:
+  - Persistent log of all sync operations (up to 100 entries)
+  - Shows upload/download events, errors, and cross-tab sync events
+  - Clear log functionality
+  - Timestamp and status for each entry
+
+- **Real-Time Status Display**:
+  - Browser support indicator for BroadcastChannel
+  - Tab ID display for debugging
+  - Sync method indicator
+  - Data statistics (materials, reports, groups, notes counts)
+
+### Changed
+- Moved cloud sync from Materials tab to dedicated Sync tab
+- Cloud sync manager now broadcasts events to other tabs
+- Settings changes propagate across tabs instantly
+- Added callbacks for remote sync events and settings changes
+
+### Technical Details
+- New file: `js/tab-settings.js` - Settings/Sync tab content
+- Updated: `js/cloud-sync-manager.js` - Cross-tab sync with BroadcastChannel
+- Updated: `js/ui-manager.js` - Settings tab rendering methods
+- Updated: `js/app.js` - Added settings tab initialization
+- Updated: `js/translations.js` - New translations for sync tab (DE/EN)
+- Updated: `index.html` - Added Sync tab navigation and content area
+- Updated: `css/components.css` - Sync log and status styles
+
+---
+
+## [2.6.0] - 2025-12-01
+
+### Added
+
+#### Cloud Synchronization Feature
+- **Multi-Provider Cloud Sync**: New cloud synchronization system for cross-device data access
+  - **GitHub Gist Integration**: Sync data to GitHub Gists with personal access token authentication
+    - Automatic gist creation on first sync
+    - Support for both public and private gists
+    - Configurable backup filename
+  - **Local/Custom Server**: Support for self-hosted sync endpoints
+    - Configurable upload and download URLs
+    - Optional authentication headers (API keys, Bearer tokens, etc.)
+    - Flexible server configuration
+
+- **Graceful Error Handling**: Robust sync operations with user-friendly feedback
+  - Exponential backoff retry logic (up to 3 attempts)
+  - Clear error messages for authentication failures
+  - Connection testing before sync operations
+  - Progress indicators during sync
+
+- **Auto-Sync Capability**: Optional automatic synchronization
+  - Configurable interval (5 minutes to 24 hours)
+  - Background sync without interrupting workflow
+  - Visual status indicators for sync state
+
+- **Security Considerations**: 
+  - Warning message about local token storage
+  - Tokens stored in localStorage (user responsibility for device trust)
+  - Support for secure authentication headers
+
+- **Translations**: Full German and English localization for all cloud sync features
+  - 50+ new translation keys for cloud sync UI
+  - Consistent terminology across languages
+
+### Changed
+- Updated Content Security Policy to allow GitHub API connections
+- Added `--card-bg-secondary` CSS variable for nested card styling
+- Enhanced badge system with new generic badge classes
+
+### Technical Details
+- New file: `js/cloud-sync-manager.js` - CloudSyncManager class
+- Updated: `js/ui-manager.js` - Cloud sync UI methods
+- Updated: `js/translations.js` - German and English translations
+- Updated: `js/app.js` - Cloud sync initialization
+- Updated: `index.html` - Script loading and CSP
+- Updated: `css/main.css` - New CSS variables
+- Updated: `css/components.css` - Cloud sync and badge styles
+
+---
+
+## [2.5.3] - 2025-12-01
+
+### Changed
+
+#### Results Table Styling Improvements
+- **Cleaner Table Layout**: Removed heavy column borders and simplified visual design
+  - Clean column alignment without vertical separators
+  - Storage type and capacity columns centered
+  - Quantity and actions columns right-aligned
+  - Subtle row borders only
+
+- **Improved Group/Single Entry Distinction**: 
+  - Group headers: Bold purple gradient bar that clearly marks the start of a group
+  - Group rows: Subtle indented styling with light purple background tint
+  - Larger separator (20px gap) between groups for clear visual separation
+  - Single entries: Clean white/card background, distinct from grouped items
+
+- **Storage Type Badges**: Modernized pill-shaped design
+  - Rounded corners with gradient backgrounds
+  - Uppercase text with subtle letter-spacing
+  - Distinct colors: MKT (blue), RES (amber), GNG (green), LAG (indigo)
+  - Enhanced dark mode variants
+
+- **Capacity Display**: Added background styling with distinct states
+  - Green tint for configured capacity
+  - Amber for promotional pricing
+  - Gray for unconfigured
+
+- **Alert Rows**: Subtle red background tint (no left border bar)
+
+- Files modified: `css/tables.css`, `css/components.css`
+
+---
+
+## [2.5.2] - 2025-12-01
+
+### Added
+
+#### Storage Type Badge Styling
+- **916 Zustellung Styling**: Added distinctive visual styling for the 916 (Zustellung/Delivery) storage type
+  - Light mode: Purple background (#f3e8ff) with dark purple text (#6b21a8) and subtle border
+  - Dark mode: Semi-transparent purple background with light purple text
+  - CSS escape sequence support for numeric class names (`.storage-type-badge.\39 16`)
+  - Alternative `.zustellung` class for easy fallback usage
+- **LAG Warehouse Styling**: Added styling for the LAG (Warehouse) storage type
+  - Light mode: Indigo background (#e0e7ff) with dark indigo text (#3730a3)
+  - Dark mode: Semi-transparent indigo background with light indigo text
+- Both light and dark mode variants ensure consistent UI across themes
+- Files modified: `css/components.css`
+
+### Fixed
+
+#### Mobile Tab Navigation
+- **Scroll Indicator**: Added visual fade indicators on mobile to show when more tabs are available
+  - Right fade appears when there are more tabs to scroll right
+  - Left fade appears when scrolled away from the start
+  - Fades automatically hide when at the edge of scroll
+  - Works in both light and dark modes
+- Files modified: `css/main.css`, `js/app.js`
+
+---
+
 ## [Unreleased]
 
 ### Removed

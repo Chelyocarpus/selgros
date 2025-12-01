@@ -133,20 +133,23 @@ button {
 button::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.25);
-    transform: translate(-50%, -50%);
-    transition: width 0.4s ease, height 0.4s ease;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
     pointer-events: none;
 }
 
 button:hover:not(:disabled)::before {
-    width: 300px;
-    height: 300px;
+    opacity: 1;
+}
+
+button:hover:not(:disabled) {
+    filter: brightness(1.08);
 }
 
 button:active:not(:disabled) {
@@ -178,8 +181,14 @@ button:hover:not(:disabled) .fa-brands {
 .btn-primary:hover:not(:disabled) {
     background: linear-gradient(135deg, #4338ca 0%, #4f46e5 50%, #6366f1 100%);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4),
-                0 3px 8px rgba(79, 70, 229, 0.25);
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45),
+                0 4px 10px rgba(79, 70, 229, 0.3);
+    filter: brightness(1.05);
+}
+
+.btn-primary:focus-visible {
+    outline: 3px solid rgba(79, 70, 229, 0.5);
+    outline-offset: 2px;
 }
 
 .btn-success {
@@ -191,7 +200,13 @@ button:hover:not(:disabled) .fa-brands {
 .btn-success:hover:not(:disabled) {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.4);
+    filter: brightness(1.05);
+}
+
+.btn-success:focus-visible {
+    outline: 3px solid rgba(16, 185, 129, 0.5);
+    outline-offset: 2px;
 }
 
 .btn-danger {
@@ -203,7 +218,13 @@ button:hover:not(:disabled) .fa-brands {
 .btn-danger:hover:not(:disabled) {
     background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+    filter: brightness(1.05);
+}
+
+.btn-danger:focus-visible {
+    outline: 3px solid rgba(239, 68, 68, 0.5);
+    outline-offset: 2px;
 }
 
 .btn-secondary {
@@ -215,7 +236,13 @@ button:hover:not(:disabled) .fa-brands {
 .btn-secondary:hover:not(:disabled) {
     background: linear-gradient(135deg, #475569 0%, #334155 100%);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(71, 85, 105, 0.35);
+    box-shadow: 0 8px 20px rgba(71, 85, 105, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn-secondary:focus-visible {
+    outline: 3px solid rgba(100, 116, 139, 0.5);
+    outline-offset: 2px;
 }
 
 .btn-small {
@@ -312,44 +339,337 @@ body.dark-mode .alert-badge.success {
     color: #86efac;
 }
 
-.storage-type-badge {
-    display: inline-block;
+/* ===========================
+   GENERIC BADGE STYLES
+   =========================== */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 4px 10px;
-    background-color: var(--bg-color);
-    border-radius: 6px;
+    border-radius: 12px;
+    font-size: 0.8em;
     font-weight: 600;
-    font-size: 0.9em;
 }
 
-.storage-type-badge.mkt {
-    background-color: #dbeafe;
-    color: #1e40af;
+.badge-success {
+    background-color: #dcfce7;
+    color: #16a34a;
 }
 
-.storage-type-badge.res {
+.badge-warning {
     background-color: #fef3c7;
-    color: #92400e;
+    color: #d97706;
 }
 
-.storage-type-badge.gng {
-    background-color: #d1fae5;
-    color: #065f46;
+.badge-danger {
+    background-color: #fee2e2;
+    color: #dc2626;
 }
 
-/* Dark mode storage type badges */
-body.dark-mode .storage-type-badge.mkt {
-    background-color: rgba(59, 130, 246, 0.2);
-    color: #93c5fd;
+.badge-secondary {
+    background-color: #f1f5f9;
+    color: #64748b;
 }
 
-body.dark-mode .storage-type-badge.res {
+.badge-info {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
+
+/* Dark mode generic badges */
+body.dark-mode .badge-success {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #86efac;
+}
+
+body.dark-mode .badge-warning {
     background-color: rgba(251, 191, 36, 0.2);
     color: #fcd34d;
 }
 
+body.dark-mode .badge-danger {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+body.dark-mode .badge-secondary {
+    background-color: rgba(100, 116, 139, 0.2);
+    color: #94a3b8;
+}
+
+body.dark-mode .badge-info {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+/* ===========================
+   CLOUD SYNC STYLES
+   =========================== */
+.cloud-sync-status {
+    padding: 15px;
+    background: var(--card-bg-secondary, #f8fafc);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+body.dark-mode .cloud-sync-status {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.sync-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+}
+
+.sync-status-item {
+    padding: 10px;
+    background: var(--card-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+/* Checkbox label styling for cloud sync settings */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+/* Provider settings card styling */
+.provider-settings {
+    transition: all 0.3s ease;
+}
+
+.provider-settings h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Alert styles for cloud sync */
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.alert-warning {
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    color: #92400e;
+}
+
+body.dark-mode .alert-warning {
+    background-color: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.4);
+    color: #fcd34d;
+}
+
+.alert i {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Info background for auto-sync indicator */
+:root {
+    --info-bg: #dbeafe;
+}
+
+body.dark-mode {
+    --info-bg: rgba(59, 130, 246, 0.15);
+}
+
+/* ===========================
+   SYNC LOG STYLES
+   =========================== */
+.sync-log-container {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg-secondary);
+    overflow: hidden;
+}
+
+.sync-log-entry {
+    transition: background-color 0.2s ease;
+}
+
+.sync-log-entry:hover {
+    background-color: var(--card-bg);
+}
+
+.sync-log-entry:last-child {
+    border-bottom: none !important;
+}
+
+body.dark-mode .sync-log-container {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+/* Sync status item styling enhancements */
+.sync-status-item {
+    padding: 12px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: box-shadow 0.2s ease;
+}
+
+.sync-status-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+body.dark-mode .sync-status-item {
+    background: rgba(30, 41, 59, 0.5);
+}
+
+/* ===========================
+   STORAGE TYPE BADGES - ENHANCED
+   =========================== */
+.storage-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    background-color: var(--bg-color);
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.8em;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    min-width: 55px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.storage-type-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* MKT - Market/Sales floor */
+.storage-type-badge.mkt {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+    border: 1px solid rgba(30, 64, 175, 0.2);
+    box-shadow: 0 2px 4px rgba(30, 64, 175, 0.15);
+}
+
+.storage-type-badge.mkt:hover {
+    box-shadow: 0 4px 8px rgba(30, 64, 175, 0.2);
+}
+
+/* RES - Reserve/Warehouse */
+.storage-type-badge.res {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border: 1px solid rgba(146, 64, 14, 0.2);
+    box-shadow: 0 2px 4px rgba(146, 64, 14, 0.15);
+}
+
+.storage-type-badge.res:hover {
+    box-shadow: 0 4px 8px rgba(146, 64, 14, 0.2);
+}
+
+/* GNG - Gangway/Aisle */
+.storage-type-badge.gng {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+    border: 1px solid rgba(6, 95, 70, 0.2);
+    box-shadow: 0 2px 4px rgba(6, 95, 70, 0.15);
+}
+
+.storage-type-badge.gng:hover {
+    box-shadow: 0 4px 8px rgba(6, 95, 70, 0.2);
+}
+
+/* LAG - Warehouse storage type */
+.storage-type-badge.lag {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    color: #3730a3;
+    border: 1px solid rgba(55, 48, 163, 0.2);
+    box-shadow: 0 2px 4px rgba(55, 48, 163, 0.15);
+}
+
+.storage-type-badge.lag:hover {
+    box-shadow: 0 4px 8px rgba(55, 48, 163, 0.2);
+}
+
+/* 916 - Zustellung (Delivery) storage type */
+.storage-type-badge.\39 16 {
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    color: #6b21a8;
+    border: 1px solid rgba(107, 33, 168, 0.25);
+    box-shadow: 0 2px 4px rgba(107, 33, 168, 0.15);
+}
+
+.storage-type-badge.\39 16:hover {
+    box-shadow: 0 4px 8px rgba(107, 33, 168, 0.2);
+}
+
+/* Alternative class for 916 without escape sequence */
+.storage-type-badge.zustellung {
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    color: #6b21a8;
+    border: 1px solid rgba(107, 33, 168, 0.25);
+    box-shadow: 0 2px 4px rgba(107, 33, 168, 0.15);
+}
+
+.storage-type-badge.zustellung:hover {
+    box-shadow: 0 4px 8px rgba(107, 33, 168, 0.2);
+}
+
+/* Dark mode storage type badges - Enhanced */
+body.dark-mode .storage-type-badge {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .storage-type-badge.mkt {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.15) 100%);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+body.dark-mode .storage-type-badge.res {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.25) 0%, rgba(251, 191, 36, 0.15) 100%);
+    color: #fcd34d;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
 body.dark-mode .storage-type-badge.gng {
-    background-color: rgba(34, 197, 94, 0.2);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%);
     color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+/* Dark mode LAG - Warehouse storage type */
+body.dark-mode .storage-type-badge.lag {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0.15) 100%);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+/* Dark mode 916 - Zustellung (Delivery) storage type */
+body.dark-mode .storage-type-badge.\39 16 {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.15) 100%);
+    color: #d8b4fe;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+body.dark-mode .storage-type-badge.zustellung {
+    background-color: rgba(168, 85, 247, 0.2);
+    color: #d8b4fe;
+    border: 1px solid rgba(168, 85, 247, 0.4);
 }
 
 /* Promotional Styles */
@@ -413,25 +733,52 @@ body.dark-mode .promo-section {
     accent-color: var(--warning-color);
 }
 
-/* Capacity Display */
+/* Capacity Display - Enhanced */
 .capacity-display {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    min-width: 50px;
 }
 
 .capacity-display.has-capacity {
-    color: var(--success-color);
+    color: #059669;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .capacity-display.no-capacity {
     color: var(--text-secondary);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    font-weight: 500;
 }
 
 .capacity-display.promo-active {
-    color: var(--warning-color);
+    color: #d97706;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+    border: 1px solid rgba(251, 191, 36, 0.3);
     font-weight: 700;
 }
 
-/* Quick Add Button */
+/* Dark mode capacity display */
+body.dark-mode .capacity-display.has-capacity {
+    color: #34d399;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+body.dark-mode .capacity-display.promo-active {
+    color: #fbbf24;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
+    border-color: rgba(251, 191, 36, 0.4);
+}
+
+/* Quick Add Button - Enhanced */
 .quick-add-btn {
     padding: 8px 16px;
     font-size: 0.875em;
@@ -454,26 +801,26 @@ body.dark-mode .promo-section {
 .quick-add-btn::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.4s ease, height 0.4s ease;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
     pointer-events: none;
 }
 
 .quick-add-btn:hover {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+    filter: brightness(1.05);
 }
 
 .quick-add-btn:hover::before {
-    width: 200px;
-    height: 200px;
+    opacity: 1;
 }
 
 .quick-add-btn:active {

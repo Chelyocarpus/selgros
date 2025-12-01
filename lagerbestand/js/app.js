@@ -13,7 +13,7 @@ const tabsInitialized = {
     check: false,
     materials: false,
     archive: false,
-    dashboard: false
+    settings: false
 };
 
 // Global functions for onclick handlers
@@ -49,9 +49,10 @@ function initializeTab(tabName) {
         case 'archive':
             renderArchiveTab();
             break;
-        case 'dashboard':
-            renderDashboardTab();
-            ui.initializeDashboard();
+        case 'settings':
+            renderSettingsTab();
+            ui.initCloudSync();
+            ui.renderSettingsTabStatus();
             break;
     }
     
@@ -157,6 +158,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup keyboard shortcuts
     setupKeyboardShortcuts();
     
+    // Setup tabs scroll indicator
+    setupTabsScrollIndicator();
+    
     console.log('[Performance] Initial load complete - other tabs will load on demand');
 });
 
@@ -252,4 +256,27 @@ function setupKeyboardShortcuts() {
             }
         }
     });
+}
+
+// Setup tabs scroll indicator for mobile
+function setupTabsScrollIndicator() {
+    const tabs = document.getElementById('navigation');
+    if (!tabs) return;
+    
+    const updateScrollIndicator = () => {
+        const isAtStart = tabs.scrollLeft <= 5;
+        const isAtEnd = tabs.scrollLeft + tabs.clientWidth >= tabs.scrollWidth - 5;
+        
+        tabs.classList.toggle('scrolled-start', !isAtStart);
+        tabs.classList.toggle('scrolled-end', isAtEnd);
+    };
+    
+    // Initial check
+    updateScrollIndicator();
+    
+    // Listen for scroll events
+    tabs.addEventListener('scroll', updateScrollIndicator, { passive: true });
+    
+    // Re-check on resize
+    window.addEventListener('resize', updateScrollIndicator, { passive: true });
 }

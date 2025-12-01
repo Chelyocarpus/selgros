@@ -13,42 +13,7 @@ const translations = {
         tabManageMaterials: 'Materialien verwalten',
         tabArchive: 'Berichtsarchiv',
         tabSettings: 'Einstellungen',
-        tabDashboard: 'Dashboard',
-        
-        // Dashboard
-        dashboardTitle: 'Dashboard',
-        dashboardSubtitle: 'Passen Sie Ihr Dashboard mit Drag-and-Drop-Widgets an',
-        addWidgetBtn: 'Widget hinzufügen',
-        resetLayoutBtn: 'Layout zurücksetzen',
-        saveLayoutBtn: 'Layout speichern',
-        selectWidgetTitle: 'Widget zum Hinzufügen auswählen',
-        emptyDashboardTitle: 'Ihr Dashboard ist leer',
-        emptyDashboardMessage: 'Fügen Sie Widgets hinzu, um mit Ihrem benutzerdefinierten Dashboard zu beginnen',
-        addFirstWidgetBtn: 'Erstes Widget hinzufügen',
-        confirmResetDashboard: 'Möchten Sie das Dashboard-Layout wirklich zurücksetzen? Dadurch werden alle Widgets entfernt und das Standard-Layout wiederhergestellt.',
-        
-        // Widget Titles
-        'alerts-countTitle': 'Warnungen gesamt',
-        'materials-countTitle': 'Materialien gesamt',
-        'capacity-overviewTitle': 'Kapazitätsübersicht',
-        'recent-alertsTitle': 'Aktuelle Warnungen',
-        'storage-distributionTitle': 'Lagerverteilung',
-        'capacity-trendsTitle': 'Kapazitätstrends',
-        'top-materialsTitle': 'Top-Materialien nach Warnungen',
-        'analytics-summaryTitle': 'Analyse-Zusammenfassung',
-        
-        // Widget Labels
-        totalAlerts: 'Warnungen gesamt',
-        totalMaterials: 'Materialien gesamt',
-        utilized: 'Genutzt',
-        currentStock: 'Aktueller Bestand',
-        maxCapacity: 'Maximalkapazität',
-        alerts: 'Warnungen',
-        totalReports: 'Berichte gesamt',
-        avgAlerts: 'Durchschn. Warnungen',
-        units: 'Einheiten',
-        utilizationPercent: 'Auslastung %',
-        overCapacity: 'Über Kapazität',
+        tabSync: 'Sync',
         
         // Enhanced Archive Features
         archiveFilterTitle: 'Filter-Optionen',
@@ -220,6 +185,117 @@ const translations = {
         restoreSuccess: 'Wiederherstellung erfolgreich',
         restoreError: 'Fehler bei Wiederherstellung',
         errorLoadingSyncStatus: 'Fehler beim Laden des Sync-Status',
+
+        // Cloud Sync
+        cloudSyncTitle: 'Cloud-Synchronisation',
+        cloudSyncDescription: 'Synchronisieren Sie Ihre Daten mit Cloud-Diensten für geräteübergreifenden Zugriff',
+        cloudSyncEnabled: 'Cloud-Sync aktiviert',
+        cloudSyncDisabled: 'Cloud-Sync deaktiviert',
+        cloudSyncProvider: 'Anbieter',
+        cloudSyncProviderNone: 'Nicht konfiguriert',
+        cloudSyncProviderGitHub: 'GitHub Gist',
+        cloudSyncProviderLocal: 'Lokaler Server',
+        cloudSyncLastSync: 'Letzte Synchronisation',
+        cloudSyncNever: 'Noch nie',
+        cloudSyncStatus: 'Status',
+        cloudSyncStatusSuccess: 'Erfolgreich',
+        cloudSyncStatusError: 'Fehler',
+        cloudSyncStatusPending: 'Ausstehend',
+        cloudSyncInProgress: 'Synchronisation läuft...',
+        btnCloudSyncSettings: 'Einstellungen',
+        btnCloudSyncUpload: 'Jetzt hochladen',
+        btnCloudSyncDownload: 'Jetzt herunterladen',
+        btnCloudSyncTest: 'Verbindung testen',
+        
+        // Cloud Sync Settings Modal
+        cloudSyncSettingsTitle: 'Cloud-Sync Einstellungen',
+        cloudSyncEnableLabel: 'Cloud-Synchronisation aktivieren',
+        cloudSyncProviderLabel: 'Sync-Anbieter wählen',
+        cloudSyncAutoSyncLabel: 'Automatische Synchronisation',
+        cloudSyncAutoSyncInterval: 'Sync-Intervall (Minuten)',
+        
+        // GitHub Gist Settings
+        githubGistTitle: 'GitHub Gist Einstellungen',
+        githubTokenLabel: 'Personal Access Token',
+        githubTokenPlaceholder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
+        githubTokenHelp: 'Erstellen Sie einen Token unter GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) mit "gist" Berechtigung',
+        githubGistIdLabel: 'Gist ID (optional)',
+        githubGistIdPlaceholder: 'Leer lassen für neue Gist',
+        githubGistIdHelp: 'Falls leer, wird bei der ersten Synchronisation automatisch eine neue Gist erstellt',
+        githubFilenameLabel: 'Dateiname',
+        githubFilenameHelp: 'Name der Backup-Datei in der Gist',
+        githubPublicLabel: 'Öffentliche Gist',
+        githubPublicHelp: 'Öffentliche Gists sind für jeden sichtbar',
+        
+        // Local Server Settings
+        localServerTitle: 'Lokaler Server Einstellungen',
+        localServerUploadUrl: 'Upload-URL',
+        localServerUploadUrlPlaceholder: 'https://your-server.com/api/backup',
+        localServerDownloadUrl: 'Download-URL',
+        localServerDownloadUrlPlaceholder: 'https://your-server.com/api/backup',
+        localServerAuthHeader: 'Auth-Header Name (optional)',
+        localServerAuthHeaderPlaceholder: 'z.B. Authorization, X-API-Key',
+        localServerAuthValue: 'Auth-Header Wert (optional)',
+        localServerAuthValuePlaceholder: 'z.B. Bearer token123, api-key-value',
+        localServerHelp: 'Konfigurieren Sie einen eigenen Server für die Datensynchronisation',
+        
+        // Cloud Sync Messages
+        cloudSyncUploadSuccess: 'Daten erfolgreich in die Cloud hochgeladen',
+        cloudSyncDownloadSuccess: 'Daten erfolgreich aus der Cloud heruntergeladen',
+        cloudSyncUploadError: 'Fehler beim Hochladen in die Cloud',
+        cloudSyncDownloadError: 'Fehler beim Herunterladen aus der Cloud',
+        cloudSyncConnectionSuccess: 'Verbindung erfolgreich',
+        cloudSyncConnectionError: 'Verbindungsfehler',
+        cloudSyncNotConfigured: 'Cloud-Sync nicht konfiguriert',
+        cloudSyncSettingsSaved: 'Einstellungen gespeichert',
+        cloudSyncConfirmDownload: 'Möchten Sie die lokalen Daten mit den Cloud-Daten überschreiben? Diese Aktion kann nicht rückgängig gemacht werden.',
+        cloudSyncTokenWarning: 'Hinweis: Ihr Token wird lokal im Browser gespeichert. Verwenden Sie dieses Gerät nur, wenn Sie ihm vertrauen.',
+        cloudSyncUploadDesc: 'Lokale Daten in die Cloud hochladen',
+        cloudSyncDownloadDesc: 'Daten aus der Cloud herunterladen',
+        cloudSyncTestDesc: 'Verbindung überprüfen',
+        
+        // Settings Tab - Cross-Tab Sync
+        crossTabSyncTitle: 'Echtzeit-Synchronisation',
+        crossTabSyncDescription: 'Automatische Synchronisation zwischen Browser-Tabs und Geräten',
+        crossTabStatus: 'Browser-Unterstützung',
+        tabIdentifier: 'Tab-ID',
+        syncMethod: 'Sync-Methode',
+        supported: 'Unterstützt',
+        notSupported: 'Nicht unterstützt',
+        howSyncWorks: 'Wie die Synchronisation funktioniert',
+        syncExplanation1: 'Änderungen in einem Tab erscheinen automatisch in allen anderen offenen Tabs',
+        syncExplanation2: 'Cloud-Sync ermöglicht Datenaustausch zwischen verschiedenen Geräten',
+        syncExplanation3: 'Konflikte werden durch Behalten der neuesten Änderung gelöst',
+        
+        // Settings Tab - Sync Log
+        syncLogTitle: 'Sync-Aktivitätsprotokoll',
+        btnClearLog: 'Protokoll löschen',
+        noSyncActivity: 'Noch keine Sync-Aktivität',
+        syncLogUploadStarted: 'Upload gestartet',
+        syncLogUploadSuccess: 'Upload erfolgreich abgeschlossen',
+        syncLogUploadError: 'Upload fehlgeschlagen',
+        syncLogDownloadStarted: 'Download gestartet',
+        syncLogDownloadSuccess: 'Download erfolgreich abgeschlossen',
+        syncLogDownloadError: 'Download fehlgeschlagen',
+        syncLogFromOtherTab: 'Sync von anderem Tab empfangen',
+        syncLogOtherTabStarted: 'Anderer Tab hat Sync gestartet',
+        syncLogSettingsChanged: 'Sync-Einstellungen geändert',
+        syncLogCleared: 'Sync-Protokoll gelöscht',
+        dataUpdatedFromOtherTab: 'Daten von anderem Tab/Gerät aktualisiert',
+        
+        // Settings Tab - Local Backup
+        localBackupTitle: 'Lokale Sicherung',
+        localBackupDescription: 'Daten als lokale JSON-Dateien exportieren und importieren',
+        
+        // Settings Tab - IndexedDB
+        indexedDBTitle: 'Lokale Datenbank',
+        indexedDBDescription: 'IndexedDB bietet zuverlässigen lokalen Speicher mit größerer Kapazität',
+        database: 'Datenbank',
+        storageEngine: 'Speicher-Engine',
+        
+        // Settings Tab - Data Statistics
+        dataStatsTitle: 'Datenstatistiken',
+        archivedReports: 'Berichte',
         
         // Modal
         modalAddTitle: 'Neues Material hinzufügen',
@@ -612,42 +688,7 @@ const translations = {
         tabManageMaterials: 'Manage Materials',
         tabArchive: 'Report Archive',
         tabSettings: 'Settings',
-        tabDashboard: 'Dashboard',
-        
-        // Dashboard
-        dashboardTitle: 'Dashboard',
-        dashboardSubtitle: 'Customize your dashboard with drag-and-drop widgets',
-        addWidgetBtn: 'Add Widget',
-        resetLayoutBtn: 'Reset Layout',
-        saveLayoutBtn: 'Save Layout',
-        selectWidgetTitle: 'Select Widget to Add',
-        emptyDashboardTitle: 'Your Dashboard is Empty',
-        emptyDashboardMessage: 'Add widgets to get started with your custom dashboard',
-        addFirstWidgetBtn: 'Add Your First Widget',
-        confirmResetDashboard: 'Are you sure you want to reset the dashboard layout? This will remove all widgets and restore the default layout.',
-        
-        // Widget Titles
-        'alerts-countTitle': 'Total Alerts',
-        'materials-countTitle': 'Total Materials',
-        'capacity-overviewTitle': 'Capacity Overview',
-        'recent-alertsTitle': 'Recent Alerts',
-        'storage-distributionTitle': 'Storage Distribution',
-        'capacity-trendsTitle': 'Capacity Trends',
-        'top-materialsTitle': 'Top Materials by Alerts',
-        'analytics-summaryTitle': 'Analytics Summary',
-        
-        // Widget Labels
-        totalAlerts: 'Total Alerts',
-        totalMaterials: 'Total Materials',
-        utilized: 'Utilized',
-        currentStock: 'Current Stock',
-        maxCapacity: 'Max Capacity',
-        alerts: 'alerts',
-        totalReports: 'Total Reports',
-        avgAlerts: 'Avg Alerts',
-        units: 'Units',
-        utilizationPercent: 'Utilization %',
-        overCapacity: 'Over Capacity',
+        tabSync: 'Sync',
         
         // Upload Section
         uploadTitle: 'Upload LX02 Report',
@@ -790,6 +831,117 @@ const translations = {
         restoreSuccess: 'Restoration successful',
         restoreError: 'Error during restoration',
         errorLoadingSyncStatus: 'Error loading sync status',
+
+        // Cloud Sync
+        cloudSyncTitle: 'Cloud Synchronization',
+        cloudSyncDescription: 'Sync your data with cloud services for cross-device access',
+        cloudSyncEnabled: 'Cloud sync enabled',
+        cloudSyncDisabled: 'Cloud sync disabled',
+        cloudSyncProvider: 'Provider',
+        cloudSyncProviderNone: 'Not configured',
+        cloudSyncProviderGitHub: 'GitHub Gist',
+        cloudSyncProviderLocal: 'Local Server',
+        cloudSyncLastSync: 'Last sync',
+        cloudSyncNever: 'Never',
+        cloudSyncStatus: 'Status',
+        cloudSyncStatusSuccess: 'Success',
+        cloudSyncStatusError: 'Error',
+        cloudSyncStatusPending: 'Pending',
+        cloudSyncInProgress: 'Syncing...',
+        btnCloudSyncSettings: 'Settings',
+        btnCloudSyncUpload: 'Upload Now',
+        btnCloudSyncDownload: 'Download Now',
+        btnCloudSyncTest: 'Test Connection',
+        
+        // Cloud Sync Settings Modal
+        cloudSyncSettingsTitle: 'Cloud Sync Settings',
+        cloudSyncEnableLabel: 'Enable cloud synchronization',
+        cloudSyncProviderLabel: 'Choose sync provider',
+        cloudSyncAutoSyncLabel: 'Automatic synchronization',
+        cloudSyncAutoSyncInterval: 'Sync interval (minutes)',
+        
+        // GitHub Gist Settings
+        githubGistTitle: 'GitHub Gist Settings',
+        githubTokenLabel: 'Personal Access Token',
+        githubTokenPlaceholder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
+        githubTokenHelp: 'Create a token at GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) with "gist" scope',
+        githubGistIdLabel: 'Gist ID (optional)',
+        githubGistIdPlaceholder: 'Leave empty for new gist',
+        githubGistIdHelp: 'If empty, a new gist will be created on first sync',
+        githubFilenameLabel: 'Filename',
+        githubFilenameHelp: 'Name of the backup file in the gist',
+        githubPublicLabel: 'Public Gist',
+        githubPublicHelp: 'Public gists are visible to everyone',
+        
+        // Local Server Settings
+        localServerTitle: 'Local Server Settings',
+        localServerUploadUrl: 'Upload URL',
+        localServerUploadUrlPlaceholder: 'https://your-server.com/api/backup',
+        localServerDownloadUrl: 'Download URL',
+        localServerDownloadUrlPlaceholder: 'https://your-server.com/api/backup',
+        localServerAuthHeader: 'Auth Header Name (optional)',
+        localServerAuthHeaderPlaceholder: 'e.g. Authorization, X-API-Key',
+        localServerAuthValue: 'Auth Header Value (optional)',
+        localServerAuthValuePlaceholder: 'e.g. Bearer token123, api-key-value',
+        localServerHelp: 'Configure your own server for data synchronization',
+        
+        // Cloud Sync Messages
+        cloudSyncUploadSuccess: 'Data successfully uploaded to cloud',
+        cloudSyncDownloadSuccess: 'Data successfully downloaded from cloud',
+        cloudSyncUploadError: 'Error uploading to cloud',
+        cloudSyncDownloadError: 'Error downloading from cloud',
+        cloudSyncConnectionSuccess: 'Connection successful',
+        cloudSyncConnectionError: 'Connection error',
+        cloudSyncNotConfigured: 'Cloud sync not configured',
+        cloudSyncSettingsSaved: 'Settings saved',
+        cloudSyncConfirmDownload: 'Do you want to overwrite local data with cloud data? This action cannot be undone.',
+        cloudSyncTokenWarning: 'Note: Your token is stored locally in the browser. Only use this device if you trust it.',
+        cloudSyncUploadDesc: 'Push local data to cloud',
+        cloudSyncDownloadDesc: 'Pull data from cloud',
+        cloudSyncTestDesc: 'Verify connection',
+        
+        // Settings Tab - Cross-Tab Sync
+        crossTabSyncTitle: 'Real-Time Sync',
+        crossTabSyncDescription: 'Automatic synchronization between browser tabs and devices',
+        crossTabStatus: 'Browser Support',
+        tabIdentifier: 'Tab ID',
+        syncMethod: 'Sync Method',
+        supported: 'Supported',
+        notSupported: 'Not Supported',
+        howSyncWorks: 'How Sync Works',
+        syncExplanation1: 'Changes in one tab automatically appear in all other open tabs',
+        syncExplanation2: 'Cloud sync enables data sharing across different devices',
+        syncExplanation3: 'Conflicts are resolved by keeping the most recent change',
+        
+        // Settings Tab - Sync Log
+        syncLogTitle: 'Sync Activity Log',
+        btnClearLog: 'Clear Log',
+        noSyncActivity: 'No sync activity yet',
+        syncLogUploadStarted: 'Upload started',
+        syncLogUploadSuccess: 'Upload completed successfully',
+        syncLogUploadError: 'Upload failed',
+        syncLogDownloadStarted: 'Download started',
+        syncLogDownloadSuccess: 'Download completed successfully',
+        syncLogDownloadError: 'Download failed',
+        syncLogFromOtherTab: 'Sync received from another tab',
+        syncLogOtherTabStarted: 'Another tab started syncing',
+        syncLogSettingsChanged: 'Sync settings changed',
+        syncLogCleared: 'Sync log cleared',
+        dataUpdatedFromOtherTab: 'Data updated from another tab/device',
+        
+        // Settings Tab - Local Backup
+        localBackupTitle: 'Local Backup',
+        localBackupDescription: 'Export and import data as local JSON files',
+        
+        // Settings Tab - IndexedDB
+        indexedDBTitle: 'Local Database',
+        indexedDBDescription: 'IndexedDB provides reliable local storage with larger capacity',
+        database: 'Database',
+        storageEngine: 'Storage Engine',
+        
+        // Settings Tab - Data Statistics
+        dataStatsTitle: 'Data Statistics',
+        archivedReports: 'Reports',
         
         // Modal
         modalAddTitle: 'Add New Material',
