@@ -406,15 +406,36 @@ class UIManager {
         
         // Escape title if it contains user data, but allow safe HTML icons in title
         const safeTitle = title ? SecurityUtils.escapeHTML(title) : titles[type];
+        const safeMessage = SecurityUtils.escapeHTML(message);
         
-        toast.innerHTML = `
-            <div class="toast-icon">${icons[type] || icons.info}</div>
-            <div class="toast-content">
-                <div class="toast-title">${safeTitle}</div>
-                <div class="toast-message">${message}</div>
-            </div>
-            <button class="toast-close" onclick="this.parentElement.remove()">×</button>
-        `;
+        // Create toast content using DOM manipulation to avoid innerHTML
+        toast.innerHTML = ''; // Clear any existing content
+        
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'toast-icon';
+        iconDiv.innerHTML = icons[type] || icons.info;
+        toast.appendChild(iconDiv);
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'toast-content';
+        
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'toast-title';
+        titleDiv.textContent = safeTitle;
+        contentDiv.appendChild(titleDiv);
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'toast-message';
+        messageDiv.textContent = safeMessage;
+        contentDiv.appendChild(messageDiv);
+        
+        toast.appendChild(contentDiv);
+        
+        const closeButton = document.createElement('button');
+        closeButton.className = 'toast-close';
+        closeButton.textContent = '×';
+        closeButton.onclick = function() { this.parentElement.remove(); };
+        toast.appendChild(closeButton);
         
         container.appendChild(toast);
         
@@ -1350,60 +1371,129 @@ class UIManager {
             }
         }
 
-        container.innerHTML = `
-            <div class="sync-status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
-                <div class="sync-status-item">
-                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
-                        <i class="fa-solid fa-toggle-${status.enabled ? 'on' : 'off'}"></i> Status
-                    </div>
-                    <div style="font-weight: 600; color: ${status.enabled ? 'var(--success-color)' : 'var(--text-secondary)'};">
-                        ${status.enabled ? this.t('cloudSyncEnabled') : this.t('cloudSyncDisabled')}
-                    </div>
-                </div>
-                <div class="sync-status-item">
-                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
-                        <i class="fa-solid fa-cloud"></i> ${this.t('cloudSyncProvider')}
-                    </div>
-                    <div style="font-weight: 600;">
-                        ${providerName}
-                    </div>
-                </div>
-                <div class="sync-status-item">
-                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
-                        <i class="fa-solid fa-clock-rotate-left"></i> ${this.t('cloudSyncLastSync')}
-                    </div>
-                    <div style="font-weight: 600;">
-                        ${lastSyncDisplay}
-                    </div>
-                </div>
-                ${statusBadge ? `
-                <div class="sync-status-item">
-                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
-                        <i class="fa-solid fa-signal"></i> ${this.t('cloudSyncStatus')}
-                    </div>
-                    <div>
-                        ${statusBadge}
-                    </div>
-                </div>
-                ` : ''}
-                ${status.hasUnsyncedChanges && status.unsyncedChangeCount > 0 ? `
-                <div class="sync-status-item" style="cursor: pointer;" onclick="ui.showUnsyncedChangesList()" title="${this.t('cloudSyncClickToShowChanges')}">
-                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
-                        <i class="fa-solid fa-exclamation-circle"></i> ${this.t('cloudSyncUnsyncedChanges')}
-                    </div>
-                    <div style="font-weight: 600; color: var(--warning-color); display: flex; align-items: center; gap: 8px;">
-                        ${this.t('cloudSyncUnsyncedChangesCount').replace('{count}', parseInt(status.unsyncedChangeCount) || 0)}
-                        <i class="fa-solid fa-chevron-right" style="font-size: 0.8em;"></i>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-            ${status.autoSync && isConfigured ? `
-            <div style="margin-top: 10px; padding: 8px 12px; background: var(--info-bg); border-radius: 6px; font-size: 0.85em;">
-                <i class="fa-solid fa-sync"></i> ${this.t('cloudSyncAutoSyncLabel')}: ${parseInt(status.autoSyncInterval) || 0} min
-            </div>
-            ` : ''}
-        `;
+        // Clear container and build DOM safely
+        container.innerHTML = '';
+        
+        const grid = document.createElement('div');
+        grid.className = 'sync-status-grid';
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(180px, 1fr))';
+        grid.style.gap = '15px';
+        
+        // Status item 1: Enabled/Disabled
+        const item1 = document.createElement('div');
+        item1.className = 'sync-status-item';
+        
+        const item1Header = document.createElement('div');
+        item1Header.style.fontSize = '0.85em';
+        item1Header.style.color = 'var(--text-secondary)';
+        item1Header.style.marginBottom = '4px';
+        item1Header.innerHTML = `<i class="fa-solid fa-toggle-${status.enabled ? 'on' : 'off'}"></i> Status`;
+        item1.appendChild(item1Header);
+        
+        const item1Content = document.createElement('div');
+        item1Content.style.fontWeight = '600';
+        item1Content.style.color = status.enabled ? 'var(--success-color)' : 'var(--text-secondary)';
+        item1Content.textContent = status.enabled ? this.t('cloudSyncEnabled') : this.t('cloudSyncDisabled');
+        item1.appendChild(item1Content);
+        
+        grid.appendChild(item1);
+        
+        // Status item 2: Provider
+        const item2 = document.createElement('div');
+        item2.className = 'sync-status-item';
+        
+        const item2Header = document.createElement('div');
+        item2Header.style.fontSize = '0.85em';
+        item2Header.style.color = 'var(--text-secondary)';
+        item2Header.style.marginBottom = '4px';
+        item2Header.innerHTML = `<i class="fa-solid fa-cloud"></i> ${this.t('cloudSyncProvider')}`;
+        item2.appendChild(item2Header);
+        
+        const item2Content = document.createElement('div');
+        item2Content.style.fontWeight = '600';
+        item2Content.textContent = providerName;
+        item2.appendChild(item2Content);
+        
+        grid.appendChild(item2);
+        
+        // Status item 3: Last Sync
+        const item3 = document.createElement('div');
+        item3.className = 'sync-status-item';
+        
+        const item3Header = document.createElement('div');
+        item3Header.style.fontSize = '0.85em';
+        item3Header.style.color = 'var(--text-secondary)';
+        item3Header.style.marginBottom = '4px';
+        item3Header.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> ${this.t('cloudSyncLastSync')}`;
+        item3.appendChild(item3Header);
+        
+        const item3Content = document.createElement('div');
+        item3Content.style.fontWeight = '600';
+        item3Content.textContent = lastSyncDisplay;
+        item3.appendChild(item3Content);
+        
+        grid.appendChild(item3);
+        
+        // Conditional status badge item
+        if (statusBadge) {
+            const badgeItem = document.createElement('div');
+            badgeItem.className = 'sync-status-item';
+            
+            const badgeHeader = document.createElement('div');
+            badgeHeader.style.fontSize = '0.85em';
+            badgeHeader.style.color = 'var(--text-secondary)';
+            badgeHeader.style.marginBottom = '4px';
+            badgeHeader.innerHTML = `<i class="fa-solid fa-signal"></i> ${this.t('cloudSyncStatus')}`;
+            badgeItem.appendChild(badgeHeader);
+            
+            const badgeContent = document.createElement('div');
+            badgeContent.innerHTML = statusBadge;
+            badgeItem.appendChild(badgeContent);
+            
+            grid.appendChild(badgeItem);
+        }
+        
+        // Conditional unsynced changes item
+        if (status.hasUnsyncedChanges && status.unsyncedChangeCount > 0) {
+            const unsyncedItem = document.createElement('div');
+            unsyncedItem.className = 'sync-status-item';
+            unsyncedItem.style.cursor = 'pointer';
+            unsyncedItem.onclick = () => ui.showUnsyncedChangesList();
+            unsyncedItem.title = this.t('cloudSyncClickToShowChanges');
+            
+            const unsyncedHeader = document.createElement('div');
+            unsyncedHeader.style.fontSize = '0.85em';
+            unsyncedHeader.style.color = 'var(--text-secondary)';
+            unsyncedHeader.style.marginBottom = '4px';
+            unsyncedHeader.innerHTML = `<i class="fa-solid fa-exclamation-circle"></i> ${this.t('cloudSyncUnsyncedChanges')}`;
+            unsyncedItem.appendChild(unsyncedHeader);
+            
+            const unsyncedContent = document.createElement('div');
+            unsyncedContent.style.fontWeight = '600';
+            unsyncedContent.style.color = 'var(--warning-color)';
+            unsyncedContent.style.display = 'flex';
+            unsyncedContent.style.alignItems = 'center';
+            unsyncedContent.style.gap = '8px';
+            unsyncedContent.innerHTML = `${this.t('cloudSyncUnsyncedChangesCount').replace('{count}', SecurityUtils.escapeHTML(String(parseInt(status.unsyncedChangeCount) || 0)))} <i class="fa-solid fa-chevron-right" style="font-size: 0.8em;"></i>`;
+            unsyncedItem.appendChild(unsyncedContent);
+            
+            grid.appendChild(unsyncedItem);
+        }
+        
+        container.appendChild(grid);
+        
+        // Conditional auto-sync info
+        if (status.autoSync && isConfigured) {
+            const autoSyncDiv = document.createElement('div');
+            autoSyncDiv.style.marginTop = '10px';
+            autoSyncDiv.style.padding = '8px 12px';
+            autoSyncDiv.style.background = 'var(--info-bg)';
+            autoSyncDiv.style.borderRadius = '6px';
+            autoSyncDiv.style.fontSize = '0.85em';
+            autoSyncDiv.innerHTML = `<i class="fa-solid fa-sync"></i> ${this.t('cloudSyncAutoSyncLabel')}: ${SecurityUtils.escapeHTML(String(parseInt(status.autoSyncInterval) || 0))} min`;
+            container.appendChild(autoSyncDiv);
+        }
     }
 
     /**
@@ -1452,7 +1542,7 @@ class UIManager {
                         
                         <div class="form-group">
                             <label for="githubToken">${this.t('githubTokenLabel')} *</label>
-                            <input type="password" id="githubToken" value="${settings.github?.token || ''}" 
+                            <input type="password" id="githubToken" value="${SecurityUtils.escapeHTML(settings.github?.token || '')}" 
                                    placeholder="${this.t('githubTokenPlaceholder')}"
                                    autocomplete="off">
                             <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
@@ -1462,7 +1552,7 @@ class UIManager {
                         
                         <div class="form-group">
                             <label for="githubGistId">${this.t('githubGistIdLabel')}</label>
-                            <input type="text" id="githubGistId" value="${settings.github?.gistId || ''}" 
+                            <input type="text" id="githubGistId" value="${SecurityUtils.escapeHTML(settings.github?.gistId || '')}" 
                                    placeholder="${this.t('githubGistIdPlaceholder')}">
                             <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
                                 ${this.t('githubGistIdHelp')}
@@ -1471,7 +1561,7 @@ class UIManager {
                         
                         <div class="form-group">
                             <label for="githubFilename">${this.t('githubFilenameLabel')}</label>
-                            <input type="text" id="githubFilename" value="${settings.github?.filename || 'warehouse-backup.json'}">
+                            <input type="text" id="githubFilename" value="${SecurityUtils.escapeHTML(settings.github?.filename || 'warehouse-backup.json')}">
                             <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
                                 ${this.t('githubFilenameHelp')}
                             </small>
@@ -1494,25 +1584,25 @@ class UIManager {
                         
                         <div class="form-group">
                             <label for="localServerUploadUrl">${this.t('localServerUploadUrl')} *</label>
-                            <input type="url" id="localServerUploadUrl" value="${settings.localServer?.uploadUrl || ''}" 
+                            <input type="url" id="localServerUploadUrl" value="${SecurityUtils.escapeHTML(settings.localServer?.uploadUrl || '')}" 
                                    placeholder="${this.t('localServerUploadUrlPlaceholder')}">
                         </div>
                         
                         <div class="form-group">
                             <label for="localServerDownloadUrl">${this.t('localServerDownloadUrl')} *</label>
-                            <input type="url" id="localServerDownloadUrl" value="${settings.localServer?.downloadUrl || ''}" 
+                            <input type="url" id="localServerDownloadUrl" value="${SecurityUtils.escapeHTML(settings.localServer?.downloadUrl || '')}" 
                                    placeholder="${this.t('localServerDownloadUrlPlaceholder')}">
                         </div>
                         
                         <div class="form-group">
                             <label for="localServerAuthHeader">${this.t('localServerAuthHeader')}</label>
-                            <input type="text" id="localServerAuthHeader" value="${settings.localServer?.authHeader || ''}" 
+                            <input type="text" id="localServerAuthHeader" value="${SecurityUtils.escapeHTML(settings.localServer?.authHeader || '')}" 
                                    placeholder="${this.t('localServerAuthHeaderPlaceholder')}">
                         </div>
                         
                         <div class="form-group">
                             <label for="localServerAuthValue">${this.t('localServerAuthValue')}</label>
-                            <input type="password" id="localServerAuthValue" value="${settings.localServer?.authValue || ''}" 
+                            <input type="password" id="localServerAuthValue" value="${SecurityUtils.escapeHTML(settings.localServer?.authValue || '')}" 
                                    placeholder="${this.t('localServerAuthValuePlaceholder')}"
                                    autocomplete="off">
                         </div>
@@ -1532,7 +1622,7 @@ class UIManager {
                     
                     <div class="form-group" id="autoSyncIntervalGroup" style="display: ${settings.autoSync ? 'block' : 'none'};">
                         <label for="cloudSyncAutoSyncInterval">${this.t('cloudSyncAutoSyncInterval')}</label>
-                        <input type="number" id="cloudSyncAutoSyncInterval" value="${parseInt(settings.autoSyncIntervalMinutes) || 30}" min="5" max="1440">
+                        <input type="number" id="cloudSyncAutoSyncInterval" value="${SecurityUtils.escapeHTML(String(parseInt(settings.autoSyncIntervalMinutes) || 30))}" min="5" max="1440">
                     </div>
                 </div>
                 <div class="modal-footer">

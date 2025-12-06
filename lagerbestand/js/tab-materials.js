@@ -1963,7 +1963,14 @@ UIManager.prototype.selectGroupColor = function(color, isCustom = false) {
         preview.style.background = color;
         const safeColor = SecurityUtils.escapeHTML(color);
         const contrastColor = this.getContrastColor(color);
-        preview.innerHTML = `<span style="font-family: monospace; font-size: 12px; color: ${contrastColor};">${safeColor}</span>`;
+        const safeContrastColor = SecurityUtils.escapeHTML(contrastColor);
+        const span = document.createElement('span');
+        span.style.fontFamily = 'monospace';
+        span.style.fontSize = '12px';
+        span.style.color = safeContrastColor;
+        span.textContent = safeColor;
+        preview.innerHTML = '';
+        preview.appendChild(span);
     }
     
     // Update visual selection in palette
