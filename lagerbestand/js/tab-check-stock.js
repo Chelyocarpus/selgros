@@ -306,13 +306,11 @@ UIManager.prototype.renderResultsTable = function(materialGroups) {
             const actionBtn = tr.querySelector('.quick-add-btn[data-action]');
             if (actionBtn) {
                 actionBtn.addEventListener('click', (e) => {
-                    const btn = e.currentTarget;
-                    const action = btn.dataset.action;
-                    const materialCode = btn.dataset.material;
+                    const {currentTarget: btn} = e;
+                    const {action, material: materialCode, name, qty} = btn.dataset;
                     if (action === 'quick-add') {
-                        const name = btn.dataset.name;
-                        const qty = parseInt(btn.dataset.qty, 10);
-                        ui.quickAddMaterial(materialCode, name, qty);
+                        const parsedQty = parseInt(qty, 10);
+                        ui.quickAddMaterial(materialCode, name, parsedQty);
                     } else if (action === 'edit') {
                         ui.openEditModal(materialCode);
                     }

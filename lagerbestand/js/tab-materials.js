@@ -391,7 +391,9 @@ UIManager.prototype.addMaterial = function() {
         // Refresh list
         this.renderMaterialsList();
 
-        this.showToast(`<i class="fa-solid fa-plus"></i> Material ${code} added successfully! Capacity set to ${capacity}.`, 'success', 'Added');
+        const safeCode = SecurityUtils.escapeHTML(code);
+        const safeCapacity = SecurityUtils.escapeHTML(String(capacity));
+        this.showToast(`<i class="fa-solid fa-plus"></i> Material ${safeCode} added successfully! Capacity set to ${safeCapacity}.`, 'success', 'Added');
     } catch (error) {
         this.showToast('Error adding material: ' + SecurityUtils.escapeHTML(error.message), 'error');
     }
@@ -753,10 +755,10 @@ UIManager.prototype.renderMaterialsList = function(options) {
     // Destroy existing DataTable if it exists
     if ($.fn.DataTable.isDataTable('#materialsTable')) {
         $('#materialsTable').DataTable().destroy();
-        // Reset events flag since we're recreating the table content
+        // Clean up event listeners before recreating
         const table = document.getElementById('materialsTable');
         if (table) {
-            delete table.dataset.eventsbound;
+            this.unbindMaterialTableEvents();
         }
     }
 
@@ -767,32 +769,28 @@ UIManager.prototype.renderMaterialsList = function(options) {
 
     if (materials.length === 0) {
         const row = document.createElement('tr');
+        const cell = document.createElement('td');
         
-        // Create 8 cells for the empty state (matching the 8 columns)
-        for (let i = 0; i < 8; i++) {
-            const cell = document.createElement('td');
-            if (i === 0) { // First cell contains the empty state content
-                cell.style.textAlign = 'center';
-                cell.style.padding = '40px';
-                cell.style.color = 'var(--text-secondary)';
-                
-                const iconDiv = document.createElement('div');
-                iconDiv.className = 'empty-state-icon';
-                iconDiv.style.fontSize = '3em';
-                iconDiv.style.marginBottom = '10px';
-                const icon = document.createElement('i');
-                icon.className = 'fa-solid fa-boxes-stacked';
-                iconDiv.appendChild(icon);
-                
-                const p = document.createElement('p');
-                p.textContent = this.t('materialsEmpty');
-                
-                cell.appendChild(iconDiv);
-                cell.appendChild(p);
-            }
-            row.appendChild(cell);
-        }
+        // Use colspan to span all 8 columns for better semantics
+        cell.setAttribute('colspan', '8');
+        cell.style.textAlign = 'center';
+        cell.style.padding = '40px';
+        cell.style.color = 'var(--text-secondary)';
         
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-state-icon';
+        iconDiv.style.fontSize = '3em';
+        iconDiv.style.marginBottom = '10px';
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-boxes-stacked';
+        iconDiv.appendChild(icon);
+        
+        const p = document.createElement('p');
+        p.textContent = this.t('materialsEmpty');
+        
+        cell.appendChild(iconDiv);
+        cell.appendChild(p);
+        row.appendChild(cell);
         tbody.appendChild(row);
         return;
     }
@@ -993,10 +991,9 @@ UIManager.prototype.bindMaterialTableEvents = function() {
     
     const self = this;
     
-    // Use event delegation on the table for better performance
-    // This survives DataTable pagination/redraws
-    table.addEventListener('click', function(e) {
-        const target = e.target;
+    // Store event handlers so they can be removed later
+    const clickHandler = function(e) {
+        const {target} = e;
         
         // Handle edit button
         const editBtn = target.closest('[data-action="edit"]');
@@ -1020,18 +1017,43 @@ UIManager.prototype.bindMaterialTableEvents = function() {
             self.openCategoryDropdown(categoryBtn, e);
             return;
         }
-    });
+    };
     
-    // Handle checkbox changes
-    table.addEventListener('change', function(e) {
-        const target = e.target;
+    const changeHandler = function(e) {
+        const {target} = e;
         if (target.classList.contains('material-select-checkbox')) {
             const materialCode = target.dataset.materialCode;
             self.toggleMaterialSelection(materialCode);
         }
-    });
+    };
     
+    // Use event delegation on the table for better performance
+    // This survives DataTable pagination/redraws
+    table.addEventListener('click', clickHandler);
+    table.addEventListener('change', changeHandler);
+    
+    // Store handlers for cleanup
+    table._eventHandlers = { clickHandler, changeHandler };
     table.dataset.eventsbound = 'true';
+};
+
+// Unbind material table events to prevent memory leaks
+UIManager.prototype.unbindMaterialTableEvents = function() {
+    const table = document.getElementById('materialsTable');
+    if (!table || !table._eventHandlers) return;
+    
+    // Remove event listeners
+    const { clickHandler, changeHandler } = table._eventHandlers;
+    if (clickHandler) {
+        table.removeEventListener('click', clickHandler);
+    }
+    if (changeHandler) {
+        table.removeEventListener('change', changeHandler);
+    }
+    
+    // Clean up stored references
+    delete table._eventHandlers;
+    delete table.dataset.eventsbound;
 };
 
 // Update IndexedDB sync status display
@@ -1506,9 +1528,9 @@ UIManager.prototype.applyMaterialsFilter = function(showToast = true) {
             if (group === 'ungrouped') {
                 // Show only materials without a group
                 if (rowData.group) return false;
-            } else {
+            } else if (rowData.group !== group) {
                 // Show only materials in the selected group
-                if (rowData.group !== group) return false;
+                return false;
             }
         }
         
@@ -1825,7 +1847,20 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
         .getPropertyValue('--default-group-color').trim() || '#3b82f6';
     
     const currentColor = group?.color || defaultGroupColor;
-    const isCustomColor = currentColor && !this.GROUP_COLOR_PALETTE.includes(currentColor);
+    
+    // Validate and sanitize color for safe use in HTML
+    const validateColor = (color) => {
+        // Allow valid hex colors (#RGB or #RRGGBB)
+        if (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color)) {
+            return color;
+        }
+        return defaultGroupColor;
+    };
+    
+    const safeColor = validateColor(currentColor);
+    const safeColorEscaped = SecurityUtils.escapeHTML(safeColor);
+    const safeGroupName = SecurityUtils.escapeHTML(group?.name || '');
+    const safeGroupDesc = SecurityUtils.escapeHTML(group?.description || '');
     
     const modalHtml = `
         <div class="modal active" id="groupModal">
@@ -1837,42 +1872,51 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
                 
                 <div class="form-group">
                     <label for="groupName">${this.t('groupName')} *</label>
-                    <input type="text" id="groupName" value="${group?.name || ''}" placeholder="${this.t('enterGroupName')}" required>
+                    <input type="text" id="groupName" value="${safeGroupName}" placeholder="${this.t('enterGroupName')}" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="groupColor">${this.t('groupColor') || 'Group Color'}</label>
                     <div class="color-palette" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; max-height: 180px; overflow-y: auto; padding: 5px;">
-                        ${this.GROUP_COLOR_PALETTE.map(color => `
-                            <button 
-                                type="button" 
-                                class="color-option ${currentColor === color ? 'selected' : ''}" 
-                                data-color="${color}"
-                                onclick="ui.selectGroupColor('${color}')"
-                                style="width: 36px; height: 36px; border-radius: 8px; background: ${color}; border: 3px solid ${currentColor === color ? 'var(--text-color)' : 'transparent'}; cursor: pointer; transition: all 0.2s; flex-shrink: 0;"
-                                title="${color}">
-                            </button>
-                        `).join('')}
+                        ${this.GROUP_COLOR_PALETTE.map(color => {
+                            // Validate color before use to prevent injection
+                            const validatedColor = SecurityUtils.validateColor(color);
+                            if (!validatedColor) return ''; // Skip invalid colors
+                            
+                            const isSelected = safeColor === validatedColor;
+                            const safeValidatedColor = SecurityUtils.escapeHTML(validatedColor);
+                            
+                            return `
+                                <button 
+                                    type="button" 
+                                    class="color-option ${isSelected ? 'selected' : ''}"
+                                    data-color="${safeValidatedColor}"
+                                    onclick="ui.selectGroupColor('${safeValidatedColor}')"
+                                    style="width: 36px; height: 36px; border-radius: 8px; background: ${validatedColor}; border: 3px solid ${isSelected ? 'var(--text-color)' : 'transparent'}; cursor: pointer; transition: all 0.2s; flex-shrink: 0;"
+                                    title="${safeValidatedColor}">
+                                </button>
+                            `;
+                        }).join('')}
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
                         <label style="margin: 0; white-space: nowrap;">${this.t('customColor') || 'Custom Color'}:</label>
                         <input 
                             type="color" 
                             id="customColorPicker" 
-                            value="${currentColor}"
+                            value="${safeColor}"
                             onchange="ui.selectGroupColor(this.value, true)"
                             style="width: 50px; height: 36px; border: none; border-radius: 8px; cursor: pointer; padding: 0;"
                         >
-                        <div id="colorPreview" style="flex: 1; height: 36px; border-radius: 8px; background: ${currentColor}; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
-                            <span style="font-family: monospace; font-size: 12px; color: ${this.getContrastColor(currentColor)};">${currentColor}</span>
+                        <div id="colorPreview" style="flex: 1; height: 36px; border-radius: 8px; background: ${safeColor}; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
+                            <span style="font-family: monospace; font-size: 12px; color: ${this.getContrastColor(safeColor)};">${safeColorEscaped}</span>
                         </div>
                     </div>
-                    <input type="hidden" id="groupColor" value="${currentColor}">
+                    <input type="hidden" id="groupColor" value="${safeColor}">
                 </div>
                 
                 <div class="form-group">
                     <label for="groupDescription">${this.t('descriptionOptional')}</label>
-                    <textarea id="groupDescription" placeholder="${this.t('enterGroupDescription')}" rows="3">${group?.description || ''}</textarea>
+                    <textarea id="groupDescription" placeholder="${this.t('enterGroupDescription')}" rows="3">${safeGroupDesc}</textarea>
                 </div>
                 
                 <div class="button-group">
@@ -1899,8 +1943,8 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
 
 // Select group color in modal
 UIManager.prototype.selectGroupColor = function(color, isCustom = false) {
-    // Validate color format
-    if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    // Validate color format (support both #RGB and #RRGGBB)
+    if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color)) {
         return;
     }
     
@@ -1917,7 +1961,9 @@ UIManager.prototype.selectGroupColor = function(color, isCustom = false) {
     const preview = document.getElementById('colorPreview');
     if (preview) {
         preview.style.background = color;
-        preview.innerHTML = `<span style="font-family: monospace; font-size: 12px; color: ${this.getContrastColor(color)};">${color}</span>`;
+        const safeColor = SecurityUtils.escapeHTML(color);
+        const contrastColor = this.getContrastColor(color);
+        preview.innerHTML = `<span style="font-family: monospace; font-size: 12px; color: ${contrastColor};">${safeColor}</span>`;
     }
     
     // Update visual selection in palette
@@ -1957,14 +2003,16 @@ UIManager.prototype.saveGroup = function(groupId) {
         // Edit existing group
         success = this.dataManager.updateGroup(groupId, { name, description, color });
         if (success) {
-            this.showToast(`Group "${name}" updated successfully!`, 'success');
+            const safeName = SecurityUtils.escapeHTML(name);
+            this.showToast(`Group "${safeName}" updated successfully!`, 'success');
         }
     } else {
         // Create new group
         const newGroupId = this.dataManager.createGroup(name, description, color);
         if (newGroupId) {
             success = true;
-            this.showToast(`Group "${name}" created successfully!`, 'success');
+            const safeName = SecurityUtils.escapeHTML(name);
+            this.showToast(`Group "${safeName}" created successfully!`, 'success');
         }
     }
     

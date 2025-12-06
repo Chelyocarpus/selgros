@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.7.4] - 2025-12-06
+
+### Security
+
+#### XSS Vulnerability Fixes
+- **Fixed innerHTML XSS vulnerabilities**: All user-controlled data is now properly escaped before being inserted into innerHTML
+- **Toast messages**: Material codes, capacities, group names, and other user data in toast notifications are now HTML-escaped
+- **Modal messages**: Delete and clear-all modal messages now use `textContent` instead of `innerHTML` to prevent XSS
+- **Color preview**: User-provided color values in group color picker are now escaped before display
+- **Group modal**: Group names, descriptions, and colors are now validated and escaped in modal HTML generation
+- **Color validation**: Added hex color format validation in group modal to prevent injection via malformed color values
+- **Change detection**: Material change descriptions (capacity, name, group changes) are now properly escaped
+- **Numeric validation**: Cloud sync status values (unsynced count, interval) are validated with `parseInt()` before innerHTML insertion
+- **Unsynced changes modal**: All change details properly escaped including material codes, names, capacities, timestamps, and IDs
+- **Color safety in change list**: Group color values validated against hex format before use in inline styles
+- **Color palette validation**: All GROUP_COLOR_PALETTE colors are validated with `SecurityUtils.validateColor()` before insertion into inline styles and onclick attributes
+- **Leverages SecurityUtils**: All fixes utilize the existing `SecurityUtils.escapeHTML()` method for consistent XSS protection
+
+### Fixed
+
+#### Memory Leak Prevention
+- **Event listener cleanup**: Added proper cleanup of event listeners when DataTable is destroyed and recreated
+- **New unbindMaterialTableEvents method**: Properly removes click and change event listeners from materials table
+- **Handler storage**: Event handlers are now stored on the table element for later cleanup
+- **Prevents duplicate bindings**: Event listeners are removed before table recreation, preventing memory leaks
+- **Category dropdown cleanup**: Properly removes document click handler when category dropdown is closed to prevent memory leaks
+
+#### Change Detection
+- **Fixed capacity change tracking**: Corrected property name from 'maxCapacity' to 'capacity' in getChangeSummary function
+- **Accurate change summaries**: Material capacity changes are now properly detected and displayed in change logs
+
+### Changed
+
+#### Code Quality Improvements
+- **Object destructuring**: Applied object destructuring for event properties across multiple files for cleaner code
+- **Merged nested conditions**: Simplified nested if statements using logical operators for better readability
+- **Table semantics**: Empty state in materials table now uses proper colspan="8" instead of 8 individual cells for better HTML structure
+- **Color validation consistency**: Updated all color validation to support both 3-character (#RGB) and 6-character (#RRGGBB) hex formats, consistent with CSS standards and SecurityUtils.validateColor()
+
+---
+
 ## [2.7.3] - 2025-12-06
 
 ### Fixed

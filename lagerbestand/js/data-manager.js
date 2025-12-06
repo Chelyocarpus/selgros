@@ -544,7 +544,7 @@ class DataManager {
     getChangeSummary(oldData, newData) {
         const changes = [];
         const fieldsToCompare = [
-            { key: 'maxCapacity', label: 'Kapazität' },
+            { key: 'capacity', label: 'Kapazität' },
             { key: 'name', label: 'Name' },
             { key: 'promoCapacity', label: 'Aktions-Kapazität' },
             { key: 'promoActive', label: 'Aktion aktiv' },
@@ -1461,8 +1461,8 @@ class DataManager {
             '#6366f1'  // Indigo
         ];
         
-        // Validate color format (must be valid hex color)
-        if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
+        // Validate color format (must be valid hex color: #RGB or #RRGGBB)
+        if (color && !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color)) {
             console.warn(`Invalid color format: ${color}, using default`);
             color = null;
         }
@@ -1546,8 +1546,8 @@ class DataManager {
             if (updates.description !== undefined) {
                 sanitizedUpdates.description = SecurityUtils.sanitizeHTML(updates.description.trim());
             }
-            // Validate color format if present
-            if (updates.color && !/^#[0-9A-Fa-f]{6}$/.test(updates.color)) {
+            // Validate color format if present (#RGB or #RRGGBB)
+            if (updates.color && !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(updates.color)) {
                 console.warn(`Invalid color format: ${updates.color}, keeping existing color`);
                 delete sanitizedUpdates.color;
             }

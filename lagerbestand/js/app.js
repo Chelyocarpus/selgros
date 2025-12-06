@@ -255,7 +255,7 @@ function setupKeyboardShortcuts() {
         
         // Enter key saves material modal (when focused on inputs)
         if (e.key === 'Enter' && materialModal.classList.contains('active')) {
-            const target = e.target;
+            const {target} = e;
             if (target.tagName === 'INPUT') {
                 e.preventDefault();
                 ui.saveMaterialModal();

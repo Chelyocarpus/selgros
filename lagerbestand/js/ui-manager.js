@@ -404,10 +404,13 @@ class UIManager {
             info: title || 'Info'
         };
         
+        // Escape title if it contains user data, but allow safe HTML icons in title
+        const safeTitle = title ? SecurityUtils.escapeHTML(title) : titles[type];
+        
         toast.innerHTML = `
             <div class="toast-icon">${icons[type] || icons.info}</div>
             <div class="toast-content">
-                <div class="toast-title">${titles[type]}</div>
+                <div class="toast-title">${safeTitle}</div>
                 <div class="toast-message">${message}</div>
             </div>
             <button class="toast-close" onclick="this.parentElement.remove()">×</button>
@@ -625,7 +628,8 @@ class UIManager {
             
             // Update modal content with translations
             document.getElementById('deleteModalTitleText').textContent = this.t('deleteModalTitle');
-            document.getElementById('deleteModalMessage').innerHTML = message;
+            // Use textContent instead of innerHTML to prevent XSS
+            document.getElementById('deleteModalMessage').textContent = message;
             document.getElementById('deleteModalWarning').textContent = this.t('deleteWarning');
             document.getElementById('deleteModalCancelText').textContent = this.t('deleteModalCancel');
             document.getElementById('deleteModalConfirmText').textContent = this.t('deleteModalConfirm');
@@ -685,7 +689,8 @@ class UIManager {
             
             // Update modal content with translations
             document.getElementById('clearAllModalTitleText').textContent = this.t('clearAllModalTitle');
-            document.getElementById('clearAllModalMessage').innerHTML = message.replace('{count}', count);
+            // Use textContent instead of innerHTML to prevent XSS
+            document.getElementById('clearAllModalMessage').textContent = message.replace('{count}', count);
             document.getElementById('clearAllModalWarning').textContent = this.t('clearAllWarning');
             document.getElementById('clearAllModalInstruction').textContent = this.t('clearAllInstruction');
             document.getElementById('clearAllModalCancelText').textContent = this.t('deleteModalCancel');
@@ -798,10 +803,13 @@ class UIManager {
 
         const changes = [];
         const newCapacityNum = parseInt(newData.capacity);
+        
+        // Helper to escape HTML for safe display in toasts
+        const esc = (str) => SecurityUtils.escapeHTML(String(str));
 
         // Check capacity change (capacity is already stored as a number in data model)
         if (oldMaterial.capacity !== newCapacityNum) {
-            changes.push(`Capacity: ${oldMaterial.capacity} → ${newCapacityNum}`);
+            changes.push(`Capacity: ${esc(oldMaterial.capacity)} → ${esc(newCapacityNum)}`);
         }
 
         // Check group/category change
@@ -810,7 +818,7 @@ class UIManager {
         if (oldGroup !== newGroup) {
             const oldGroupName = oldGroup ? this.dataManager.getGroup(oldGroup)?.name || oldGroup : 'None';
             const newGroupName = newGroup ? this.dataManager.getGroup(newGroup)?.name || newGroup : 'None';
-            changes.push(`Group: ${oldGroupName} → ${newGroupName}`);
+            changes.push(`Group: ${esc(oldGroupName)} → ${esc(newGroupName)}`);
         }
 
         // Check name change (trim whitespace for comparison)
@@ -819,7 +827,7 @@ class UIManager {
         if (oldName !== newName) {
             const oldDisplay = oldName || '(empty)';
             const newDisplay = newName || '(empty)';
-            changes.push(`Name: ${oldDisplay} → ${newDisplay}`);
+            changes.push(`Name: ${esc(oldDisplay)} → ${esc(newDisplay)}`);
         }
 
         // Check promo capacity change
@@ -828,7 +836,7 @@ class UIManager {
         if (oldPromoCapacity !== newPromoCapacity) {
             const oldDisplay = oldPromoCapacity || 'None';
             const newDisplay = newPromoCapacity || 'None';
-            changes.push(`Promo Capacity: ${oldDisplay} → ${newDisplay}`);
+            changes.push(`Promo Capacity: ${esc(oldDisplay)} → ${esc(newDisplay)}`);
         }
 
         return {
@@ -1056,9 +1064,11 @@ class UIManager {
                     promoCapacity: promoCapacity
                 });
                 
-                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${code} updated successfully!`;
+                const safeCode = SecurityUtils.escapeHTML(code);
+                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${safeCode} updated successfully!`;
                 
                 if (changeDetection.hasChanges) {
+                    // Changes are already escaped in detectMaterialChanges method
                     toastMessage += ` ${changeDetection.changes.join(', ')}.`;
                 } else {
                     toastMessage += ' No changes detected.';
@@ -1066,9 +1076,13 @@ class UIManager {
                 
                 this.showToast(toastMessage, 'success', 'Updated');
             } else if (mode === 'quickadd') {
-                this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${code} quickly added! Capacity set to ${capacityNum}.`, 'success', 'Quick Added');
+                const safeCode = SecurityUtils.escapeHTML(code);
+                const safeCapacity = SecurityUtils.escapeHTML(String(capacityNum));
+                this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${safeCode} quickly added! Capacity set to ${safeCapacity}.`, 'success', 'Quick Added');
             } else {
-                this.showToast(`<i class="fa-solid fa-plus"></i> Material ${code} added successfully! Capacity set to ${capacityNum}.`, 'success', 'Added');
+                const safeCode = SecurityUtils.escapeHTML(code);
+                const safeCapacity = SecurityUtils.escapeHTML(String(capacityNum));
+                this.showToast(`<i class="fa-solid fa-plus"></i> Material ${safeCode} added successfully! Capacity set to ${safeCapacity}.`, 'success', 'Added');
             }
 
         } catch (error) {
@@ -1101,7 +1115,8 @@ class UIManager {
                 this.updateUndoRedoButtons();
             }
             
-            this.showToast(`<i class="fa-solid fa-trash-can"></i> Material ${code} deleted successfully`, 'success');
+            const safeCode = SecurityUtils.escapeHTML(code);
+            this.showToast(`<i class="fa-solid fa-trash-can"></i> Material ${safeCode} deleted successfully`, 'success');
             
             // Refresh results if data is displayed
             const inputData = document.getElementById('inputData').value.trim();
@@ -1377,7 +1392,7 @@ class UIManager {
                         <i class="fa-solid fa-exclamation-circle"></i> ${this.t('cloudSyncUnsyncedChanges')}
                     </div>
                     <div style="font-weight: 600; color: var(--warning-color); display: flex; align-items: center; gap: 8px;">
-                        ${this.t('cloudSyncUnsyncedChangesCount').replace('{count}', status.unsyncedChangeCount)}
+                        ${this.t('cloudSyncUnsyncedChangesCount').replace('{count}', parseInt(status.unsyncedChangeCount) || 0)}
                         <i class="fa-solid fa-chevron-right" style="font-size: 0.8em;"></i>
                     </div>
                 </div>
@@ -1385,7 +1400,7 @@ class UIManager {
             </div>
             ${status.autoSync && isConfigured ? `
             <div style="margin-top: 10px; padding: 8px 12px; background: var(--info-bg); border-radius: 6px; font-size: 0.85em;">
-                <i class="fa-solid fa-sync"></i> ${this.t('cloudSyncAutoSyncLabel')}: ${status.autoSyncInterval} min
+                <i class="fa-solid fa-sync"></i> ${this.t('cloudSyncAutoSyncLabel')}: ${parseInt(status.autoSyncInterval) || 0} min
             </div>
             ` : ''}
         `;
@@ -1517,7 +1532,7 @@ class UIManager {
                     
                     <div class="form-group" id="autoSyncIntervalGroup" style="display: ${settings.autoSync ? 'block' : 'none'};">
                         <label for="cloudSyncAutoSyncInterval">${this.t('cloudSyncAutoSyncInterval')}</label>
-                        <input type="number" id="cloudSyncAutoSyncInterval" value="${settings.autoSyncIntervalMinutes || 30}" min="5" max="1440">
+                        <input type="number" id="cloudSyncAutoSyncInterval" value="${parseInt(settings.autoSyncIntervalMinutes) || 30}" min="5" max="1440">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1968,7 +1983,7 @@ class UIManager {
                 }
                 
                 if (details.action === 'add' && details.capacity) {
-                    description += ` - ${this.t('capacity') || 'Kapazität'}: ${details.capacity}`;
+                    description += ` - ${this.t('capacity') || 'Kapazität'}: ${SecurityUtils.escapeHTML(String(details.capacity))}`;
                 } else if (details.action === 'edit' && details.changes) {
                     description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.changes)}</small>`;
                 }
@@ -1978,14 +1993,16 @@ class UIManager {
                 description = `<strong>${SecurityUtils.escapeHTML(details.groupName || details.groupId)}</strong>`;
                 
                 if (details.action === 'add' && details.color) {
-                    description += ` <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${details.color}; vertical-align: middle;"></span>`;
+                    // Validate color is a safe hex format (#RGB or #RRGGBB)
+                    const safeColor = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(details.color) ? details.color : '#3b82f6';
+                    description += ` <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${safeColor}; vertical-align: middle;"></span>`;
                 } else if (details.action === 'edit' && details.changes) {
                     description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.changes)}</small>`;
                 }
             }
             // Handle bulk delete
             else if (details.action === 'bulk_delete' && details.count) {
-                description = `${details.count} ${this.t('materials') || 'Materialien'}`;
+                description = `${parseInt(details.count) || 0} ${this.t('materials') || 'Materialien'}`;
                 if (details.materialCodes) {
                     description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.materialCodes)}</small>`;
                 }
@@ -1996,6 +2013,7 @@ class UIManager {
         
         const changesHtml = changes.length > 0 ? changes.map(change => {
             const time = new Date(change.timestamp).toLocaleString();
+            const safeChangeId = SecurityUtils.escapeHTML(String(change.id));
             return `
                 <div class="unsynced-change-item" style="display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border-color); align-items: flex-start;">
                     <div style="flex-shrink: 0; width: 30px; text-align: center;">
@@ -2004,12 +2022,12 @@ class UIManager {
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                             ${getActionBadge(change.details?.action || change.type)}
-                            <span style="font-size: 0.8em; color: var(--text-secondary);">${time}</span>
+                            <span style="font-size: 0.8em; color: var(--text-secondary);">${SecurityUtils.escapeHTML(time)}</span>
                         </div>
                         <div>${formatChangeDetails(change)}</div>
                     </div>
                     <div style="flex-shrink: 0;">
-                        <button class="btn-icon" onclick="ui.dismissUnsyncedChange('${change.id}')" title="${this.t('dismiss') || 'Verwerfen'}">
+                        <button class="btn-icon" onclick="ui.dismissUnsyncedChange('${safeChangeId}')" title="${this.t('dismiss') || 'Verwerfen'}">
                             <i class="fa-solid fa-times"></i>
                         </button>
                     </div>
@@ -2077,13 +2095,11 @@ class UIManager {
      * Dismiss all unsynced changes
      */
     dismissAllUnsyncedChanges() {
-        if (confirm(this.t('confirmDismissAllChanges') || 'Möchten Sie wirklich alle nicht synchronisierten Änderungen verwerfen?')) {
-            if (this.cloudSyncManager) {
-                this.cloudSyncManager.dismissAllUnsyncedChanges();
-                this.closeModal();
-                this.renderCloudSyncStatus();
-                this.showToast(this.t('allChangesDiscarded') || 'Alle Änderungen verworfen', 'info');
-            }
+        if (confirm(this.t('confirmDismissAllChanges') || 'Möchten Sie wirklich alle nicht synchronisierten Änderungen verwerfen?') && this.cloudSyncManager) {
+            this.cloudSyncManager.dismissAllUnsyncedChanges();
+            this.closeModal();
+            this.renderCloudSyncStatus();
+            this.showToast(this.t('allChangesDiscarded') || 'Alle Änderungen verworfen', 'info');
         }
     }
 
@@ -2638,7 +2654,7 @@ class UIManager {
         
         // Close on outside click - don't use once:true as it can cause blocking issues
         setTimeout(() => {
-            // Remove any existing handler first
+            // Remove any existing handler first to prevent duplicates
             if (this.closeCategoryDropdownHandler) {
                 document.removeEventListener('click', this.closeCategoryDropdownHandler);
             }
@@ -2708,7 +2724,7 @@ class UIManager {
             this.currentCategoryButton = null;
         }
         
-        // Remove click handler
+        // Remove click handler to prevent memory leak
         if (this.closeCategoryDropdownHandler) {
             document.removeEventListener('click', this.closeCategoryDropdownHandler);
             this.closeCategoryDropdownHandler = null;

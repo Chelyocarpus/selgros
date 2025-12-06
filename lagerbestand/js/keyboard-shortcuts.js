@@ -117,7 +117,7 @@ class KeyboardShortcutManager {
             if (!this.enabled) return;
 
             // Don't trigger shortcuts when typing in inputs (except Escape)
-            const target = e.target;
+            const {target} = e;
             const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
             
             if (isInput && e.key !== 'Escape' && !e.ctrlKey && !e.metaKey) {
