@@ -676,15 +676,18 @@ body.dark-mode .quick-category-select option {
 
 .category-search-icon {
     position: absolute;
-    left: 12px;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
     color: #9ca3af;
     font-size: 0.9em;
     pointer-events: none;
+    z-index: 1;
 }
 
 .category-dropdown-search {
     width: 100%;
-    padding: 8px 12px 8px 36px;
+    padding: 8px 12px 8px 48px !important;
     border: 2px solid #e5e7eb;
     border-radius: 8px;
     font-size: 0.9em;

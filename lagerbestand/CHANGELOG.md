@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.7.3] - 2025-12-06
+
+### Fixed
+
+#### Unsynced Changes Tracking Improvements
+- **Fixed material capacity display**: New materials now show capacity correctly in the unsynced changes list (was showing "Keine Details verfügbar" due to incorrect property reference)
+- **Fixed category change tracking**: When assigning a material to a group/category, the change is now properly tracked with details like "Gruppe zugewiesen: [Group Name]" or "Gruppe: [Old] → [New]"
+- **Early CloudSync initialization**: CloudSyncManager is now initialized at app startup, ensuring all changes are tracked even before visiting the Settings tab
+
+---
+
+## [2.7.2] - 2025-12-04
+
+### Added
+
+#### Unsynced Changes Tracking Details
+- **Detailed change list**: Clicking on "Nicht synchronisierte Änderungen" now opens a modal showing a detailed list of all pending changes
+- **Change descriptions**: Each change shows action type (Hinzugefügt/Bearbeitet/Gelöscht), material code, name, and relevant details (capacity, changes made)
+- **Dismiss individual changes**: Each change can be dismissed individually with an "X" button, removing it from the sync queue
+- **Dismiss all changes**: "Alle verwerfen" button to clear all unsynced changes at once with confirmation
+- **Quick upload**: Direct "Jetzt hochladen" button in the modal to sync immediately
+- **Change tracking for materials**: Add, edit, and delete operations now track detailed information (material code, name, capacity, what changed)
+- **Bulk delete tracking**: Bulk material deletions now show count and sample of deleted material codes
+- **Edit change summary**: When editing materials, the change summary shows what fields changed (e.g., "Kapazität: 50 → 100")
+
+#### Enhanced Group Color Picker
+- **30 color palette**: Expanded from 10 to 30 colors including vibrant, pastel, and earthy tones
+- **Custom color picker**: Native HTML5 color picker for selecting any custom color
+- **Live color preview**: Real-time preview showing the selected color and hex code
+- **Scrollable palette**: Color palette now scrolls if needed to fit all options
+- **Improved styling**: Color options have hover effects, checkmarks for selected colors
+
+### Changed
+- **Cloud sync status display**: Unsynced changes section now shows clickable chevron icon indicating more details are available
+- **Translations**: Added German and English translations for new change tracking UI (actionAdd, actionEdit, actionDelete, dismiss, dismissAll, etc.)
+- **Settings tab refresh**: Cloud sync status now auto-refreshes when switching to Settings tab
+
+### Performance
+- **Lazy loading for Materials tab**: Significantly reduced delay when opening the Materials tab
+  - **DataTables data mode**: Table now uses DataTables' native data array with column renderers instead of pre-building DOM elements
+  - **Deferred rendering**: Only visible rows are rendered; off-screen rows are rendered on-demand during pagination/scroll
+  - **Event delegation**: Single event listener on table handles all button clicks and checkbox changes
+  - **Deferred secondary content**: Groups and notes lists load after the main table renders
+  - **requestAnimationFrame**: Table initialization deferred to next animation frame for smoother UI
+- **Materials tab optimization**: Significantly improved load time when switching to "Materialien verwalten" tab
+  - Uses `DocumentFragment` for batch DOM operations instead of individual appends
+  - DataTable initialization deferred to next animation frame with `requestAnimationFrame`
+  - Enabled `deferRender: true` for DataTables to improve rendering of large datasets
+  - More efficient tbody clearing with while loop instead of textContent
+
+---
+
 ## [2.7.1] - 2025-12-01
 
 ### Changed

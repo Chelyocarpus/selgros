@@ -43,8 +43,11 @@ function initializeTab(tabName) {
         case 'materials':
             renderMaterialsTab();
             ui.renderMaterialsList();
-            ui.renderGroupsList();
-            ui.renderNotesList();
+            // Defer secondary content to avoid blocking main table render
+            requestAnimationFrame(() => {
+                ui.renderGroupsList();
+                ui.renderNotesList();
+            });
             break;
         case 'archive':
             renderArchiveTab();
@@ -144,6 +147,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render modals (needed globally)
     renderMaterialModal();
     renderViewReportModal();
+    
+    // Initialize cloud sync early to track all changes (lightweight operation)
+    ui.initCloudSync();
     
     // Initialize only the active tab (Check Stock) on load
     renderCheckStockTab();

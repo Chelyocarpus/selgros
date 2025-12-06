@@ -447,6 +447,9 @@ class UIManager {
             this.renderMaterialsList();
         } else if (tabName === 'archive') {
             this.renderArchiveList();
+        } else if (tabName === 'settings') {
+            // Refresh cloud sync status to show latest unsynced changes
+            this.renderCloudSyncStatus();
         }
     }
 
@@ -590,7 +593,10 @@ class UIManager {
 
     // Close material modal
     closeMaterialModal() {
-        document.getElementById('materialModal').classList.remove('active');
+        const modal = document.getElementById('materialModal');
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        modal.onclick = null; // Remove any click handlers
         this.currentModalMode = null;
         this.currentEditingMaterial = null;
         this.quickAddContext = null;
@@ -1106,8 +1112,6 @@ class UIManager {
                 const analysis = this.reportProcessor.analyzeStock(parsedData);
                 this.displayResults(analysis);
             }
-            
-            this.showToast(`Material ${code} deleted successfully!`, 'success');
         } else {
             this.showToast('Error deleting material.', 'error');
         }
@@ -1276,6 +1280,8 @@ class UIManager {
     initCloudSync() {
         if (!this.cloudSyncManager) {
             this.cloudSyncManager = new CloudSyncManager(this.dataManager);
+            // Connect DataManager to CloudSyncManager for change tracking
+            this.dataManager.setCloudSyncManager(this.cloudSyncManager);
             this.setupCrossTabSyncListeners();
         }
         this.renderCloudSyncStatus();
@@ -1362,6 +1368,17 @@ class UIManager {
                     </div>
                     <div>
                         ${statusBadge}
+                    </div>
+                </div>
+                ` : ''}
+                ${status.hasUnsyncedChanges && status.unsyncedChangeCount > 0 ? `
+                <div class="sync-status-item" style="cursor: pointer;" onclick="ui.showUnsyncedChangesList()" title="${this.t('cloudSyncClickToShowChanges')}">
+                    <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
+                        <i class="fa-solid fa-exclamation-circle"></i> ${this.t('cloudSyncUnsyncedChanges')}
+                    </div>
+                    <div style="font-weight: 600; color: var(--warning-color); display: flex; align-items: center; gap: 8px;">
+                        ${this.t('cloudSyncUnsyncedChangesCount').replace('{count}', status.unsyncedChangeCount)}
+                        <i class="fa-solid fa-chevron-right" style="font-size: 0.8em;"></i>
                     </div>
                 </div>
                 ` : ''}
@@ -1905,6 +1922,168 @@ class UIManager {
             this.cloudSyncManager.clearSyncLog();
             this.renderSyncLog();
             this.showToast(this.t('syncLogCleared') || 'Sync log cleared', 'success');
+        }
+    }
+
+    /**
+     * Show modal with list of unsynced changes
+     */
+    showUnsyncedChangesList() {
+        if (!this.cloudSyncManager) return;
+        
+        const status = this.cloudSyncManager.getSyncStatus();
+        const changes = status.unsyncedChangesList || [];
+        const modal = document.getElementById('materialModal');
+        
+        const getChangeIcon = (type) => {
+            const icons = {
+                'materials': '<i class="fa-solid fa-box"></i>',
+                'archive': '<i class="fa-solid fa-archive"></i>',
+                'groups': '<i class="fa-solid fa-layer-group"></i>',
+                'notes': '<i class="fa-solid fa-sticky-note"></i>'
+            };
+            return icons[type] || '<i class="fa-solid fa-edit"></i>';
+        };
+        
+        const getActionBadge = (action) => {
+            const badges = {
+                'add': { class: 'success', label: this.t('actionAdd') || 'Hinzugefügt' },
+                'edit': { class: 'warning', label: this.t('actionEdit') || 'Bearbeitet' },
+                'delete': { class: 'danger', label: this.t('actionDelete') || 'Gelöscht' },
+                'bulk_delete': { class: 'danger', label: this.t('actionBulkDelete') || 'Mehrfach gelöscht' }
+            };
+            const badge = badges[action] || { class: 'secondary', label: action };
+            return `<span class="badge badge-${badge.class}">${badge.label}</span>`;
+        };
+        
+        const formatChangeDetails = (change) => {
+            const details = change.details || {};
+            let description = '';
+            
+            // Handle material changes
+            if (details.materialCode) {
+                description = `<strong>${SecurityUtils.escapeHTML(details.materialCode)}</strong>`;
+                if (details.materialName && details.materialName !== details.materialCode) {
+                    description += ` (${SecurityUtils.escapeHTML(details.materialName)})`;
+                }
+                
+                if (details.action === 'add' && details.capacity) {
+                    description += ` - ${this.t('capacity') || 'Kapazität'}: ${details.capacity}`;
+                } else if (details.action === 'edit' && details.changes) {
+                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.changes)}</small>`;
+                }
+            }
+            // Handle group changes
+            else if (details.groupName || details.groupId) {
+                description = `<strong>${SecurityUtils.escapeHTML(details.groupName || details.groupId)}</strong>`;
+                
+                if (details.action === 'add' && details.color) {
+                    description += ` <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${details.color}; vertical-align: middle;"></span>`;
+                } else if (details.action === 'edit' && details.changes) {
+                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.changes)}</small>`;
+                }
+            }
+            // Handle bulk delete
+            else if (details.action === 'bulk_delete' && details.count) {
+                description = `${details.count} ${this.t('materials') || 'Materialien'}`;
+                if (details.materialCodes) {
+                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.materialCodes)}</small>`;
+                }
+            }
+            
+            return description || this.t('changeNoDetails') || 'Keine Details verfügbar';
+        };
+        
+        const changesHtml = changes.length > 0 ? changes.map(change => {
+            const time = new Date(change.timestamp).toLocaleString();
+            return `
+                <div class="unsynced-change-item" style="display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border-color); align-items: flex-start;">
+                    <div style="flex-shrink: 0; width: 30px; text-align: center;">
+                        ${getChangeIcon(change.type)}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            ${getActionBadge(change.details?.action || change.type)}
+                            <span style="font-size: 0.8em; color: var(--text-secondary);">${time}</span>
+                        </div>
+                        <div>${formatChangeDetails(change)}</div>
+                    </div>
+                    <div style="flex-shrink: 0;">
+                        <button class="btn-icon" onclick="ui.dismissUnsyncedChange('${change.id}')" title="${this.t('dismiss') || 'Verwerfen'}">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('') : `
+            <div class="empty-state" style="padding: 30px; text-align: center;">
+                <i class="fa-solid fa-check-circle" style="font-size: 2em; color: var(--success-color); margin-bottom: 10px;"></i>
+                <p>${this.t('noUnsyncedChanges') || 'Keine nicht synchronisierten Änderungen'}</p>
+            </div>
+        `;
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-clock-rotate-left"></i> ${this.t('cloudSyncUnsyncedChanges') || 'Nicht synchronisierte Änderungen'}</h2>
+                    <button class="modal-close" onclick="ui.closeModal()" aria-label="${this.t('btnCancel') || 'Abbrechen'}">×</button>
+                </div>
+                <div class="modal-body" style="max-height: 400px; overflow-y: auto; padding: 0;">
+                    ${changesHtml}
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 10px; justify-content: space-between;">
+                    <button class="btn btn-danger" onclick="ui.dismissAllUnsyncedChanges()" ${changes.length === 0 ? 'disabled' : ''}>
+                        <i class="fa-solid fa-trash"></i> ${this.t('dismissAll') || 'Alle verwerfen'}
+                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="ui.closeModal()">
+                            ${this.t('btnClose') || 'Schließen'}
+                        </button>
+                        <button class="btn btn-primary" onclick="ui.closeModal(); ui.cloudSyncUpload();" ${changes.length === 0 ? 'disabled' : ''}>
+                            <i class="fa-solid fa-cloud-arrow-up"></i> ${this.t('btnCloudSyncUpload') || 'Jetzt hochladen'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        modal.style.display = 'flex';
+        
+        // Add click handler to close when clicking outside the modal content
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                this.closeModal();
+            }
+        };
+        
+        // Announce to screen readers if accessibility manager is available
+        if (typeof accessibilityManager !== 'undefined' && accessibilityManager.announce) {
+            accessibilityManager.announce(this.t('modalOpened') || 'Modal geöffnet');
+        }
+    }
+    
+    /**
+     * Dismiss a specific unsynced change
+     */
+    dismissUnsyncedChange(changeId) {
+        if (this.cloudSyncManager) {
+            this.cloudSyncManager.dismissUnsyncedChange(changeId);
+            this.showUnsyncedChangesList(); // Refresh the modal
+            this.renderCloudSyncStatus(); // Refresh the status display
+        }
+    }
+    
+    /**
+     * Dismiss all unsynced changes
+     */
+    dismissAllUnsyncedChanges() {
+        if (confirm(this.t('confirmDismissAllChanges') || 'Möchten Sie wirklich alle nicht synchronisierten Änderungen verwerfen?')) {
+            if (this.cloudSyncManager) {
+                this.cloudSyncManager.dismissAllUnsyncedChanges();
+                this.closeModal();
+                this.renderCloudSyncStatus();
+                this.showToast(this.t('allChangesDiscarded') || 'Alle Änderungen verworfen', 'info');
+            }
         }
     }
 
@@ -2457,11 +2636,20 @@ class UIManager {
             });
         });
         
-        // Close on outside click
+        // Close on outside click - don't use once:true as it can cause blocking issues
         setTimeout(() => {
-            document.addEventListener('click', this.closeCategoryDropdownHandler = () => {
-                this.closeCategoryDropdown();
-            }, { once: true });
+            // Remove any existing handler first
+            if (this.closeCategoryDropdownHandler) {
+                document.removeEventListener('click', this.closeCategoryDropdownHandler);
+            }
+            this.closeCategoryDropdownHandler = (e) => {
+                // Check if click is outside the dropdown
+                const dropdown = document.getElementById('categoryDropdownPopup');
+                if (dropdown && !dropdown.contains(e.target)) {
+                    this.closeCategoryDropdown();
+                }
+            };
+            document.addEventListener('click', this.closeCategoryDropdownHandler);
         }, 10);
     }
     
@@ -2507,17 +2695,11 @@ class UIManager {
             // Clear any pending removal timeout to prevent race condition
             if (this.categoryDropdownRemovalTimeout) {
                 clearTimeout(this.categoryDropdownRemovalTimeout);
+                this.categoryDropdownRemovalTimeout = null;
             }
             
-            // Schedule removal with stored timeout ID
-            this.categoryDropdownRemovalTimeout = setTimeout(() => {
-                // Check if dropdown still exists before removing
-                const stillExists = document.getElementById('categoryDropdownPopup');
-                if (stillExists) {
-                    stillExists.remove();
-                }
-                this.categoryDropdownRemovalTimeout = null;
-            }, 200);
+            // Remove immediately instead of with timeout to prevent race conditions
+            dropdown.remove();
         }
         
         // Update aria-expanded on the button
@@ -2627,6 +2809,11 @@ class UIManager {
                 button.setAttribute('data-has-category', 'true');
                 button.setAttribute('data-current-group', groupId);
                 
+                // Update button inline styles
+                button.style.background = `linear-gradient(135deg, ${color}15 0%, ${color}30 100%)`;
+                button.style.border = `1px solid ${color}40`;
+                button.style.color = this.getContrastColor(color);
+                
                 // Update button text
                 const textSpan = button.querySelector('.category-select-text');
                 if (textSpan) textSpan.textContent = group.name;
@@ -2640,6 +2827,11 @@ class UIManager {
             button.setAttribute('data-has-category', 'false');
             button.setAttribute('data-current-group', '');
             
+            // Reset button inline styles
+            button.style.background = '';
+            button.style.border = '';
+            button.style.color = '';
+            
             // Update button text
             const textSpan = button.querySelector('.category-select-text');
             if (textSpan) textSpan.textContent = this.t('groupUngrouped');
@@ -2649,12 +2841,12 @@ class UIManager {
     /**
      * Get contrasting text color for a given background color
      * @param {string} hexColor - Hex color code
-     * @returns {string} - Black or color-adjusted text color
+     * @returns {string} - Adjusted text color for readability
      */
     getContrastColor(hexColor) {
         // Validate input
         if (!hexColor || typeof hexColor !== 'string') {
-            return '#000000'; // Default to black for invalid input
+            return document.body.classList.contains('dark-mode') ? '#ffffff' : '#000000';
         }
         
         // Convert hex to RGB
@@ -2663,7 +2855,7 @@ class UIManager {
         // Validate hex format (must be 3 or 6 characters)
         if (!/^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex)) {
             console.warn(`Invalid hex color: ${hexColor}, using default`);
-            return '#000000';
+            return document.body.classList.contains('dark-mode') ? '#ffffff' : '#000000';
         }
         
         // Expand shorthand format (e.g., '03F' to '0033FF')
@@ -2678,14 +2870,32 @@ class UIManager {
         // Validate parsed values
         if (isNaN(r) || isNaN(g) || isNaN(b)) {
             console.warn(`Failed to parse hex color: ${hexColor}, using default`);
-            return '#000000';
+            return document.body.classList.contains('dark-mode') ? '#ffffff' : '#000000';
         }
         
         // Calculate luminance
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const isDarkMode = document.body.classList.contains('dark-mode');
         
-        // Return darker shade of the color for better readability
-        return luminance > 0.5 ? `rgb(${Math.floor(r * 0.4)}, ${Math.floor(g * 0.4)}, ${Math.floor(b * 0.4)})` : hexColor;
+        if (isDarkMode) {
+            // In dark mode: light colors need darkening, dark colors need lightening
+            if (luminance > 0.6) {
+                // Very light colors - darken them for dark backgrounds
+                return `rgb(${Math.floor(r * 0.7)}, ${Math.floor(g * 0.7)}, ${Math.floor(b * 0.7)})`;
+            } else if (luminance < 0.3) {
+                // Very dark colors - lighten them for dark backgrounds
+                const factor = 1.8;
+                return `rgb(${Math.min(255, Math.floor(r * factor + 60))}, ${Math.min(255, Math.floor(g * factor + 60))}, ${Math.min(255, Math.floor(b * factor + 60))})`;
+            }
+            // Medium luminance colors are usually fine
+            return hexColor;
+        } else {
+            // In light mode: light colors need darkening for white backgrounds
+            if (luminance > 0.5) {
+                return `rgb(${Math.floor(r * 0.4)}, ${Math.floor(g * 0.4)}, ${Math.floor(b * 0.4)})`;
+            }
+            return hexColor;
+        }
     }
 
     /**
