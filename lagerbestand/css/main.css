@@ -244,6 +244,15 @@ body.high-contrast .header-btn#highContrastBtn {
     border-color: rgba(255, 255, 255, 0.6);
 }
 
+body.reduced-motion .header-btn#reducedMotionBtn {
+    background: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+body.reduced-motion .header-btn#reducedMotionBtn i::before {
+    content: "\f28b"; /* fa-pause */
+}
+
 /* Tabs */
 .tabs {
     display: flex;
