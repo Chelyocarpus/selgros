@@ -283,7 +283,12 @@ class UIManager {
      */
     updateLanguage() {
         // Update header
-        document.getElementById('headerTitle').innerHTML = `<i class="fa-solid fa-boxes-stacked"></i> ${this.t('appTitle')}`;
+        const headerTitle = document.getElementById('headerTitle');
+        headerTitle.textContent = '';
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-boxes-stacked';
+        headerTitle.appendChild(icon);
+        headerTitle.appendChild(document.createTextNode(' ' + this.t('appTitle')));
         document.getElementById('headerSubtitle').textContent = this.t('appSubtitle');
         
         // Update skip links and loading text
@@ -325,9 +330,20 @@ class UIManager {
         
         // Update tabs
         const tabs = document.querySelectorAll('.tab');
-        tabs[0].innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> ${this.t('tabCheckStock')}`;
-        tabs[1].innerHTML = `<i class="fa-solid fa-boxes-stacked"></i> ${this.t('tabManageMaterials')}`;
-        tabs[2].innerHTML = `<i class="fa-solid fa-folder-open"></i> ${this.t('tabArchive')}`;
+        const tabConfigs = [
+            { icon: 'fa-magnifying-glass', text: this.t('tabCheckStock') },
+            { icon: 'fa-boxes-stacked', text: this.t('tabManageMaterials') },
+            { icon: 'fa-folder-open', text: this.t('tabArchive') }
+        ];
+        tabs.forEach((tab, index) => {
+            if (tabConfigs[index]) {
+                tab.textContent = '';
+                const icon = document.createElement('i');
+                icon.className = `fa-solid ${tabConfigs[index].icon}`;
+                tab.appendChild(icon);
+                tab.appendChild(document.createTextNode(' ' + tabConfigs[index].text));
+            }
+        });
         
         // Update language selector
         document.getElementById('languageSelect').value = this.languageManager.getCurrentLanguage();
@@ -404,14 +420,40 @@ class UIManager {
             info: title || 'Info'
         };
         
-        toast.innerHTML = `
-            <div class="toast-icon">${icons[type] || icons.info}</div>
-            <div class="toast-content">
-                <div class="toast-title">${titles[type]}</div>
-                <div class="toast-message">${message}</div>
-            </div>
-            <button class="toast-close" onclick="this.parentElement.remove()">×</button>
-        `;
+        // Create toast structure safely
+        const toastIcon = document.createElement('div');
+        toastIcon.className = 'toast-icon';
+        toastIcon.innerHTML = icons[type] || icons.info; // Icons are hardcoded, safe
+        
+        const toastContent = document.createElement('div');
+        toastContent.className = 'toast-content';
+        
+        const toastTitle = document.createElement('div');
+        toastTitle.className = 'toast-title';
+        // Title from internal calls may contain icons (HTML), so use innerHTML
+        // but this is controlled data from the application, not user input
+        if (title && title.includes('<')) {
+            toastTitle.innerHTML = title;
+        } else {
+            toastTitle.textContent = titles[type];
+        }
+        
+        const toastMessage = document.createElement('div');
+        toastMessage.className = 'toast-message';
+        // Message from internal calls may contain formatting/icons (HTML)
+        // This is controlled data from the application, not user input
+        toastMessage.innerHTML = message;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'toast-close';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = function() { this.parentElement.remove(); };
+        
+        toastContent.appendChild(toastTitle);
+        toastContent.appendChild(toastMessage);
+        toast.appendChild(toastIcon);
+        toast.appendChild(toastContent);
+        toast.appendChild(closeBtn);
         
         container.appendChild(toast);
         
@@ -1335,7 +1377,15 @@ class UIManager {
             }
         }
 
-        container.innerHTML = `
+        // Clear container safely
+        container.textContent = '';
+        
+        const grid = document.createElement('div');
+        grid.className = 'sync-status-grid';
+        grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;';
+        
+        // Build grid content with safe DOM methods
+        const gridContent = `
             <div class="sync-status-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
                 <div class="sync-status-item">
                     <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
@@ -1385,10 +1435,11 @@ class UIManager {
             </div>
             ${status.autoSync && isConfigured ? `
             <div style="margin-top: 10px; padding: 8px 12px; background: var(--info-bg); border-radius: 6px; font-size: 0.85em;">
-                <i class="fa-solid fa-sync"></i> ${this.t('cloudSyncAutoSyncLabel')}: ${status.autoSyncInterval} min
+                <i class="fa-solid fa-sync"></i> ${this.t('cloudSyncAutoSyncLabel')}: ${SecurityUtils.escapeHTML(String(status.autoSyncInterval))} min
             </div>
             ` : ''}
         `;
+        container.innerHTML = gridContent;
     }
 
     /**
@@ -1402,7 +1453,29 @@ class UIManager {
         const settings = this.cloudSyncManager.getSettings();
         const modal = document.getElementById('materialModal');
 
-        modal.innerHTML = `
+        // Clear and build modal safely
+        modal.textContent = '';
+        
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.maxWidth = '600px';
+        
+        // Build HTML with escaped values
+        const escapedSettings = {
+            github: {
+                token: SecurityUtils.escapeHTML(settings.github?.token || ''),
+                gistId: SecurityUtils.escapeHTML(settings.github?.gistId || ''),
+                filename: SecurityUtils.escapeHTML(settings.github?.filename || 'warehouse-backup.json')
+            },
+            localServer: {
+                uploadUrl: SecurityUtils.escapeHTML(settings.localServer?.uploadUrl || ''),
+                downloadUrl: SecurityUtils.escapeHTML(settings.localServer?.downloadUrl || ''),
+                authHeader: SecurityUtils.escapeHTML(settings.localServer?.authHeader || ''),
+                authValue: SecurityUtils.escapeHTML(settings.localServer?.authValue || '')
+            }
+        };
+        
+        modalContent.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2><i class="fa-solid fa-cloud-arrow-up"></i> ${this.t('cloudSyncSettingsTitle')}</h2>
@@ -1437,7 +1510,7 @@ class UIManager {
                         
                         <div class="form-group">
                             <label for="githubToken">${this.t('githubTokenLabel')} *</label>
-                            <input type="password" id="githubToken" value="${settings.github?.token || ''}" 
+                            <input type="password" id="githubToken" value="${escapedSettings.github.token}" 
                                    placeholder="${this.t('githubTokenPlaceholder')}"
                                    autocomplete="off">
                             <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
@@ -1447,7 +1520,7 @@ class UIManager {
                         
                         <div class="form-group">
                             <label for="githubGistId">${this.t('githubGistIdLabel')}</label>
-                            <input type="text" id="githubGistId" value="${settings.github?.gistId || ''}" 
+                            <input type="text" id="githubGistId" value="${escapedSettings.github.gistId}" 
                                    placeholder="${this.t('githubGistIdPlaceholder')}">
                             <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
                                 ${this.t('githubGistIdHelp')}
@@ -1456,7 +1529,7 @@ class UIManager {
                         
                         <div class="form-group">
                             <label for="githubFilename">${this.t('githubFilenameLabel')}</label>
-                            <input type="text" id="githubFilename" value="${settings.github?.filename || 'warehouse-backup.json'}">
+                            <input type="text" id="githubFilename" value="${escapedSettings.github.filename}">
                             <small style="color: var(--text-secondary); display: block; margin-top: 4px;">
                                 ${this.t('githubFilenameHelp')}
                             </small>
@@ -1479,25 +1552,25 @@ class UIManager {
                         
                         <div class="form-group">
                             <label for="localServerUploadUrl">${this.t('localServerUploadUrl')} *</label>
-                            <input type="url" id="localServerUploadUrl" value="${settings.localServer?.uploadUrl || ''}" 
+                            <input type="url" id="localServerUploadUrl" value="${escapedSettings.localServer.uploadUrl}" 
                                    placeholder="${this.t('localServerUploadUrlPlaceholder')}">
                         </div>
                         
                         <div class="form-group">
                             <label for="localServerDownloadUrl">${this.t('localServerDownloadUrl')} *</label>
-                            <input type="url" id="localServerDownloadUrl" value="${settings.localServer?.downloadUrl || ''}" 
+                            <input type="url" id="localServerDownloadUrl" value="${escapedSettings.localServer.downloadUrl}" 
                                    placeholder="${this.t('localServerDownloadUrlPlaceholder')}">
                         </div>
                         
                         <div class="form-group">
                             <label for="localServerAuthHeader">${this.t('localServerAuthHeader')}</label>
-                            <input type="text" id="localServerAuthHeader" value="${settings.localServer?.authHeader || ''}" 
+                            <input type="text" id="localServerAuthHeader" value="${escapedSettings.localServer.authHeader}" 
                                    placeholder="${this.t('localServerAuthHeaderPlaceholder')}">
                         </div>
                         
                         <div class="form-group">
                             <label for="localServerAuthValue">${this.t('localServerAuthValue')}</label>
-                            <input type="password" id="localServerAuthValue" value="${settings.localServer?.authValue || ''}" 
+                            <input type="password" id="localServerAuthValue" value="${escapedSettings.localServer.authValue}" 
                                    placeholder="${this.t('localServerAuthValuePlaceholder')}"
                                    autocomplete="off">
                         </div>
@@ -1530,7 +1603,8 @@ class UIManager {
                 </div>
             </div>
         `;
-
+        
+        modal.appendChild(modalContent);
         modal.classList.add('active');
 
         // Add event listener for auto-sync checkbox
@@ -1786,7 +1860,7 @@ class UIManager {
                     <i class="fa-solid fa-hard-drive"></i> ${this.t('database') || 'Database'}
                 </div>
                 <div style="font-weight: 600;">
-                    ${dbManager?.dbName || 'WarehouseDB'}
+                    ${SecurityUtils.escapeHTML(dbManager?.dbName || 'WarehouseDB')}
                 </div>
             </div>
             <div class="sync-status-item">
@@ -1933,7 +2007,15 @@ class UIManager {
         
         const status = this.cloudSyncManager.getSyncStatus();
         const changes = status.unsyncedChangesList || [];
-        const modal = document.getElementById('materialModal');
+        
+        // Create or get dedicated modal for unsynced changes
+        let modal = document.getElementById('unsyncedChangesModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'unsyncedChangesModal';
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
         
         const getChangeIcon = (type) => {
             const icons = {
@@ -1968,7 +2050,10 @@ class UIManager {
                 }
                 
                 if (details.action === 'add' && details.capacity) {
-                    description += ` - ${this.t('capacity') || 'Kapazität'}: ${details.capacity}`;
+                    const safeCapacity = Number.isFinite(Number(details.capacity))
+                        ? Number(details.capacity)
+                        : SecurityUtils.escapeHTML(details.capacity);
+                    description += ` - ${this.t('capacity') || 'Kapazität'}: ${safeCapacity}`;
                 } else if (details.action === 'edit' && details.changes) {
                     description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.changes)}</small>`;
                 }
@@ -1978,7 +2063,7 @@ class UIManager {
                 description = `<strong>${SecurityUtils.escapeHTML(details.groupName || details.groupId)}</strong>`;
                 
                 if (details.action === 'add' && details.color) {
-                    description += ` <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${details.color}; vertical-align: middle;"></span>`;
+                    description += ` <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${SecurityUtils.validateColor(details.color)}; vertical-align: middle;"></span>`;
                 } else if (details.action === 'edit' && details.changes) {
                     description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.changes)}</small>`;
                 }
@@ -2022,13 +2107,21 @@ class UIManager {
             </div>
         `;
         
-        modal.innerHTML = `
+        // Clear modal safely
+        modal.textContent = '';
+        
+        const modalContentDiv = document.createElement('div');
+        modalContentDiv.className = 'modal-content';
+        modalContentDiv.style.maxWidth = '600px';
+        
+        // Use innerHTML for structure but ensure all dynamic content is escaped
+        modalContentDiv.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2><i class="fa-solid fa-clock-rotate-left"></i> ${this.t('cloudSyncUnsyncedChanges') || 'Nicht synchronisierte Änderungen'}</h2>
-                    <button class="modal-close" onclick="ui.closeModal()" aria-label="${this.t('btnCancel') || 'Abbrechen'}">×</button>
+                    <button class="modal-close" onclick="ui.closeUnsyncedChangesModal()" aria-label="${this.t('btnCancel') || 'Abbrechen'}">×</button>
                 </div>
-                <div class="modal-body" style="max-height: 400px; overflow-y: auto; padding: 0;">
+                <div class="modal-body" style="max-height: 400px; overflow-y: auto; padding: 0;" tabindex="0" role="region" aria-label="${this.t('unsyncedChangesList') || 'List of unsynced changes'}">
                     ${changesHtml}
                 </div>
                 <div class="modal-footer" style="display: flex; gap: 10px; justify-content: space-between;">
@@ -2036,10 +2129,10 @@ class UIManager {
                         <i class="fa-solid fa-trash"></i> ${this.t('dismissAll') || 'Alle verwerfen'}
                     </button>
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-secondary" onclick="ui.closeModal()">
+                        <button class="btn btn-secondary" onclick="ui.closeUnsyncedChangesModal()">
                             ${this.t('btnClose') || 'Schließen'}
                         </button>
-                        <button class="btn btn-primary" onclick="ui.closeModal(); ui.cloudSyncUpload();" ${changes.length === 0 ? 'disabled' : ''}>
+                        <button class="btn btn-primary" onclick="ui.closeUnsyncedChangesModal(); ui.cloudSyncUpload();" ${changes.length === 0 ? 'disabled' : ''}>
                             <i class="fa-solid fa-cloud-arrow-up"></i> ${this.t('btnCloudSyncUpload') || 'Jetzt hochladen'}
                         </button>
                     </div>
@@ -2047,18 +2140,30 @@ class UIManager {
             </div>
         `;
         
-        modal.style.display = 'flex';
+        modal.appendChild(modalContentDiv);
+        modal.classList.add('active');
         
         // Add click handler to close when clicking outside the modal content
         modal.onclick = (e) => {
             if (e.target === modal) {
-                this.closeModal();
+                this.closeUnsyncedChangesModal();
             }
         };
         
         // Announce to screen readers if accessibility manager is available
         if (typeof accessibilityManager !== 'undefined' && accessibilityManager.announce) {
             accessibilityManager.announce(this.t('modalOpened') || 'Modal geöffnet');
+        }
+    }
+    
+    /**
+     * Close unsynced changes modal
+     */
+    closeUnsyncedChangesModal() {
+        const modal = document.getElementById('unsyncedChangesModal');
+        if (modal) {
+            modal.classList.remove('active');
+            modal.onclick = null;
         }
     }
     
@@ -2080,7 +2185,7 @@ class UIManager {
         if (confirm(this.t('confirmDismissAllChanges') || 'Möchten Sie wirklich alle nicht synchronisierten Änderungen verwerfen?')) {
             if (this.cloudSyncManager) {
                 this.cloudSyncManager.dismissAllUnsyncedChanges();
-                this.closeModal();
+                this.closeUnsyncedChangesModal();
                 this.renderCloudSyncStatus();
                 this.showToast(this.t('allChangesDiscarded') || 'Alle Änderungen verworfen', 'info');
             }

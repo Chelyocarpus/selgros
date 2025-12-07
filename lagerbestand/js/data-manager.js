@@ -544,7 +544,7 @@ class DataManager {
     getChangeSummary(oldData, newData) {
         const changes = [];
         const fieldsToCompare = [
-            { key: 'maxCapacity', label: 'Kapazität' },
+            { key: 'capacity', label: 'Kapazität' },
             { key: 'name', label: 'Name' },
             { key: 'promoCapacity', label: 'Aktions-Kapazität' },
             { key: 'promoActive', label: 'Aktion aktiv' },

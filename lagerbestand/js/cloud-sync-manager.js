@@ -724,7 +724,6 @@ class CloudSyncManager {
                 e.preventDefault();
                 // Chrome requires returnValue to be set
                 e.returnValue = '';
-                return '';
             }
         });
     }

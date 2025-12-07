@@ -403,31 +403,32 @@ UIManager.prototype.addMaterial = function() {
  * @returns {HTMLElement} Table row element
  */
 UIManager.prototype.createMaterialRow = function(material) {
+    const { code, name, capacity, promoCapacity, group, createdAt, updatedAt } = material;
     const row = document.createElement('tr');
-    row.dataset.materialCode = material.code;
+    row.dataset.materialCode = code;
     
     // Checkbox column
     const checkboxCell = document.createElement('td');
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'material-select-checkbox';
-    checkbox.dataset.materialCode = material.code;
-    checkbox.setAttribute('aria-label', `Select material ${material.code}${material.name ? ` - ${material.name}` : ''}`);
-    checkbox.addEventListener('change', () => this.toggleMaterialSelection(material.code));
+    checkbox.dataset.materialCode = code;
+    checkbox.setAttribute('aria-label', `Select material ${code}${name ? ` - ${name}` : ''}`);
+    checkbox.addEventListener('change', () => this.toggleMaterialSelection(code));
     checkboxCell.appendChild(checkbox);
     row.appendChild(checkboxCell);
     
     // Code column
     const codeCell = document.createElement('td');
     const codeStrong = document.createElement('strong');
-    codeStrong.textContent = material.code;
+    codeStrong.textContent = code;
     codeCell.appendChild(codeStrong);
     row.appendChild(codeCell);
     
     // Name column
     const nameCell = document.createElement('td');
-    if (material.name) {
-        nameCell.textContent = material.name;
+    if (name) {
+        nameCell.textContent = name;
     } else {
         const emptySpan = document.createElement('span');
         emptySpan.style.color = 'var(--text-secondary)';
@@ -439,29 +440,29 @@ UIManager.prototype.createMaterialRow = function(material) {
     // Capacity column
     const capacityCell = document.createElement('td');
     const isPromoActive = this.isPromotionActive(material);
-    if (material.promoCapacity && isPromoActive) {
+    if (promoCapacity && isPromoActive) {
         const promoSpan = document.createElement('span');
         promoSpan.style.fontWeight = '600';
         promoSpan.style.color = 'var(--warning-color)';
-        promoSpan.textContent = material.promoCapacity;
+        promoSpan.textContent = promoCapacity;
         capacityCell.appendChild(promoSpan);
         capacityCell.appendChild(document.createTextNode(' '));
         const normalSpan = document.createElement('small');
         normalSpan.style.color = 'var(--text-secondary)';
-        normalSpan.textContent = `(${this.t('normal')}: ${material.capacity})`;
+        normalSpan.textContent = `(${this.t('normal')}: ${capacity})`;
         capacityCell.appendChild(normalSpan);
     } else {
         const capacitySpan = document.createElement('span');
         capacitySpan.style.fontWeight = '600';
         capacitySpan.style.color = 'var(--success-color)';
-        capacitySpan.textContent = material.capacity;
+        capacitySpan.textContent = capacity;
         capacityCell.appendChild(capacitySpan);
     }
     row.appendChild(capacityCell);
     
     // Promo status column
     const promoCell = document.createElement('td');
-    if (material.promoCapacity) {
+    if (promoCapacity) {
         const badge = document.createElement('span');
         badge.className = isPromoActive ? 'promo-status-badge active' : 'promo-status-badge inactive';
         
@@ -479,7 +480,7 @@ UIManager.prototype.createMaterialRow = function(material) {
         
         const small = document.createElement('small');
         small.style.fontSize = '0.8em';
-        small.textContent = `${material.promoCapacity} capacity`;
+        small.textContent = `${promoCapacity} capacity`;
         badge.appendChild(small);
         
         promoCell.appendChild(badge);
@@ -500,8 +501,8 @@ UIManager.prototype.createMaterialRow = function(material) {
     // Date column
     const dateCell = document.createElement('td');
     dateCell.style.fontSize = '0.9em';
-    const createdDate = new Date(material.createdAt).toLocaleDateString();
-    const updatedDate = material.updatedAt ? new Date(material.updatedAt).toLocaleDateString() : '';
+    const createdDate = new Date(createdAt).toLocaleDateString();
+    const updatedDate = updatedAt ? new Date(updatedAt).toLocaleDateString() : '';
     dateCell.textContent = createdDate;
     if (updatedDate && updatedDate !== createdDate) {
         const br = document.createElement('br');
@@ -519,7 +520,7 @@ UIManager.prototype.createMaterialRow = function(material) {
     const editBtn = document.createElement('button');
     editBtn.className = 'btn-primary btn-small';
     editBtn.style.marginRight = '5px';
-    editBtn.addEventListener('click', () => this.openEditModal(material.code));
+    editBtn.addEventListener('click', () => this.openEditModal(code));
     const editIcon = document.createElement('i');
     editIcon.className = 'fa-solid fa-pen-to-square';
     editBtn.appendChild(editIcon);
@@ -527,7 +528,7 @@ UIManager.prototype.createMaterialRow = function(material) {
     
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn-danger btn-small';
-    deleteBtn.addEventListener('click', () => this.deleteMaterial(material.code));
+    deleteBtn.addEventListener('click', () => this.deleteMaterial(code));
     const deleteIcon = document.createElement('i');
     deleteIcon.className = 'fa-solid fa-trash-can';
     deleteBtn.appendChild(deleteIcon);
@@ -768,31 +769,27 @@ UIManager.prototype.renderMaterialsList = function(options) {
     if (materials.length === 0) {
         const row = document.createElement('tr');
         
-        // Create 8 cells for the empty state (matching the 8 columns)
-        for (let i = 0; i < 8; i++) {
-            const cell = document.createElement('td');
-            if (i === 0) { // First cell contains the empty state content
-                cell.style.textAlign = 'center';
-                cell.style.padding = '40px';
-                cell.style.color = 'var(--text-secondary)';
-                
-                const iconDiv = document.createElement('div');
-                iconDiv.className = 'empty-state-icon';
-                iconDiv.style.fontSize = '3em';
-                iconDiv.style.marginBottom = '10px';
-                const icon = document.createElement('i');
-                icon.className = 'fa-solid fa-boxes-stacked';
-                iconDiv.appendChild(icon);
-                
-                const p = document.createElement('p');
-                p.textContent = this.t('materialsEmpty');
-                
-                cell.appendChild(iconDiv);
-                cell.appendChild(p);
-            }
-            row.appendChild(cell);
-        }
+        // Create a single cell that spans all 8 columns
+        const cell = document.createElement('td');
+        cell.colSpan = 8;
+        cell.style.textAlign = 'center';
+        cell.style.padding = '40px';
+        cell.style.color = 'var(--text-secondary)';
         
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-state-icon';
+        iconDiv.style.fontSize = '3em';
+        iconDiv.style.marginBottom = '10px';
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-boxes-stacked';
+        iconDiv.appendChild(icon);
+        
+        const p = document.createElement('p');
+        p.textContent = this.t('materialsEmpty');
+        
+        cell.appendChild(iconDiv);
+        cell.appendChild(p);
+        row.appendChild(cell);
         tbody.appendChild(row);
         return;
     }
@@ -831,9 +828,9 @@ UIManager.prototype.renderMaterialsList = function(options) {
                 {
                     data: 'code',
                     orderable: false,
-                    render: function(data) {
+                    render: function(data, type, row) {
                         const escaped = SecurityUtils.escapeHTML(data);
-                        const name = self.dataManager.getMaterial(data)?.name || '';
+                        const name = row.name || '';
                         const label = name ? `${escaped} - ${SecurityUtils.escapeHTML(name)}` : escaped;
                         return `<input type="checkbox" class="material-select-checkbox" data-material-code="${escaped}" aria-label="Select material ${label}">`;
                     }
@@ -1506,9 +1503,9 @@ UIManager.prototype.applyMaterialsFilter = function(showToast = true) {
             if (group === 'ungrouped') {
                 // Show only materials without a group
                 if (rowData.group) return false;
-            } else {
+            } else if (rowData.group !== group) {
                 // Show only materials in the selected group
-                if (rowData.group !== group) return false;
+                return false;
             }
         }
         
@@ -1665,11 +1662,12 @@ UIManager.prototype.renderGroupsList = function() {
  * @returns {HTMLElement} Group card element
  */
 UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
-    const materialCount = this.dataManager.getMaterialsByGroup(group.id).length;
+    const { id, name, description, color, createdAt } = group;
+    const materialCount = this.dataManager.getMaterialsByGroup(id).length;
     
     // Validate color format to prevent XSS
-    const groupColor = (group.color && /^#[0-9A-Fa-f]{6}$/.test(group.color)) 
-        ? group.color 
+    const groupColor = (color && /^#[0-9A-Fa-f]{6}$/.test(color)) 
+        ? color 
         : defaultGroupColor;
     
     // Create card container
@@ -1719,7 +1717,7 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     
     const title = document.createElement('h4');
     title.style.cssText = `margin: 0; color: ${this.getContrastColor(groupColor)}; font-size: 1.1em;`;
-    title.textContent = group.name;
+    title.textContent = name;
     
     const count = document.createElement('small');
     count.style.color = 'var(--text-secondary)';
@@ -1735,10 +1733,10 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     card.appendChild(header);
     
     // Add description if present
-    if (group.description) {
+    if (description) {
         const desc = document.createElement('p');
         desc.style.cssText = 'color: var(--text-secondary); font-size: 0.9em; margin-bottom: 15px; padding-left: 62px;';
-        desc.textContent = group.description;
+        desc.textContent = description;
         card.appendChild(desc);
     }
     
@@ -1753,7 +1751,7 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     viewBtn.type = 'button';
     viewBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.filterByGroup(group.id);
+        this.filterByGroup(id);
     });
     const viewIcon = document.createElement('i');
     viewIcon.className = 'fa-solid fa-filter';
@@ -1767,7 +1765,7 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     editBtn.type = 'button';
     editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.editGroup(group.id);
+        this.editGroup(id);
     });
     const editIcon = document.createElement('i');
     editIcon.className = 'fa-solid fa-pen-to-square';
@@ -1779,7 +1777,7 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     deleteBtn.type = 'button';
     deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.deleteGroup(group.id);
+        this.deleteGroup(id);
     });
     const deleteIcon = document.createElement('i');
     deleteIcon.className = 'fa-solid fa-trash-can';
@@ -1793,7 +1791,7 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     // Add timestamp footer
     const footer = document.createElement('div');
     footer.style.cssText = 'font-size: 0.75em; color: var(--text-secondary); margin-top: 10px; text-align: right;';
-    footer.textContent = `${this.t('created')}: ${new Date(group.createdAt).toLocaleDateString()}`;
+    footer.textContent = `${this.t('created')}: ${new Date(createdAt).toLocaleDateString()}`;
     card.appendChild(footer);
     
     return card;
@@ -1825,7 +1823,6 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
         .getPropertyValue('--default-group-color').trim() || '#3b82f6';
     
     const currentColor = group?.color || defaultGroupColor;
-    const isCustomColor = currentColor && !this.GROUP_COLOR_PALETTE.includes(currentColor);
     
     const modalHtml = `
         <div class="modal active" id="groupModal">
@@ -1900,7 +1897,7 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
 // Select group color in modal
 UIManager.prototype.selectGroupColor = function(color, isCustom = false) {
     // Validate color format
-    if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color)) {
         return;
     }
     
