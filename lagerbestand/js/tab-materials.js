@@ -403,31 +403,32 @@ UIManager.prototype.addMaterial = function() {
  * @returns {HTMLElement} Table row element
  */
 UIManager.prototype.createMaterialRow = function(material) {
+    const { code, name, capacity, promoCapacity, group, createdAt, updatedAt } = material;
     const row = document.createElement('tr');
-    row.dataset.materialCode = material.code;
+    row.dataset.materialCode = code;
     
     // Checkbox column
     const checkboxCell = document.createElement('td');
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'material-select-checkbox';
-    checkbox.dataset.materialCode = material.code;
-    checkbox.setAttribute('aria-label', `Select material ${material.code}${material.name ? ` - ${material.name}` : ''}`);
-    checkbox.addEventListener('change', () => this.toggleMaterialSelection(material.code));
+    checkbox.dataset.materialCode = code;
+    checkbox.setAttribute('aria-label', `Select material ${code}${name ? ` - ${name}` : ''}`);
+    checkbox.addEventListener('change', () => this.toggleMaterialSelection(code));
     checkboxCell.appendChild(checkbox);
     row.appendChild(checkboxCell);
     
     // Code column
     const codeCell = document.createElement('td');
     const codeStrong = document.createElement('strong');
-    codeStrong.textContent = material.code;
+    codeStrong.textContent = code;
     codeCell.appendChild(codeStrong);
     row.appendChild(codeCell);
     
     // Name column
     const nameCell = document.createElement('td');
-    if (material.name) {
-        nameCell.textContent = material.name;
+    if (name) {
+        nameCell.textContent = name;
     } else {
         const emptySpan = document.createElement('span');
         emptySpan.style.color = 'var(--text-secondary)';
@@ -439,29 +440,29 @@ UIManager.prototype.createMaterialRow = function(material) {
     // Capacity column
     const capacityCell = document.createElement('td');
     const isPromoActive = this.isPromotionActive(material);
-    if (material.promoCapacity && isPromoActive) {
+    if (promoCapacity && isPromoActive) {
         const promoSpan = document.createElement('span');
         promoSpan.style.fontWeight = '600';
         promoSpan.style.color = 'var(--warning-color)';
-        promoSpan.textContent = material.promoCapacity;
+        promoSpan.textContent = promoCapacity;
         capacityCell.appendChild(promoSpan);
         capacityCell.appendChild(document.createTextNode(' '));
         const normalSpan = document.createElement('small');
         normalSpan.style.color = 'var(--text-secondary)';
-        normalSpan.textContent = `(${this.t('normal')}: ${material.capacity})`;
+        normalSpan.textContent = `(${this.t('normal')}: ${capacity})`;
         capacityCell.appendChild(normalSpan);
     } else {
         const capacitySpan = document.createElement('span');
         capacitySpan.style.fontWeight = '600';
         capacitySpan.style.color = 'var(--success-color)';
-        capacitySpan.textContent = material.capacity;
+        capacitySpan.textContent = capacity;
         capacityCell.appendChild(capacitySpan);
     }
     row.appendChild(capacityCell);
     
     // Promo status column
     const promoCell = document.createElement('td');
-    if (material.promoCapacity) {
+    if (promoCapacity) {
         const badge = document.createElement('span');
         badge.className = isPromoActive ? 'promo-status-badge active' : 'promo-status-badge inactive';
         
@@ -479,7 +480,7 @@ UIManager.prototype.createMaterialRow = function(material) {
         
         const small = document.createElement('small');
         small.style.fontSize = '0.8em';
-        small.textContent = `${material.promoCapacity} capacity`;
+        small.textContent = `${promoCapacity} capacity`;
         badge.appendChild(small);
         
         promoCell.appendChild(badge);
@@ -500,8 +501,8 @@ UIManager.prototype.createMaterialRow = function(material) {
     // Date column
     const dateCell = document.createElement('td');
     dateCell.style.fontSize = '0.9em';
-    const createdDate = new Date(material.createdAt).toLocaleDateString();
-    const updatedDate = material.updatedAt ? new Date(material.updatedAt).toLocaleDateString() : '';
+    const createdDate = new Date(createdAt).toLocaleDateString();
+    const updatedDate = updatedAt ? new Date(updatedAt).toLocaleDateString() : '';
     dateCell.textContent = createdDate;
     if (updatedDate && updatedDate !== createdDate) {
         const br = document.createElement('br');
@@ -519,7 +520,7 @@ UIManager.prototype.createMaterialRow = function(material) {
     const editBtn = document.createElement('button');
     editBtn.className = 'btn-primary btn-small';
     editBtn.style.marginRight = '5px';
-    editBtn.addEventListener('click', () => this.openEditModal(material.code));
+    editBtn.addEventListener('click', () => this.openEditModal(code));
     const editIcon = document.createElement('i');
     editIcon.className = 'fa-solid fa-pen-to-square';
     editBtn.appendChild(editIcon);
@@ -527,7 +528,7 @@ UIManager.prototype.createMaterialRow = function(material) {
     
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn-danger btn-small';
-    deleteBtn.addEventListener('click', () => this.deleteMaterial(material.code));
+    deleteBtn.addEventListener('click', () => this.deleteMaterial(code));
     const deleteIcon = document.createElement('i');
     deleteIcon.className = 'fa-solid fa-trash-can';
     deleteBtn.appendChild(deleteIcon);
@@ -734,7 +735,7 @@ UIManager.prototype.restoreMaterialsTableState = function(state, highlightMateri
     table.on('draw.stateRestore', handleDrawComplete);
 };
 
-// Render materials list
+// Render materials list - optimized for performance with lazy loading
 UIManager.prototype.renderMaterialsList = function(options) {
     // Ensure options is an object to prevent destructuring errors
     options = (typeof options === 'object' && options !== null) ? options : {};
@@ -753,13 +754,22 @@ UIManager.prototype.renderMaterialsList = function(options) {
     // Destroy existing DataTable if it exists
     if ($.fn.DataTable.isDataTable('#materialsTable')) {
         $('#materialsTable').DataTable().destroy();
+        // Reset events flag since we're recreating the table content
+        const table = document.getElementById('materialsTable');
+        if (table) {
+            delete table.dataset.eventsbound;
+        }
     }
 
-    // Clear tbody
-    tbody.textContent = '';
+    // Clear tbody efficiently
+    while (tbody.firstChild) {
+        tbody.removeChild(tbody.firstChild);
+    }
 
     if (materials.length === 0) {
         const row = document.createElement('tr');
+        
+        // Create a single cell that spans all 8 columns
         const cell = document.createElement('td');
         cell.colSpan = 8;
         cell.style.textAlign = 'center';
@@ -784,43 +794,241 @@ UIManager.prototype.renderMaterialsList = function(options) {
         return;
     }
 
-    // Create rows using DOM methods to prevent XSS
-    materials.forEach(material => {
-        const row = this.createMaterialRow(material);
-        tbody.appendChild(row);
+    // Prepare data array for DataTables (much faster than DOM manipulation)
+    const tableData = materials.map(material => {
+        return {
+            code: material.code,
+            name: material.name || '',
+            capacity: material.capacity,
+            promoCapacity: material.promoCapacity,
+            promoActive: this.isPromotionActive(material),
+            promoEndDate: material.promoEndDate,
+            group: material.group,
+            createdAt: material.createdAt,
+            updatedAt: material.updatedAt
+        };
     });
 
-    // Initialize DataTable
-    $('#materialsTable').DataTable({
-        pageLength: 10,
-        order: [[1, 'asc']], // Sort by material code (now column 1 due to checkbox column)
-        language: {
-            search: `<i class="fa-solid fa-magnifying-glass"></i> ${this.t('dtSearchMaterials')}`,
-            lengthMenu: this.t('dtLengthMenuMaterials'),
-            info: this.t('dtInfoMaterials'),
-            infoEmpty: this.t('dtInfoEmptyMaterials'),
-            infoFiltered: this.t('dtInfoFilteredMaterials'),
-            zeroRecords: this.t('dtZeroRecordsMaterials'),
-            paginate: {
-                first: this.t('dtFirst'),
-                last: this.t('dtLast'),
-                next: this.t('dtNext'),
-                previous: this.t('dtPrevious')
-            }
-        },
-        dom: '<"top"lf>rt<"bottom"ip><"clear">',
-        columnDefs: [
-            { orderable: false, targets: [0, 7] } // Disable sorting on checkbox and Actions columns
-        ]
-    });
+    const self = this;
     
-    // Restore state if requested
-    if (savedState) {
-        this.restoreMaterialsTableState(savedState, highlightMaterialCode);
-    }
+    // Initialize DataTable with data array (lazy rendering)
+    requestAnimationFrame(() => {
+        const table = document.getElementById('materialsTable');
+        if (!table || $.fn.DataTable.isDataTable('#materialsTable')) {
+            return;
+        }
+        
+        $('#materialsTable').DataTable({
+            data: tableData,
+            pageLength: 10,
+            order: [[1, 'asc']],
+            deferRender: true, // Critical for performance - only renders visible rows
+            columns: [
+                // Checkbox column
+                {
+                    data: 'code',
+                    orderable: false,
+                    render: function(data, type, row) {
+                        const escaped = SecurityUtils.escapeHTML(data);
+                        const name = row.name || '';
+                        const label = name ? `${escaped} - ${SecurityUtils.escapeHTML(name)}` : escaped;
+                        return `<input type="checkbox" class="material-select-checkbox" data-material-code="${escaped}" aria-label="Select material ${label}">`;
+                    }
+                },
+                // Material code column
+                {
+                    data: 'code',
+                    render: function(data) {
+                        return `<strong>${SecurityUtils.escapeHTML(data)}</strong>`;
+                    }
+                },
+                // Name column
+                {
+                    data: 'name',
+                    render: function(data) {
+                        return data ? SecurityUtils.escapeHTML(data) : '—';
+                    }
+                },
+                // Capacity column
+                {
+                    data: null,
+                    render: function(data) {
+                        if (data.promoActive && data.promoCapacity) {
+                            let html = `<span style="text-decoration: line-through; color: var(--text-secondary);">${data.capacity}</span>`;
+                            html += ` <span class="promo-badge" title="${self.t('alertPromo')}">${data.promoCapacity}</span>`;
+                            if (data.promoEndDate) {
+                                const endDate = new Date(data.promoEndDate).toLocaleDateString();
+                                html += `<br><small style="color: var(--text-secondary);">${self.t('promoUntil') || 'Until'}: ${endDate}</small>`;
+                            }
+                            return html;
+                        }
+                        return data.capacity;
+                    }
+                },
+                // Promo status column
+                {
+                    data: 'promoActive',
+                    render: function(data, type, row) {
+                        if (data && row.promoCapacity) {
+                            return `<span class="status-badge promo">${self.t('alertPromo')}</span>`;
+                        }
+                        return '—';
+                    }
+                },
+                // Group column
+                {
+                    data: 'group',
+                    render: function(data, type, row) {
+                        return self.renderCategoryColumnHTML(row.code, data);
+                    }
+                },
+                // Date column
+                {
+                    data: 'createdAt',
+                    render: function(data, type, row) {
+                        const createdDate = new Date(data).toLocaleDateString();
+                        let html = createdDate;
+                        if (row.updatedAt) {
+                            const updatedDate = new Date(row.updatedAt).toLocaleDateString();
+                            if (updatedDate !== createdDate) {
+                                html += `<br><small style="color: var(--text-secondary);">${self.t('updated')}: ${updatedDate}</small>`;
+                            }
+                        }
+                        return html;
+                    }
+                },
+                // Actions column
+                {
+                    data: 'code',
+                    orderable: false,
+                    render: function(data) {
+                        const escaped = SecurityUtils.escapeHTML(data);
+                        return `
+                            <button class="btn-primary btn-small" style="margin-right: 5px;" data-action="edit" data-code="${escaped}">
+                                <i class="fa-solid fa-pen-to-square"></i> ${self.t('btnEdit')}
+                            </button>
+                            <button class="btn-danger btn-small" data-action="delete" data-code="${escaped}">
+                                <i class="fa-solid fa-trash-can"></i> ${self.t('btnDelete')}
+                            </button>
+                        `;
+                    }
+                }
+            ],
+            language: {
+                search: `<i class="fa-solid fa-magnifying-glass"></i> ${this.t('dtSearchMaterials')}`,
+                lengthMenu: this.t('dtLengthMenuMaterials'),
+                info: this.t('dtInfoMaterials'),
+                infoEmpty: this.t('dtInfoEmptyMaterials'),
+                infoFiltered: this.t('dtInfoFilteredMaterials'),
+                zeroRecords: this.t('dtZeroRecordsMaterials'),
+                paginate: {
+                    first: this.t('dtFirst'),
+                    last: this.t('dtLast'),
+                    next: this.t('dtNext'),
+                    previous: this.t('dtPrevious')
+                }
+            },
+            dom: '<"top"lf>rt<"bottom"ip><"clear">',
+            createdRow: function(row, data) {
+                // Add data attribute for quick access
+                row.dataset.materialCode = data.code;
+            },
+            drawCallback: function() {
+                // Close any open category dropdown on pagination/redraw
+                self.closeCategoryDropdown();
+                // Bind event handlers after each draw (pagination, search, etc.)
+                self.bindMaterialTableEvents();
+            }
+        });
+        
+        // Restore state if requested
+        if (savedState) {
+            this.restoreMaterialsTableState(savedState, highlightMaterialCode);
+        }
+    });
     
     // Update sync status display
     this.updateSyncStatus();
+};
+
+// Render category column HTML for DataTables
+UIManager.prototype.renderCategoryColumnHTML = function(materialCode, groupId) {
+    const group = groupId ? this.dataManager.getGroup(groupId) : null;
+    const displayText = group ? SecurityUtils.escapeHTML(group.name) : this.t('groupUngrouped');
+    const rawColor = group?.color || 'var(--default-category-color)';
+    const categoryColor = SecurityUtils.validateColor(rawColor) || 'var(--default-category-color)';
+    
+    const style = group ? `
+        background: linear-gradient(135deg, ${categoryColor}15 0%, ${categoryColor}30 100%);
+        border: 1px solid ${categoryColor}40;
+        color: ${this.getContrastColor(categoryColor)};
+    ` : '';
+    
+    return `
+        <div class="quick-category-select-wrapper" style="--category-color: ${categoryColor};">
+            <button class="quick-category-select" type="button" 
+                data-material-code="${SecurityUtils.escapeHTML(materialCode)}" 
+                data-current-group="${groupId || ''}"
+                data-has-category="${!!group}"
+                title="${this.t('quickAssignCategory') || 'Quick assign category'}"
+                role="combobox" aria-expanded="false" aria-haspopup="listbox"
+                style="${style}">
+                <span class="category-select-text">${displayText}</span>
+                <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+            </button>
+        </div>
+    `;
+};
+
+// Bind event handlers for material table (called after each DataTable draw)
+UIManager.prototype.bindMaterialTableEvents = function() {
+    const table = document.getElementById('materialsTable');
+    if (!table) return;
+    
+    // Only bind once - check on the table element
+    if (table.dataset.eventsbound === 'true') return;
+    
+    const self = this;
+    
+    // Use event delegation on the table for better performance
+    // This survives DataTable pagination/redraws
+    table.addEventListener('click', function(e) {
+        const target = e.target;
+        
+        // Handle edit button
+        const editBtn = target.closest('[data-action="edit"]');
+        if (editBtn) {
+            const code = editBtn.dataset.code;
+            self.openEditModal(code);
+            return;
+        }
+        
+        // Handle delete button
+        const deleteBtn = target.closest('[data-action="delete"]');
+        if (deleteBtn) {
+            const code = deleteBtn.dataset.code;
+            self.deleteMaterial(code);
+            return;
+        }
+        
+        // Handle category dropdown
+        const categoryBtn = target.closest('.quick-category-select');
+        if (categoryBtn) {
+            self.openCategoryDropdown(categoryBtn, e);
+            return;
+        }
+    });
+    
+    // Handle checkbox changes
+    table.addEventListener('change', function(e) {
+        const target = e.target;
+        if (target.classList.contains('material-select-checkbox')) {
+            const materialCode = target.dataset.materialCode;
+            self.toggleMaterialSelection(materialCode);
+        }
+    });
+    
+    table.dataset.eventsbound = 'true';
 };
 
 // Update IndexedDB sync status display
@@ -902,9 +1110,33 @@ UIManager.prototype.exportMaterialsCSV = function() {
 // Export materials for SAP import (Material Numbers only)
 UIManager.prototype.exportMaterialsForSAP = function() {
     try {
-        const result = this.dataManager.exportMaterialsForSAP();
+        // Check if there's a filter applied and get filtered material codes
+        let materialCodes = null;
+        
+        if ($.fn.DataTable.isDataTable('#materialsTable')) {
+            const table = $('#materialsTable').DataTable();
+            const filteredData = table.rows({ search: 'applied' }).data();
+            const allData = table.rows().data();
+            
+            // Only pass filtered codes if there's actually a filter applied
+            if (filteredData.length < allData.length && filteredData.length > 0) {
+                materialCodes = [];
+                filteredData.each(function(row) {
+                    if (row.code) {
+                        materialCodes.push(row.code);
+                    }
+                });
+            }
+        }
+        
+        const result = this.dataManager.exportMaterialsForSAP(materialCodes);
         if (result.success) {
             let message = `<i class="fa-solid fa-file-export"></i> ${result.count} ${this.t('sapExportSuccess')}`;
+            
+            // Show if filtered export
+            if (materialCodes) {
+                message += `<br><small><i class="fa-solid fa-filter"></i> ${this.t('filteredExport') || 'Filtered export'}</small>`;
+            }
             
             // Warn about missing codes if any
             if (result.missingCodes && result.missingCodes.length > 0) {
@@ -1225,7 +1457,7 @@ UIManager.prototype.getTimeAgo = function(timestamp) {
 };
 
 // Apply materials filter
-UIManager.prototype.applyMaterialsFilter = function() {
+UIManager.prototype.applyMaterialsFilter = function(showToast = true) {
     const capacityMin = document.getElementById('filterCapacityMin').value;
     const capacityMax = document.getElementById('filterCapacityMax').value;
     const promoStatus = document.getElementById('filterPromoStatus').value;
@@ -1239,39 +1471,41 @@ UIManager.prototype.applyMaterialsFilter = function() {
         return search.toString().indexOf('materialsTable') === -1;
     });
     
-    // Apply custom filtering
-    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+    // Apply custom filtering using row data directly (works with deferRender)
+    $.fn.dataTable.ext.search.push(function(settings, searchData, dataIndex) {
         if (settings.nTable.id !== 'materialsTable') {
             return true; // Don't filter other tables
         }
         
-        const capacity = parseInt(data[2].replace(/[^0-9]/g, '')) || 0; // Extract capacity number
-        const promoColumn = data[4]; // Promo status column
+        // Get the actual row data object from DataTable
+        const rowData = table.row(dataIndex).data();
+        if (!rowData) return true;
         
-        // Get material code from row
-        const row = settings.aoData[dataIndex];
-        const materialCode = $(row.nTr).data('material-code');
-        const material = ui.dataManager.getMaterial(materialCode);
+        // Get the effective capacity (promo or regular)
+        const effectiveCapacity = (rowData.promoActive && rowData.promoCapacity) 
+            ? rowData.promoCapacity 
+            : rowData.capacity;
         
         // Capacity filter
-        if (capacityMin && capacity < parseInt(capacityMin)) return false;
-        if (capacityMax && capacity > parseInt(capacityMax)) return false;
+        if (capacityMin && effectiveCapacity < parseInt(capacityMin)) return false;
+        if (capacityMax && effectiveCapacity > parseInt(capacityMax)) return false;
         
         // Promo status filter
         if (promoStatus !== 'all') {
-            if (promoStatus === 'active' && !promoColumn.includes('fa-gift')) return false;
-            if (promoStatus === 'inactive' && promoColumn.includes('fa-gift') && !promoColumn.includes('Inactive')) return false;
-            if (promoStatus === 'none' && promoColumn.includes('capacity')) return false;
+            const hasActivePromo = rowData.promoActive && rowData.promoCapacity;
+            if (promoStatus === 'active' && !hasActivePromo) return false;
+            if (promoStatus === 'inactive' && hasActivePromo) return false;
+            if (promoStatus === 'none' && hasActivePromo) return false;
         }
         
         // Group filter
         if (group !== 'all') {
             if (group === 'ungrouped') {
                 // Show only materials without a group
-                if (material && material.group) return false;
-            } else {
+                if (rowData.group) return false;
+            } else if (rowData.group !== group) {
                 // Show only materials in the selected group
-                if (!material || material.group !== group) return false;
+                return false;
             }
         }
         
@@ -1279,7 +1513,9 @@ UIManager.prototype.applyMaterialsFilter = function() {
     });
     
     table.draw();
-    this.showToast('Filters applied', 'info');
+    if (showToast) {
+        this.showToast('Filters applied', 'info');
+    }
 };
 
 // Clear materials filter
@@ -1320,7 +1556,7 @@ UIManager.prototype.filterByGroup = function(groupId) {
     
     // Apply the filter
     setTimeout(() => {
-        this.applyMaterialsFilter();
+        this.applyMaterialsFilter(false);
         
         const group = this.dataManager.getGroup(groupId);
         if (group) {
@@ -1426,11 +1662,12 @@ UIManager.prototype.renderGroupsList = function() {
  * @returns {HTMLElement} Group card element
  */
 UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
-    const materialCount = this.dataManager.getMaterialsByGroup(group.id).length;
+    const { id, name, description, color, createdAt } = group;
+    const materialCount = this.dataManager.getMaterialsByGroup(id).length;
     
     // Validate color format to prevent XSS
-    const groupColor = (group.color && /^#[0-9A-Fa-f]{6}$/.test(group.color)) 
-        ? group.color 
+    const groupColor = (color && /^#[0-9A-Fa-f]{6}$/.test(color)) 
+        ? color 
         : defaultGroupColor;
     
     // Create card container
@@ -1479,8 +1716,8 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     textDiv.style.flex = '1';
     
     const title = document.createElement('h4');
-    title.style.cssText = `margin: 0; color: ${groupColor}; font-size: 1.1em;`;
-    title.textContent = group.name;
+    title.style.cssText = `margin: 0; color: ${this.getContrastColor(groupColor)}; font-size: 1.1em;`;
+    title.textContent = name;
     
     const count = document.createElement('small');
     count.style.color = 'var(--text-secondary)';
@@ -1496,10 +1733,10 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     card.appendChild(header);
     
     // Add description if present
-    if (group.description) {
+    if (description) {
         const desc = document.createElement('p');
         desc.style.cssText = 'color: var(--text-secondary); font-size: 0.9em; margin-bottom: 15px; padding-left: 62px;';
-        desc.textContent = group.description;
+        desc.textContent = description;
         card.appendChild(desc);
     }
     
@@ -1510,11 +1747,11 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     // View materials button
     const viewBtn = document.createElement('button');
     viewBtn.className = 'btn-small';
-    viewBtn.style.cssText = `background: ${groupColor}20; color: ${groupColor}; border: 1px solid ${groupColor}; flex: 1;`;
+    viewBtn.style.cssText = `background: ${groupColor}20; color: ${this.getContrastColor(groupColor)}; border: 1px solid ${groupColor}; flex: 1;`;
     viewBtn.type = 'button';
     viewBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.filterByGroup(group.id);
+        this.filterByGroup(id);
     });
     const viewIcon = document.createElement('i');
     viewIcon.className = 'fa-solid fa-filter';
@@ -1528,7 +1765,7 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     editBtn.type = 'button';
     editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.editGroup(group.id);
+        this.editGroup(id);
     });
     const editIcon = document.createElement('i');
     editIcon.className = 'fa-solid fa-pen-to-square';
@@ -1540,7 +1777,7 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     deleteBtn.type = 'button';
     deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.deleteGroup(group.id);
+        this.deleteGroup(id);
     });
     const deleteIcon = document.createElement('i');
     deleteIcon.className = 'fa-solid fa-trash-can';
@@ -1554,13 +1791,29 @@ UIManager.prototype.createGroupCard = function(group, defaultGroupColor) {
     // Add timestamp footer
     const footer = document.createElement('div');
     footer.style.cssText = 'font-size: 0.75em; color: var(--text-secondary); margin-top: 10px; text-align: right;';
-    footer.textContent = `${this.t('created')}: ${new Date(group.createdAt).toLocaleDateString()}`;
+    footer.textContent = `${this.t('created')}: ${new Date(createdAt).toLocaleDateString()}`;
     card.appendChild(footer);
     
     return card;
 };
 
 // Show group modal for creating/editing
+// Pastel color palette for groups
+UIManager.prototype.GROUP_COLOR_PALETTE = [
+    // Vibrant colors
+    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+    '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1',
+    // Pastel colors
+    '#93c5fd', '#86efac', '#fde047', '#fca5a5', '#c4b5fd',
+    '#67e8f9', '#f9a8d4', '#fdba74', '#5eead4', '#a5b4fc',
+    // More pastels
+    '#fbcfe8', '#a7f3d0', '#fef08a', '#fed7aa', '#ddd6fe',
+    '#bae6fd', '#fecdd3', '#d9f99d', '#99f6e4', '#e0e7ff',
+    // Earthy/Muted
+    '#d4a373', '#a3b18a', '#bc6c25', '#dda15e', '#606c38',
+    '#588157', '#283618', '#fefae0', '#e9edc9', '#ccd5ae'
+];
+
 UIManager.prototype.showGroupModal = function(groupId = null) {
     const isEdit = groupId !== null;
     const group = isEdit ? this.dataManager.getGroup(groupId) : null;
@@ -1568,6 +1821,8 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
     // Get default group color from CSS variable
     const defaultGroupColor = getComputedStyle(document.documentElement)
         .getPropertyValue('--default-group-color').trim() || '#3b82f6';
+    
+    const currentColor = group?.color || defaultGroupColor;
     
     const modalHtml = `
         <div class="modal active" id="groupModal">
@@ -1584,19 +1839,32 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
                 
                 <div class="form-group">
                     <label for="groupColor">${this.t('groupColor') || 'Group Color'}</label>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                        ${['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1'].map(color => `
+                    <div class="color-palette" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; max-height: 180px; overflow-y: auto; padding: 5px;">
+                        ${this.GROUP_COLOR_PALETTE.map(color => `
                             <button 
                                 type="button" 
-                                class="color-option ${group?.color === color ? 'selected' : ''}" 
+                                class="color-option ${currentColor === color ? 'selected' : ''}" 
                                 data-color="${color}"
                                 onclick="ui.selectGroupColor('${color}')"
-                                style="width: 40px; height: 40px; border-radius: 8px; background: ${color}; border: 3px solid ${group?.color === color ? 'var(--text-color)' : 'transparent'}; cursor: pointer; transition: all 0.2s;"
+                                style="width: 36px; height: 36px; border-radius: 8px; background: ${color}; border: 3px solid ${currentColor === color ? 'var(--text-color)' : 'transparent'}; cursor: pointer; transition: all 0.2s; flex-shrink: 0;"
                                 title="${color}">
                             </button>
                         `).join('')}
                     </div>
-                    <input type="hidden" id="groupColor" value="${group?.color || defaultGroupColor}">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                        <label style="margin: 0; white-space: nowrap;">${this.t('customColor') || 'Custom Color'}:</label>
+                        <input 
+                            type="color" 
+                            id="customColorPicker" 
+                            value="${currentColor}"
+                            onchange="ui.selectGroupColor(this.value, true)"
+                            style="width: 50px; height: 36px; border: none; border-radius: 8px; cursor: pointer; padding: 0;"
+                        >
+                        <div id="colorPreview" style="flex: 1; height: 36px; border-radius: 8px; background: ${currentColor}; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
+                            <span style="font-family: monospace; font-size: 12px; color: ${this.getContrastColor(currentColor)};">${currentColor}</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="groupColor" value="${currentColor}">
                 </div>
                 
                 <div class="form-group">
@@ -1627,11 +1895,29 @@ UIManager.prototype.showGroupModal = function(groupId = null) {
 };
 
 // Select group color in modal
-UIManager.prototype.selectGroupColor = function(color) {
+UIManager.prototype.selectGroupColor = function(color, isCustom = false) {
+    // Validate color format
+    if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color)) {
+        return;
+    }
+    
     // Update hidden input
     document.getElementById('groupColor').value = color;
     
-    // Update visual selection
+    // Update custom color picker
+    const customPicker = document.getElementById('customColorPicker');
+    if (customPicker) {
+        customPicker.value = color;
+    }
+    
+    // Update color preview
+    const preview = document.getElementById('colorPreview');
+    if (preview) {
+        preview.style.background = color;
+        preview.innerHTML = `<span style="font-family: monospace; font-size: 12px; color: ${this.getContrastColor(color)};">${color}</span>`;
+    }
+    
+    // Update visual selection in palette
     document.querySelectorAll('.color-option').forEach(btn => {
         if (btn.dataset.color === color) {
             btn.classList.add('selected');
@@ -1641,6 +1927,14 @@ UIManager.prototype.selectGroupColor = function(color) {
             btn.style.border = '3px solid transparent';
         }
     });
+    
+    // If custom color, deselect all palette options
+    if (isCustom && !this.GROUP_COLOR_PALETTE.includes(color)) {
+        document.querySelectorAll('.color-option').forEach(btn => {
+            btn.classList.remove('selected');
+            btn.style.border = '3px solid transparent';
+        });
+    }
 };
 
 // Save group (create or edit)
@@ -1676,6 +1970,14 @@ UIManager.prototype.saveGroup = function(groupId) {
         this.renderGroupsList();
         this.populateGroupDropdown(); // Update dropdowns
         this.populateFilterGroupDropdown(); // Update filter dropdown
+        
+        // Update all category indicators for materials in this group
+        if (groupId) {
+            const materialsInGroup = this.dataManager.getMaterialsByGroup(groupId);
+            materialsInGroup.forEach(material => {
+                this.updateCategoryIndicator(material.code, groupId);
+            });
+        }
     } else {
         this.showToast('Error saving group', 'error');
     }

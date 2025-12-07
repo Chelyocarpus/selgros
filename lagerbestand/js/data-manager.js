@@ -12,6 +12,9 @@ class DataManager {
         this.currentHistoryIndex = -1;
         this.maxHistorySize = 50;
         
+        // Reference to cloud sync manager (set via setCloudSyncManager)
+        this.cloudSyncManager = null;
+        
         // Load data from Dexie (with localStorage fallback)
         this.materials = {};
         this.archive = [];
@@ -22,6 +25,27 @@ class DataManager {
         
         // Async initialization
         this.initializeData();
+    }
+    
+    // Set reference to cloud sync manager for change tracking
+    setCloudSyncManager(cloudSyncManager) {
+        this.cloudSyncManager = cloudSyncManager;
+    }
+    
+    // Store pending change details for next save operation
+    setPendingChangeDetails(details) {
+        this.pendingChangeDetails = details;
+    }
+    
+    // Notify cloud sync manager of local changes
+    notifyLocalChange(changeType, details = null) {
+        if (this.cloudSyncManager && typeof this.cloudSyncManager.markLocalChange === 'function') {
+            // Use pending details if available, otherwise use passed details
+            const changeDetails = details || this.pendingChangeDetails || {};
+            this.cloudSyncManager.markLocalChange(changeType, changeDetails);
+            // Clear pending details after use
+            this.pendingChangeDetails = null;
+        }
     }
     
     // Asynchronously load data from Dexie
@@ -229,6 +253,9 @@ class DataManager {
             // Backup: Save to localStorage
             localStorage.setItem(this.STORAGE_KEYS.MATERIALS, JSON.stringify(this.materials));
             
+            // Notify cloud sync of local change
+            this.notifyLocalChange('materials');
+            
             return true;
         } catch (e) {
             console.error('Error saving materials:', e);
@@ -236,6 +263,7 @@ class DataManager {
             // Fallback to localStorage only
             try {
                 localStorage.setItem(this.STORAGE_KEYS.MATERIALS, JSON.stringify(this.materials));
+                this.notifyLocalChange('materials');
                 return true;
             } catch (localError) {
                 console.error('Error saving to localStorage:', localError);
@@ -264,6 +292,9 @@ class DataManager {
                 summary: entry.summary
             }));
             localStorage.setItem(this.STORAGE_KEYS.ARCHIVE, JSON.stringify(lightweightArchive));
+            
+            // Notify cloud sync of local change
+            this.notifyLocalChange('archive');
             
             return true;
         } catch (e) {
@@ -410,6 +441,9 @@ class DataManager {
             // Backup: Save to localStorage
             localStorage.setItem(this.STORAGE_KEYS.GROUPS, JSON.stringify(this.groups));
             
+            // Notify cloud sync of local change
+            this.notifyLocalChange('groups');
+            
             return true;
         } catch (e) {
             console.error('Error saving groups:', e);
@@ -417,6 +451,7 @@ class DataManager {
             // Fallback to localStorage only
             try {
                 localStorage.setItem(this.STORAGE_KEYS.GROUPS, JSON.stringify(this.groups));
+                this.notifyLocalChange('groups');
                 return true;
             } catch (localError) {
                 return false;
@@ -435,6 +470,9 @@ class DataManager {
             // Backup: Save to localStorage
             localStorage.setItem(this.STORAGE_KEYS.NOTES, JSON.stringify(this.notes));
             
+            // Notify cloud sync of local change
+            this.notifyLocalChange('notes');
+            
             return true;
         } catch (e) {
             console.error('Error saving notes:', e);
@@ -442,6 +480,7 @@ class DataManager {
             // Fallback to localStorage only
             try {
                 localStorage.setItem(this.STORAGE_KEYS.NOTES, JSON.stringify(this.notes));
+                this.notifyLocalChange('notes');
                 return true;
             } catch (localError) {
                 return false;
@@ -499,6 +538,28 @@ class DataManager {
                 return false;
             }
         }
+    }
+
+    // Get a summary of what changed between two material objects
+    getChangeSummary(oldData, newData) {
+        const changes = [];
+        const fieldsToCompare = [
+            { key: 'capacity', label: 'Kapazität' },
+            { key: 'name', label: 'Name' },
+            { key: 'promoCapacity', label: 'Aktions-Kapazität' },
+            { key: 'promoActive', label: 'Aktion aktiv' },
+            { key: 'group', label: 'Gruppe' }
+        ];
+        
+        for (const field of fieldsToCompare) {
+            const oldVal = oldData[field.key];
+            const newVal = newData[field.key];
+            if (oldVal !== newVal) {
+                changes.push(`${field.label}: ${oldVal || '-'} → ${newVal || '-'}`);
+            }
+        }
+        
+        return changes.length > 0 ? changes.join(', ') : 'Allgemeine Änderungen';
     }
 
     // Add or update material
@@ -565,6 +626,23 @@ class DataManager {
         }
         
         this.materials[sanitizedCode] = material;
+        
+        // Set pending change details for cloud sync tracking
+        if (oldData) {
+            this.setPendingChangeDetails({
+                action: 'edit',
+                materialCode: sanitizedCode,
+                materialName: material.name || sanitizedCode,
+                changes: this.getChangeSummary(oldData, material)
+            });
+        } else {
+            this.setPendingChangeDetails({
+                action: 'add',
+                materialCode: sanitizedCode,
+                materialName: material.name || sanitizedCode,
+                capacity: material.capacity
+            });
+        }
         
         // Async save
         this.saveMaterials().then(success => {
@@ -1301,6 +1379,14 @@ class DataManager {
             });
 
             if (deletedMaterials.length > 0) {
+                // Set pending change details for cloud sync tracking
+                this.setPendingChangeDetails({
+                    action: 'bulk_delete',
+                    count: deletedMaterials.length,
+                    materialCodes: deletedMaterials.map(m => m.code || m.materialCode).slice(0, 5).join(', ') + 
+                        (deletedMaterials.length > 5 ? '...' : '')
+                });
+                
                 this.saveMaterials();
                 
                 // Add to history
@@ -1396,6 +1482,14 @@ class DataManager {
             createdAt: new Date().toISOString()
         };
         
+        // Set pending change details for cloud sync tracking
+        this.setPendingChangeDetails({
+            action: 'add',
+            groupId: groupId,
+            groupName: sanitizedName,
+            color: color
+        });
+        
         this.saveGroups();
         return groupId;
     }
@@ -1408,8 +1502,24 @@ class DataManager {
     // Assign material to group
     assignMaterialToGroup(materialCode, groupId) {
         if (this.materials[materialCode]) {
-            this.materials[materialCode].group = groupId;
-            this.materials[materialCode].updatedAt = new Date().toISOString();
+            const material = this.materials[materialCode];
+            const oldGroupId = material.group;
+            const oldGroupName = oldGroupId ? (this.groups[oldGroupId]?.name || oldGroupId) : null;
+            const newGroupName = groupId ? (this.groups[groupId]?.name || groupId) : null;
+            
+            material.group = groupId;
+            material.updatedAt = new Date().toISOString();
+            
+            // Set pending change details for cloud sync tracking
+            this.setPendingChangeDetails({
+                action: 'edit',
+                materialCode: materialCode,
+                materialName: material.name || materialCode,
+                changes: oldGroupName 
+                    ? (newGroupName ? `Gruppe: ${oldGroupName} → ${newGroupName}` : `Gruppe entfernt: ${oldGroupName}`)
+                    : (newGroupName ? `Gruppe zugewiesen: ${newGroupName}` : 'Gruppe geändert')
+            });
+            
             return this.saveMaterials();
         }
         return false;
@@ -1442,11 +1552,31 @@ class DataManager {
                 delete sanitizedUpdates.color;
             }
             
+            const oldGroup = { ...this.groups[groupId] };
             this.groups[groupId] = {
                 ...this.groups[groupId],
                 ...sanitizedUpdates,
                 updatedAt: new Date().toISOString()
             };
+            
+            // Set pending change details for cloud sync tracking
+            const changes = [];
+            if (sanitizedUpdates.name && sanitizedUpdates.name !== oldGroup.name) {
+                changes.push(`Name: ${oldGroup.name} → ${sanitizedUpdates.name}`);
+            }
+            if (sanitizedUpdates.color && sanitizedUpdates.color !== oldGroup.color) {
+                changes.push(`Farbe: ${oldGroup.color} → ${sanitizedUpdates.color}`);
+            }
+            if (sanitizedUpdates.description !== undefined && sanitizedUpdates.description !== oldGroup.description) {
+                changes.push('Beschreibung geändert');
+            }
+            this.setPendingChangeDetails({
+                action: 'edit',
+                groupId: groupId,
+                groupName: this.groups[groupId].name,
+                changes: changes.length > 0 ? changes.join(', ') : 'Aktualisiert'
+            });
+            
             return this.saveGroups();
         }
         return false;
@@ -1455,6 +1585,8 @@ class DataManager {
     // Delete group
     deleteGroup(groupId) {
         if (this.groups[groupId]) {
+            const groupName = this.groups[groupId].name;
+            
             // Remove group assignment from all materials
             Object.keys(this.materials).forEach(materialCode => {
                 if (this.materials[materialCode].group === groupId) {
@@ -1464,6 +1596,14 @@ class DataManager {
             });
             
             delete this.groups[groupId];
+            
+            // Set pending change details for cloud sync tracking
+            this.setPendingChangeDetails({
+                action: 'delete',
+                groupId: groupId,
+                groupName: groupName
+            });
+            
             this.saveMaterials();
             return this.saveGroups();
         }
@@ -1606,6 +1746,23 @@ class DataManager {
         
         this.materials[sanitizedCode] = material;
         
+        // Set pending change details for cloud sync tracking
+        if (oldData) {
+            this.setPendingChangeDetails({
+                action: 'edit',
+                materialCode: sanitizedCode,
+                materialName: material.name || sanitizedCode,
+                changes: this.getChangeSummary(oldData, material)
+            });
+        } else {
+            this.setPendingChangeDetails({
+                action: 'add',
+                materialCode: sanitizedCode,
+                materialName: material.name || sanitizedCode,
+                capacity: material.capacity
+            });
+        }
+        
         if (this.saveMaterials()) {
             // Add to history
             if (oldData) {
@@ -1628,6 +1785,13 @@ class DataManager {
     deleteMaterial(code) {
         const material = this.materials[code];
         if (material) {
+            // Set pending change details for cloud sync tracking
+            this.setPendingChangeDetails({
+                action: 'delete',
+                materialCode: code,
+                materialName: material.name || code
+            });
+            
             delete this.materials[code];
             
             if (this.saveMaterials()) {

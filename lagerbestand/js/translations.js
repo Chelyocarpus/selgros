@@ -253,6 +253,22 @@ const translations = {
         cloudSyncUploadDesc: 'Lokale Daten in die Cloud hochladen',
         cloudSyncDownloadDesc: 'Daten aus der Cloud herunterladen',
         cloudSyncTestDesc: 'Verbindung überprüfen',
+        cloudSyncUnsyncedChanges: 'Nicht synchronisierte Änderungen',
+        cloudSyncUnsyncedChangesCount: '{count} Änderung(en) nicht synchronisiert',
+        cloudSyncUnsyncedWarning: 'Sie haben nicht synchronisierte Änderungen. Möchten Sie diese vor dem Verlassen der Seite hochladen?',
+        cloudSyncClickToShowChanges: 'Klicken um Änderungen anzuzeigen',
+        noUnsyncedChanges: 'Keine nicht synchronisierten Änderungen',
+        changeNoDetails: 'Keine Details verfügbar',
+        actionAdd: 'Hinzugefügt',
+        actionEdit: 'Bearbeitet',
+        actionDelete: 'Gelöscht',
+        actionBulkDelete: 'Mehrfach gelöscht',
+        dismiss: 'Verwerfen',
+        dismissAll: 'Alle verwerfen',
+        confirmDismissAllChanges: 'Möchten Sie wirklich alle nicht synchronisierten Änderungen verwerfen? Die Änderungen bleiben lokal erhalten, werden aber nicht mehr zur Synchronisation vorgemerkt.',
+        allChangesDiscarded: 'Alle Änderungen aus der Sync-Liste entfernt',
+        capacity: 'Kapazität',
+        materials: 'Materialien',
         
         // Settings Tab - Cross-Tab Sync
         crossTabSyncTitle: 'Echtzeit-Synchronisation',
@@ -304,6 +320,7 @@ const translations = {
         btnSave: 'Speichern',
         btnSaveChanges: 'Änderungen speichern',
         btnCancel: 'Abbrechen',
+        btnClose: 'Schließen',
         
         // Toast Messages
         toastSuccess: 'Erfolg',
@@ -422,6 +439,7 @@ const translations = {
         descriptionOptional: 'Beschreibung (optional)',
         enterGroupDescription: 'Geben Sie eine Gruppenbeschreibung ein',
         groupColor: 'Gruppenfarbe',
+        customColor: 'Eigene Farbe',
         viewMaterials: 'Materialien anzeigen',
         created: 'Erstellt',
 
@@ -899,6 +917,22 @@ const translations = {
         cloudSyncUploadDesc: 'Push local data to cloud',
         cloudSyncDownloadDesc: 'Pull data from cloud',
         cloudSyncTestDesc: 'Verify connection',
+        cloudSyncUnsyncedChanges: 'Unsynced Changes',
+        cloudSyncUnsyncedChangesCount: '{count} change(s) not synced',
+        cloudSyncUnsyncedWarning: 'You have unsynced changes. Do you want to upload them before leaving?',
+        cloudSyncClickToShowChanges: 'Click to show changes',
+        noUnsyncedChanges: 'No unsynced changes',
+        changeNoDetails: 'No details available',
+        actionAdd: 'Added',
+        actionEdit: 'Edited',
+        actionDelete: 'Deleted',
+        actionBulkDelete: 'Bulk deleted',
+        dismiss: 'Dismiss',
+        dismissAll: 'Dismiss all',
+        confirmDismissAllChanges: 'Do you really want to dismiss all unsynced changes? The changes will remain locally but will no longer be marked for synchronization.',
+        allChangesDiscarded: 'All changes removed from sync list',
+        capacity: 'Capacity',
+        materials: 'Materials',
         
         // Settings Tab - Cross-Tab Sync
         crossTabSyncTitle: 'Real-Time Sync',
@@ -950,6 +984,7 @@ const translations = {
         btnSave: 'Save Material',
         btnSaveChanges: 'Save Changes',
         btnCancel: 'Cancel',
+        btnClose: 'Close',
         
         // Toast Messages
         toastSuccess: 'Success',
@@ -1068,6 +1103,7 @@ const translations = {
         descriptionOptional: 'Description (optional)',
         enterGroupDescription: 'Enter a group description',
         groupColor: 'Group Color',
+        customColor: 'Custom Color',
         viewMaterials: 'View Materials',
         created: 'Created',
 

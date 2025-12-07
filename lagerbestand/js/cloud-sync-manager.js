@@ -12,6 +12,13 @@ class CloudSyncManager {
         this.lastSyncTime = null;
         this.syncErrors = [];
         
+        // Track unsynced changes
+        this.hasUnsyncedChanges = false;
+        this.unsyncedChangeCount = 0;
+        this.lastLocalChangeTime = null;
+        this.unsyncedChangesList = []; // List of change descriptions
+        this.maxUnsyncedChangesHistory = 50; // Maximum changes to keep in history
+        
         // Generate unique tab ID for cross-tab communication
         this.tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
         
@@ -26,12 +33,18 @@ class CloudSyncManager {
         // Load settings from localStorage
         this.settings = this.loadSettings();
         
+        // Load unsynced changes state
+        this.loadUnsyncedState();
+        
         // Auto-sync interval (if enabled)
         this.autoSyncInterval = null;
         this.setupAutoSync();
         
         // Initialize cross-tab synchronization
         this.initCrossTabSync();
+        
+        // Setup beforeunload handler for unsynced changes warning
+        this.setupBeforeUnloadHandler();
     }
 
     // ========================
@@ -180,6 +193,11 @@ class CloudSyncManager {
             this.settings.lastSync = new Date().toISOString();
             this.settings.lastSyncStatus = 'success';
             this.saveSettings();
+
+            // Clear unsynced changes after successful upload
+            if (direction === 'upload') {
+                this.clearUnsyncedChanges();
+            }
 
             return result;
 
@@ -584,7 +602,142 @@ class CloudSyncManager {
             lastSync: this.settings.lastSync,
             lastSyncStatus: this.settings.lastSyncStatus,
             syncInProgress: this.syncInProgress,
-            errors: this.syncErrors.slice(-5) // Last 5 errors
+            errors: this.syncErrors.slice(-5), // Last 5 errors
+            hasUnsyncedChanges: this.hasUnsyncedChanges,
+            unsyncedChangeCount: this.unsyncedChangeCount,
+            unsyncedChangesList: this.unsyncedChangesList
+        };
+    }
+
+    // ========================
+    // Unsynced Changes Tracking
+    // ========================
+
+    // Load unsynced state from localStorage
+    loadUnsyncedState() {
+        try {
+            const stored = localStorage.getItem('warehouse_unsynced_state');
+            if (stored) {
+                const state = JSON.parse(stored);
+                this.hasUnsyncedChanges = state.hasUnsyncedChanges || false;
+                this.unsyncedChangeCount = state.unsyncedChangeCount || 0;
+                this.lastLocalChangeTime = state.lastLocalChangeTime || null;
+                this.unsyncedChangesList = state.unsyncedChangesList || [];
+            }
+        } catch (error) {
+            console.error('CloudSyncManager: Error loading unsynced state:', error);
+        }
+    }
+
+    // Save unsynced state to localStorage
+    saveUnsyncedState() {
+        try {
+            localStorage.setItem('warehouse_unsynced_state', JSON.stringify({
+                hasUnsyncedChanges: this.hasUnsyncedChanges,
+                unsyncedChangeCount: this.unsyncedChangeCount,
+                lastLocalChangeTime: this.lastLocalChangeTime,
+                unsyncedChangesList: this.unsyncedChangesList
+            }));
+        } catch (error) {
+            console.error('CloudSyncManager: Error saving unsynced state:', error);
+        }
+    }
+
+    // Mark that a local change was made (call this from DataManager after saves)
+    markLocalChange(changeType = 'unknown', details = {}) {
+        // Only track if cloud sync is enabled
+        if (!this.settings.enabled || this.settings.provider === 'none') {
+            return;
+        }
+
+        this.hasUnsyncedChanges = true;
+        this.unsyncedChangeCount++;
+        this.lastLocalChangeTime = new Date().toISOString();
+        
+        // Add to changes list with details
+        const changeEntry = {
+            id: Date.now() + '-' + Math.random().toString(36).substring(2, 9),
+            type: changeType,
+            timestamp: this.lastLocalChangeTime,
+            details: details
+        };
+        
+        this.unsyncedChangesList.unshift(changeEntry);
+        
+        // Limit the list size
+        if (this.unsyncedChangesList.length > this.maxUnsyncedChangesHistory) {
+            this.unsyncedChangesList = this.unsyncedChangesList.slice(0, this.maxUnsyncedChangesHistory);
+        }
+        
+        this.saveUnsyncedState();
+
+        console.log(`CloudSyncManager: Local change tracked (${changeType}), total unsynced: ${this.unsyncedChangeCount}`);
+    }
+
+    // Clear unsynced changes (call after successful upload)
+    clearUnsyncedChanges() {
+        this.hasUnsyncedChanges = false;
+        this.unsyncedChangeCount = 0;
+        this.lastLocalChangeTime = null;
+        this.unsyncedChangesList = [];
+        this.saveUnsyncedState();
+        console.log('CloudSyncManager: Unsynced changes cleared');
+    }
+    
+    // Dismiss/remove specific unsynced change from the list
+    dismissUnsyncedChange(changeId) {
+        this.unsyncedChangesList = this.unsyncedChangesList.filter(c => c.id !== changeId);
+        this.unsyncedChangeCount = this.unsyncedChangesList.length;
+        this.hasUnsyncedChanges = this.unsyncedChangeCount > 0;
+        if (!this.hasUnsyncedChanges) {
+            this.lastLocalChangeTime = null;
+        }
+        this.saveUnsyncedState();
+        console.log(`CloudSyncManager: Change ${changeId} dismissed, remaining: ${this.unsyncedChangeCount}`);
+    }
+    
+    // Dismiss all unsynced changes without syncing
+    dismissAllUnsyncedChanges() {
+        this.clearUnsyncedChanges();
+        console.log('CloudSyncManager: All unsynced changes dismissed');
+    }
+
+    // Check if there are unsynced changes
+    checkUnsyncedChanges() {
+        return {
+            hasChanges: this.hasUnsyncedChanges,
+            changeCount: this.unsyncedChangeCount,
+            lastChangeTime: this.lastLocalChangeTime
+        };
+    }
+
+    // Setup beforeunload handler to warn about unsynced changes
+    setupBeforeUnloadHandler() {
+        window.addEventListener('beforeunload', (e) => {
+            // Only show warning if cloud sync is enabled and there are unsynced changes
+            if (this.settings.enabled && 
+                this.settings.provider !== 'none' && 
+                this.hasUnsyncedChanges && 
+                this.unsyncedChangeCount > 0) {
+                
+                // Standard way to trigger the browser's leave confirmation
+                e.preventDefault();
+                // Chrome requires returnValue to be set
+                e.returnValue = '';
+            }
+        });
+    }
+
+    // Get a user-friendly message about unsynced changes
+    getUnsyncedChangesMessage() {
+        if (!this.hasUnsyncedChanges || this.unsyncedChangeCount === 0) {
+            return null;
+        }
+
+        return {
+            count: this.unsyncedChangeCount,
+            lastChange: this.lastLocalChangeTime,
+            provider: this.settings.provider
         };
     }
 
