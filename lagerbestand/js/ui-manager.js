@@ -600,7 +600,9 @@ class UIManager {
         document.getElementById('modalPromoActive').checked = material.promoActive || false;
         document.getElementById('modalPromoEndDate').value = material.promoEndDate || '';
 
-        document.getElementById('materialModal').classList.add('active');
+        const modal = document.getElementById('materialModal');
+        modal.style.display = ''; // Clear inline display style
+        modal.classList.add('active');
     }
 
     // Open add material modal
@@ -629,7 +631,9 @@ class UIManager {
         document.getElementById('modalPromoActive').checked = false;
         document.getElementById('modalPromoEndDate').value = '';
 
-        document.getElementById('materialModal').classList.add('active');
+        const modal = document.getElementById('materialModal');
+        modal.style.display = ''; // Clear inline display style
+        modal.classList.add('active');
         document.getElementById('modalMaterialCode').focus();
     }
 
