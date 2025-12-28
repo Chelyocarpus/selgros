@@ -338,6 +338,19 @@
             border-bottom: 1px solid var(--border);
         }
         
+        /* Narrow column for specific headers */
+        th:contains("Maximale Füllmenge") {
+            max-width: 120px;
+            width: 120px;
+        }
+        
+        td[data-column="maximale-füllmenge"] {
+            max-width: 120px;
+            width: 120px;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        
         th {
             background: rgba(248, 250, 252, 0.98);
             backdrop-filter: blur(10px);
@@ -518,6 +531,10 @@
                 background: #f0f0f0 !important;
                 color: #333 !important;
                 position: static;
+            }
+            
+            #tableHead {
+                display: none !important;
             }
             
             th.highlight {
@@ -1307,7 +1324,15 @@
                 const originalIndex = visibleIndices[visibleIndex];
                 const highlight = (originalIndex === currentSortColumn || originalIndex === LAGERPLATZ_INDEX) ? ' class="highlight"' : '';
                 const safeHeader = escapeHtml(h || 'Spalte ' + (originalIndex+1));
-                let headerHTML = `<th${highlight}>${safeHeader}</th>`;
+                
+                // Check if this header should be narrower
+                const headerLower = (h || '').toLowerCase();
+                let headerStyle = '';
+                if (headerLower.includes('maximale') && headerLower.includes('füllmenge')) {
+                    headerStyle = ' style="max-width: 120px; width: 120px;"';
+                }
+                
+                let headerHTML = `<th${highlight}${headerStyle}>${safeHeader}</th>`;
                 
                 // Add QR column header after Artikel
                 if (originalIndex === ARTIKEL_INDEX) {
@@ -1405,7 +1430,16 @@
                     const highlight = (colIndex === currentSortColumn || colIndex === LAGERPLATZ_INDEX) ? ' class="highlight"' : '';
                     let cellContent = value !== undefined && value !== null ? value : '';
                     const safeCellContent = escapeHtml(String(cellContent));
-                    let cellHTML = `<td${highlight}>${safeCellContent}</td>`;
+                    
+                    // Check if this column header indicates it should be narrower
+                    const headerName = headers[colIndex] || '';
+                    const headerNameLower = headerName.toLowerCase();
+                    let cellStyle = '';
+                    if (headerNameLower.includes('maximale') && headerNameLower.includes('füllmenge')) {
+                        cellStyle = ' style="max-width: 120px; width: 120px; word-wrap: break-word;"';
+                    }
+                    
+                    let cellHTML = `<td${highlight}${cellStyle}>${safeCellContent}</td>`;
                     
                     // Add QR code column after Artikel
                     if (colIndex === ARTIKEL_INDEX && cellContent) {
