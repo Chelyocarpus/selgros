@@ -130,15 +130,22 @@
             transition: var(--transition);
             position: relative;
             z-index: 0;
-            pointer-events: none;
+            pointer-events: auto;
         }
         
-        .file-input-wrapper:hover .file-input-label {
+        .file-input-wrapper input[type="file"]:focus + .file-input-label,
+        .file-input-label.focused {
             border-color: var(--primary);
             color: var(--primary);
             background: rgba(99, 102, 241, 0.05);
             transform: translateY(-1px);
             box-shadow: var(--shadow);
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        .file-input-wrapper input[type="file"]:focus {
+            outline: none;
         }
         
         .select-wrapper {
@@ -306,6 +313,14 @@
             box-shadow: var(--shadow-sm);
         }
         
+        .status.error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(248, 113, 113, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            color: var(--text);
+            border-left: 4px solid #dc2626;
+            box-shadow: var(--shadow-sm);
+        }
+        
         .table-container {
             max-height: 65vh;
             overflow: auto;
@@ -444,27 +459,6 @@
         
         .empty-state p {
             font-size: 0.875rem;
-        }
-        
-        #status:empty {
-            display: none;
-        }
-        
-        .status {
-            margin: 1rem 1.5rem;
-            padding: 0.75rem 1rem;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
-        }
-        
-        .status.success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .status.info {
-            background: #cffafe;
-            color: #0e7490;
         }
         
         @media (max-width: 768px) {
@@ -728,7 +722,7 @@
                 </div>
                 
                 <div class="btn-group">
-                    <button id="customizeBtn" class="btn-secondary" onclick="toggleColumnSelector()" disabled>
+                    <button id="customizeBtn" class="btn-secondary" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 3h.01"/>
                             <path d="M12 8h.01"/>
@@ -737,7 +731,7 @@
                         </svg>
                         Spalten anpassen
                     </button>
-                    <button id="exportBtn" class="btn-success" onclick="exportData()" disabled>
+                    <button id="exportBtn" class="btn-success" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                             <polyline points="7 10 12 15 17 10"/>
@@ -745,7 +739,7 @@
                         </svg>
                         Exportieren
                     </button>
-                    <button id="printBtn" class="btn-print" onclick="printTable()" disabled>
+                    <button id="printBtn" class="btn-print" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="6 9 6 2 18 2 18 9"/>
                             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
@@ -757,19 +751,19 @@
             </div>
             
             <!-- Column Selector Modal -->
-            <div id="columnSelector" class="column-selector" style="display: none;">
+            <div id="columnSelector" class="column-selector" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="columnSelectorTitle">
                 <div class="column-selector-content">
                     <div class="column-selector-header">
-                        <h3>Sichtbare Spalten auswählen</h3>
-                        <button class="column-selector-close" onclick="toggleColumnSelector()">&times;</button>
+                        <h3 id="columnSelectorTitle">Sichtbare Spalten auswählen</h3>
+                        <button class="column-selector-close" aria-label="Modal schließen">&times;</button>
                     </div>
                     <div class="column-selector-body" id="columnCheckboxes">
                         <!-- Checkboxes will be generated dynamically -->
                     </div>
                     <div class="column-selector-footer">
-                        <button class="btn-secondary" onclick="selectAllColumns()">Alle auswählen</button>
-                        <button class="btn-secondary" onclick="deselectAllColumns()">Alle abwählen</button>
-                        <button class="btn-primary" onclick="applyColumnSelection()">Anwenden</button>
+                        <button class="btn-secondary">Alle auswählen</button>
+                        <button class="btn-secondary">Alle abwählen</button>
+                        <button class="btn-primary">Anwenden</button>
                     </div>
                 </div>
             </div>
@@ -817,6 +811,7 @@
         let data = [];
         let sortedData = [];
         let visibleColumns = []; // Array of column indices that are visible
+        let dateColumns = new Set(); // Set of column indices that contain date values
 
         // Spaltenindizes (0-basiert)
         const ARTIKEL_INDEX = 0;           // Spalte "Artikel"
@@ -824,16 +819,42 @@
         const PROZENTUAL_INDEX = 9;        // Spalte "proz. Ausgabemenge"
         const LAGERPLATZ_INDEX = 5;        // Spalte "Lagerplatz"
 
+        // Excel date serial number constants
+        // Excel stores dates as serial numbers where:
+        // - Day 0 = January 0, 1900 (but Excel incorrectly treats 1900 as a leap year)
+        // - Day 1 = January 1, 1900
+        // - JavaScript epoch starts January 1, 1970
+        // - The offset between Excel and JS epochs is 25569 days
+        const EXCEL_EPOCH_OFFSET = 25569;  // Days between Excel epoch (1900) and Unix epoch (1970)
+        const EXCEL_DATE_MIN = 40000;      // Approximate start of reasonable date range (~2009)
+        const EXCEL_DATE_MAX = 50000;      // Approximate end of reasonable date range (~2036)
+
         let currentSortColumn = AUFFUELLBEDARF_INDEX;
 
-        // Generate QR code as data URL using qrcode.js library
+        // Focus management for modals
+        let lastFocusedElement = null;
+
+        // Cache for generated QR codes to avoid regenerating
+        const qrCodeCache = new Map();
+
+        // Generate QR code as data URL using qrcode.js library with caching
         function generateQRCode(text, size = 32) {
             if (!text || text === '') return '';
             
+            // Create cache key from text and size
+            const cacheKey = `${text}_${size}`;
+            
+            // Return cached QR code if available
+            if (qrCodeCache.has(cacheKey)) {
+                return qrCodeCache.get(cacheKey);
+            }
+            
             try {
                 // Create a temporary container
-                const tempDiv = document.createElement('div');
-                const qr = new QRCode(tempDiv, {
+                tempDiv = document.createElement('div');
+                
+                // Generate QR code synchronously
+                qr = new QRCode(tempDiv, {
                     text: String(text),
                     width: size,
                     height: size,
@@ -842,32 +863,76 @@
                     correctLevel: QRCode.CorrectLevel.L
                 });
                 
-                // Get the generated canvas and convert to data URL
+                // Get the canvas (QRCode.js may create it asynchronously in some cases)
                 const canvas = tempDiv.querySelector('canvas');
+                let dataUrl = '';
+                
                 if (canvas) {
-                    return canvas.toDataURL('image/png');
+                    dataUrl = canvas.toDataURL('image/png');
+                } else {
+                    // Fallback: create a simple placeholder image
+                    console.warn('QRCode canvas not found, using fallback for:', text);
+                    const fallbackCanvas = document.createElement('canvas');
+                    fallbackCanvas.width = size;
+                    fallbackCanvas.height = size;
+                    const ctx = fallbackCanvas.getContext('2d');
+                    
+                    // Create a simple pattern
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, size, size);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(size * 0.2, size * 0.2, size * 0.6, size * 0.6);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(size * 0.3, size * 0.3, size * 0.4, size * 0.4);
+                    
+                    dataUrl = fallbackCanvas.toDataURL('image/png');
                 }
-                return '';
+                
+                // Cache the result
+                qrCodeCache.set(cacheKey, dataUrl);
+                
+                // Clean up: clear the temporary div and remove references
+                tempDiv.innerHTML = '';
+                // Clear QRCode instance references to prevent memory leaks
+                if (qr && qr._oDrawing) {
+                    qr._oDrawing._elCanvas = null;
+                    qr._oDrawing._el = null;
+                }
+                
+                return dataUrl;
             } catch (error) {
                 console.error('QR Code generation error:', error);
+                // Clean up resources even on error
+                if (tempDiv) tempDiv.innerHTML = '';
                 return '';
             }
         }
 
         // Load column preferences from localStorage
         function loadColumnPreferences() {
-            const saved = localStorage.getItem('visibleColumns');
-            if (saved) {
-                visibleColumns = JSON.parse(saved);
-            } else {
-                // Default: show all columns
+            try {
+                const saved = localStorage.getItem('visibleColumns');
+                if (saved) {
+                    visibleColumns = JSON.parse(saved);
+                } else {
+                    // Default: show all columns
+                    visibleColumns = [];
+                }
+            } catch (error) {
+                console.warn('Unable to load column preferences from localStorage:', error);
+                // Fallback: show all columns
                 visibleColumns = [];
             }
         }
 
         // Save column preferences to localStorage
         function saveColumnPreferences() {
-            localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns));
+            try {
+                localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns));
+            } catch (error) {
+                console.warn('Unable to save column preferences to localStorage:', error);
+                // Silently fail - user preferences won't be persisted, but app continues to work
+            }
         }
 
         // Toggle column selector modal
@@ -880,29 +945,66 @@
             }
         }
 
+        // Handle keyboard events for modal
+        function handleModalKeydown(event) {
+            const selector = document.getElementById('columnSelector');
+            if (selector.style.display !== 'none' && selector.style.display !== '') {
+                if (event.key === 'Escape') {
+                    hideColumnSelector();
+                }
+            }
+        }
+
+        // HTML escaping function to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // Show column selector with checkboxes
         function showColumnSelector() {
             const selector = document.getElementById('columnSelector');
             const checkboxesContainer = document.getElementById('columnCheckboxes');
             
+            // Store the currently focused element
+            lastFocusedElement = document.activeElement;
+            
             // Generate checkboxes for each column
             checkboxesContainer.innerHTML = '<div class="column-checkbox-group">' + 
                 headers.map((header, index) => {
                     const isChecked = visibleColumns.length === 0 || visibleColumns.includes(index);
+                    const safeHeader = escapeHtml(header || 'Spalte ' + (index + 1));
                     return `
                         <div class="column-checkbox-item">
-                            <input type="checkbox" id="col_${index}" ${isChecked ? 'checked' : ''}>
-                            <label for="col_${index}">${header || 'Spalte ' + (index + 1)}</label>
+                            <input type="checkbox" id="col_${index}" ${isChecked ? 'checked' : ''} onchange="handleColumnCheckboxChange(this, ${index})">
+                            <label for="col_${index}">${safeHeader}</label>
                         </div>
                     `;
                 }).join('') + '</div>';
             
             selector.style.display = 'flex';
+            
+            // Focus the first checkbox or close button
+            const firstCheckbox = checkboxesContainer.querySelector('input[type="checkbox"]');
+            if (firstCheckbox) {
+                firstCheckbox.focus();
+            } else {
+                // Fallback to close button
+                const closeButton = selector.querySelector('.column-selector-close');
+                if (closeButton) closeButton.focus();
+            }
         }
 
         // Hide column selector
         function hideColumnSelector() {
             document.getElementById('columnSelector').style.display = 'none';
+            
+            // Restore focus to the previously focused element
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+                lastFocusedElement = null;
+            }
         }
 
         // Select all columns
@@ -920,19 +1022,23 @@
         // Apply column selection
         function applyColumnSelection() {
             const checkboxes = document.querySelectorAll('#columnCheckboxes input[type="checkbox"]');
-            visibleColumns = [];
             
+            // Count how many are currently checked
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            
+            if (checkedCount === 0) {
+                // Prevent applying when no columns are selected
+                showStatus('Mindestens eine Spalte muss ausgewählt sein.', 'info');
+                return;
+            }
+            
+            // Collect the checked states
+            visibleColumns = [];
             checkboxes.forEach((cb, index) => {
                 if (cb.checked) {
                     visibleColumns.push(index);
                 }
             });
-            
-            // Ensure at least one column is selected
-            if (visibleColumns.length === 0) {
-                visibleColumns = [0]; // Default to first column
-                checkboxes[0].checked = true;
-            }
             
             saveColumnPreferences();
             displayTable(headers, sortedData.length > 0 ? sortedData : data);
@@ -947,6 +1053,24 @@
             }
         });
 
+        // Handle keyboard events for modal accessibility
+        document.addEventListener('keydown', handleModalKeydown);
+
+        // Handle column checkbox changes to prevent unchecking the last column
+        function handleColumnCheckboxChange(checkbox, index) {
+            if (!checkbox.checked) {
+                // Count how many checkboxes are currently checked
+                const checkboxes = document.querySelectorAll('#columnCheckboxes input[type="checkbox"]');
+                const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+                
+                // If this would be the last unchecked box, prevent it
+                if (checkedCount === 0) {
+                    checkbox.checked = true;
+                    showStatus('Mindestens eine Spalte muss ausgewählt sein.', 'info');
+                }
+            }
+        }
+
         document.getElementById('fileInput').addEventListener('change', handleFile);
         document.getElementById('sortColumn').addEventListener('change', function() {
             const sortValue = this.value;
@@ -960,6 +1084,40 @@
             if (data.length > 0) {
                 sortData();
             }
+        });
+
+        // Button event listeners
+        document.getElementById('customizeBtn').addEventListener('click', toggleColumnSelector);
+        document.getElementById('exportBtn').addEventListener('click', exportData);
+        document.getElementById('printBtn').addEventListener('click', printTable);
+        document.querySelector('.column-selector-close').addEventListener('click', hideColumnSelector);
+        document.querySelector('.column-selector-footer .btn-secondary:nth-child(1)').addEventListener('click', selectAllColumns);
+        document.querySelector('.column-selector-footer .btn-secondary:nth-child(2)').addEventListener('click', deselectAllColumns);
+        document.querySelector('.column-selector-footer .btn-primary').addEventListener('click', applyColumnSelection);
+
+        // File input accessibility
+        const fileInput = document.getElementById('fileInput');
+        const fileInputLabel = document.querySelector('.file-input-label');
+        
+        // Make label focusable and handle activation
+        fileInputLabel.setAttribute('tabindex', '0');
+        fileInputLabel.addEventListener('click', function() {
+            fileInput.click();
+        });
+        fileInputLabel.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
+        
+        // Handle label focus to show focus styles
+        fileInputLabel.addEventListener('focus', function() {
+            this.classList.add('focused');
+        });
+        
+        fileInputLabel.addEventListener('blur', function() {
+            this.classList.remove('focused');
         });
 
         function handleFile(e) {
@@ -979,10 +1137,40 @@
                 setTimeout(() => {
                     try {
                         const arrayBuffer = e.target.result;
-                        workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                        workbook = XLSX.read(arrayBuffer, { 
+                            type: 'array', 
+                            cellDates: true,
+                            dateNF: 'DD.MM.YYYY'
+                        });
                         
                         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                        
+                        // Detect date columns by checking cell types
+                        dateColumns.clear();
+                        const range = XLSX.utils.decode_range(firstSheet['!ref']);
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            // Check first few data rows for date types
+                            let dateCount = 0;
+                            const samplesToCheck = Math.min(10, range.e.r - range.s.r);
+                            for (let R = range.s.r + 1; R <= range.s.r + samplesToCheck; ++R) {
+                                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                                const cell = firstSheet[cellAddress];
+                                if (cell && (cell.t === 'd' || (cell.t === 'n' && cell.w && cell.w.includes('/'))))  {
+                                    dateCount++;
+                                }
+                            }
+                            // If more than half of sampled cells are dates, treat column as date column
+                            if (dateCount > samplesToCheck / 2) {
+                                dateColumns.add(C);
+                            }
+                        }
+                        
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
+                            header: 1, 
+                            raw: false, 
+                            dateNF: 'DD.MM.YYYY',
+                            defval: null
+                        });
                         
                         if (jsonData.length < 2) {
                             loadingOverlay.classList.remove('active');
@@ -1025,7 +1213,7 @@
                         showStatus(`${data.length} Zeilen erfolgreich geladen und sortiert`, 'success');
                     } catch (error) {
                         loadingOverlay.classList.remove('active');
-                        showStatus('Fehler beim Lesen der Datei: ' + error.message, 'info');
+                        showStatus('Fehler beim Lesen der Datei: ' + error.message, 'error');
                     }
                 }, 50);
             };
@@ -1118,7 +1306,8 @@
             thead.innerHTML = '<tr>' + visibleHeaders.map((h, visibleIndex) => {
                 const originalIndex = visibleIndices[visibleIndex];
                 const highlight = (originalIndex === currentSortColumn || originalIndex === LAGERPLATZ_INDEX) ? ' class="highlight"' : '';
-                let headerHTML = `<th${highlight}>${h || 'Spalte ' + (originalIndex+1)}</th>`;
+                const safeHeader = escapeHtml(h || 'Spalte ' + (originalIndex+1));
+                let headerHTML = `<th${highlight}>${safeHeader}</th>`;
                 
                 // Add QR column header after Artikel
                 if (originalIndex === ARTIKEL_INDEX) {
@@ -1136,6 +1325,26 @@
             let lastLagerplatz = null;
             let groupIndex = 0;
             
+            // Generate QR codes synchronously
+            const qrCodeMap = new Map();
+            
+            // Collect all unique cell contents that need QR codes
+            const qrContents = new Set();
+            rows.forEach(row => {
+                const artikelContent = row[ARTIKEL_INDEX];
+                const lagerplatzContent = row[LAGERPLATZ_INDEX];
+                if (artikelContent) qrContents.add(String(artikelContent));
+                if (lagerplatzContent) qrContents.add(String(lagerplatzContent));
+            });
+            
+            // Generate QR codes for all unique contents
+            for (const content of qrContents) {
+                const qrCodeUrl = generateQRCode(content);
+                if (qrCodeUrl) {
+                    qrCodeMap.set(content, qrCodeUrl);
+                }
+            }
+            
             tbody.innerHTML = rows.map((row, rowIndex) => {
                 const currentLagerplatz = String(row[LAGERPLATZ_INDEX] || '');
                 const nextLagerplatz = rowIndex < rows.length - 1 ? String(rows[rowIndex + 1][LAGERPLATZ_INDEX] || '') : null;
@@ -1148,30 +1357,62 @@
                 }
                 
                 const groupClass = isGroupStart ? ' group-start' : '';
-                const groupEndClass = isGroupEnd ? ' group-end' : '';
-                const altGroupClass = groupIndex % 2 === 0 ? ' group-alt' : '';
                 
-                return `<tr class="${groupClass}${groupEndClass}${altGroupClass}">` + visibleIndices.map((colIndex, visibleIndex) => {
+                return `<tr class="${groupClass}">` + visibleIndices.map((colIndex, visibleIndex) => {
                     let value = row[colIndex];
-                    // Datum formatieren
+                    // Format dates in German format (robust detection for all potential date values)
+                    let formattedValue = value;
+                    
                     if (value instanceof Date) {
-                        value = value.toLocaleDateString('de-DE');
-                    } else if (typeof value === 'number' && value > 40000 && value < 50000) {
-                        // Excel-Datum-Seriennummer
-                        const date = new Date((value - 25569) * 86400 * 1000);
-                        value = date.toLocaleDateString('de-DE');
+                        formattedValue = value.toLocaleDateString('de-DE');
+                    } else if (typeof value === 'number' && value > EXCEL_DATE_MIN && value < EXCEL_DATE_MAX) {
+                        // Excel-Datum-Seriennummer: Convert Excel serial number to JavaScript Date
+                        const date = new Date((value - EXCEL_EPOCH_OFFSET) * 86400 * 1000);
+                        formattedValue = date.toLocaleDateString('de-DE');
+                    } else if (typeof value === 'string') {
+                        // Check if string looks like a date and format it
+                        if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(value)) {
+                            // Already in German format dd.mm.yyyy, keep as is
+                            formattedValue = value;
+                        } else if (/^\d{4}-\d{1,2}-\d{1,2}/.test(value)) {
+                            // ISO date string, convert to German format
+                            const date = new Date(value);
+                            if (!isNaN(date.getTime())) {
+                                formattedValue = date.toLocaleDateString('de-DE');
+                            }
+                        } else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value)) {
+                            // US format mm/dd/yy or mm/dd/yyyy, convert to German
+                            let dateStr = value;
+                            // Convert 2-digit year to 4-digit year (assume 20xx for modern dates)
+                            const parts = value.split('/');
+                            if (parts[2] && parts[2].length === 2) {
+                                const year = parseInt(parts[2]);
+                                parts[2] = 2000 + year; // Convert 25 -> 2025
+                                dateStr = parts.join('/');
+                            }
+                            const date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                formattedValue = date.toLocaleDateString('de-DE');
+                            }
+                        }
+                    }
+                    
+                    // Use formatted value if it changed
+                    if (formattedValue !== value) {
+                        value = formattedValue;
                     }
                     
                     const highlight = (colIndex === currentSortColumn || colIndex === LAGERPLATZ_INDEX) ? ' class="highlight"' : '';
                     let cellContent = value !== undefined && value !== null ? value : '';
-                    let cellHTML = `<td${highlight}>${cellContent}</td>`;
+                    const safeCellContent = escapeHtml(String(cellContent));
+                    let cellHTML = `<td${highlight}>${safeCellContent}</td>`;
                     
                     // Add QR code column after Artikel
                     if (colIndex === ARTIKEL_INDEX && cellContent) {
-                        const qrCodeUrl = generateQRCode(String(cellContent));
+                        const qrCodeUrl = qrCodeMap.get(String(cellContent));
                         if (qrCodeUrl) {
                             cellHTML += `<td style="text-align: center; padding: 0.5rem;">
-                                <img src="${qrCodeUrl}" alt="QR" style="width: 32px; height: 32px; display: block; margin: 0 auto;" title="Artikel: ${cellContent}" />
+                                <img src="${qrCodeUrl}" alt="QR" style="width: 32px; height: 32px; display: block; margin: 0 auto;" title="Artikel: ${safeCellContent}" />
                             </td>`;
                         } else {
                             cellHTML += '<td></td>';
@@ -1180,10 +1421,10 @@
                     
                     // Add QR code column after Lagerplatz
                     if (colIndex === LAGERPLATZ_INDEX && cellContent) {
-                        const qrCodeUrl = generateQRCode(String(cellContent));
+                        const qrCodeUrl = qrCodeMap.get(String(cellContent));
                         if (qrCodeUrl) {
                             cellHTML += `<td style="text-align: center; padding: 0.5rem;">
-                                <img src="${qrCodeUrl}" alt="QR" style="width: 32px; height: 32px; display: block; margin: 0 auto;" title="Lagerplatz: ${cellContent}" />
+                                <img src="${qrCodeUrl}" alt="QR" style="width: 32px; height: 32px; display: block; margin: 0 auto;" title="Lagerplatz: ${safeCellContent}" />
                             </td>`;
                         } else {
                             cellHTML += '<td></td>';
@@ -1246,9 +1487,17 @@
 
         function showStatus(message, type) {
             const status = document.getElementById('status');
-            const icon = type === 'success' 
-                ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
-                : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+            let icon;
+            
+            if (type === 'success') {
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+            } else if (type === 'error') {
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>';
+            } else {
+                // Default to info/warning icon
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+            }
+            
             status.innerHTML = `<div class="status ${type}">${icon} ${message}</div>`;
         }
     </script>
