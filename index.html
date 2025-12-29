@@ -231,12 +231,12 @@
                 </a>
 
                 <!-- QR Code Generator -->
-                <a href="index.html" class="app-card">
+                <a href="qrcode/index.html" class="app-card">
                     <div class="app-icon">
                         <i class="fas fa-qrcode"></i>
                     </div>
-                    <h2>Regalnummer Generator</h2>
-                    <p>Generieren Sie QR-Codes für Regalnummern</p>
+                    <h2>QR-Code Generator</h2>
+                    <p>Generieren Sie QR-Codes für verschiedene Anwendungen</p>
                     <span class="app-badge">Tools</span>
                 </a>
             </div>
@@ -259,15 +259,9 @@
         // Add keyboard navigation
         document.addEventListener('DOMContentLoaded', function() {
             const cards = document.querySelectorAll('.app-card');
-            
+
             cards.forEach(card => {
-                card.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        window.location.href = this.href;
-                    }
-                });
-                
-                // Make cards keyboard focusable
+                // Make cards keyboard focusable (Enter works by default for <a> elements)
                 card.setAttribute('tabindex', '0');
             });
 
