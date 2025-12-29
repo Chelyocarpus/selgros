@@ -328,12 +328,6 @@
             border-bottom: 1px solid var(--border);
         }
         
-        /* Narrow column for specific headers */
-        th:contains("Maximale Füllmenge") {
-            max-width: 120px;
-            width: 120px;
-        }
-        
         td[data-column="maximale-füllmenge"] {
             max-width: 120px;
             width: 120px;
@@ -718,7 +712,7 @@
                             <polyline points="17 8 12 3 7 8"/>
                             <line x1="12" y1="3" x2="12" y2="15"/>
                         </svg>
-                        <span id="fileLabel">PDF Datei auswählen</span>
+                        <span id="fileLabel">PDF-Datei auswählen</span>
                     </div>
                 </div>
                 
@@ -822,13 +816,14 @@
 
         // Excel date serial number constants
         // Excel stores dates as serial numbers where:
-        // - Day 0 = January 0, 1900 (but Excel incorrectly treats 1900 as a leap year)
+        // - Day 0 = January 0, 1900
         // - Day 1 = January 1, 1900
         // - JavaScript epoch starts January 1, 1970
         // - The offset between Excel and JS epochs is 25569 days
+        // Note: Excel treats 1900 as a leap year for backward compatibility with Lotus 1-2-3
         const EXCEL_EPOCH_OFFSET = 25569;  // Days between Excel epoch (1900) and Unix epoch (1970)
-        const EXCEL_DATE_MIN = 40000;      // Approximate start of reasonable date range (~2009)
-        const EXCEL_DATE_MAX = 50000;      // Approximate end of reasonable date range (~2036)
+        const EXCEL_DATE_MIN = 40000;      // July 6, 2009 - Start of reasonable modern date range
+        const EXCEL_DATE_MAX = 50000;      // November 14, 2036 - End of reasonable date range
 
 
         
@@ -857,10 +852,10 @@
             
             try {
                 // Create a temporary container
-                tempDiv = document.createElement('div');
+                const tempDiv = document.createElement('div');
                 
                 // Generate QR code synchronously
-                qr = new QRCode(tempDiv, {
+                const qr = new QRCode(tempDiv, {
                     text: String(text),
                     width: size,
                     height: size,
@@ -983,11 +978,19 @@
                     const safeHeader = escapeHtml(header || 'Spalte ' + (index + 1));
                     return `
                         <div class="column-checkbox-item">
-                            <input type="checkbox" id="col_${index}" ${isChecked ? 'checked' : ''} onchange="handleColumnCheckboxChange(this, ${index})">
+                            <input type="checkbox" id="col_${index}" data-col-index="${index}" ${isChecked ? 'checked' : ''}>
                             <label for="col_${index}">${safeHeader}</label>
                         </div>
                     `;
                 }).join('') + '</div>';
+            
+            // Attach event listeners to checkboxes instead of inline handlers
+            checkboxesContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const index = parseInt(this.getAttribute('data-col-index'));
+                    handleColumnCheckboxChange(this, index);
+                });
+            });
             
             selector.style.display = 'flex';
             
@@ -1122,23 +1125,30 @@
             const loadingOverlay = document.getElementById('loadingOverlay');
             loadingOverlay.classList.add('active');
             
-            // Dateiname anzeigen
             document.getElementById('fileLabel').textContent = file.name;
 
             const fileExtension = file.name.toLowerCase().split('.').pop();
 
-            if (fileExtension === 'pdf') {
-                await handlePDFFile(file);
-            } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-                handleXLSXFile(file);
-            } else {
+            try {
+                if (fileExtension === 'pdf') {
+                    await handlePDFFile(file);
+                } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+                    handleXLSXFile(file);
+                } else {
+                    loadingOverlay.classList.remove('active');
+                    showStatus('Nicht unterstütztes Dateiformat. Bitte wählen Sie eine XLSX- oder PDF-Datei.', 'error');
+                }
+            } catch (error) {
                 loadingOverlay.classList.remove('active');
-                showStatus('Nicht unterstütztes Dateiformat. Bitte wählen Sie eine XLSX- oder PDF-Datei.', 'error');
+                showStatus('Fehler beim Laden der Datei: ' + error.message, 'error');
             }
         }
 
         async function handlePDFFile(file) {
             const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            // Clear QR code cache for new file to prevent memory leak
+            qrCodeCache.clear();
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -1155,6 +1165,8 @@
                     // Group text items by line (Y position)
                     const lines = new Map();
                     const yThreshold = 3;
+                    // Keep track of Y positions in sorted order for efficient lookup
+                    const yPositions = [];
                     
                     for (const item of textContent.items) {
                         const text = item.str.trim();
@@ -1165,24 +1177,31 @@
                             text.includes('Druckzeit') || 
                             text.includes('Benutzer') ||
                             /^\d{2}\.\d{2}\.\d{4}/.test(text) ||
-                            text.includes('Prozent') ||
-                            text === 'Patrick Weber') {
+                            text.includes('Prozent')) {
                             continue;
                         }
                         
                         const y = item.transform[5];
                         let foundY = null;
                         
-                        for (const existingY of lines.keys()) {
-                            if (Math.abs(y - existingY) < yThreshold) {
-                                foundY = existingY;
+                        // Binary search would be overkill, but linear search on sorted array is faster
+                        // than Map.keys() iteration since we can break early
+                        for (let i = 0; i < yPositions.length; i++) {
+                            if (Math.abs(y - yPositions[i]) < yThreshold) {
+                                foundY = yPositions[i];
                                 break;
                             }
+                            // Since array is sorted, we can stop if we're past the threshold
+                            if (yPositions[i] < y - yThreshold) break;
                         }
                         
                         if (foundY === null) {
-                            lines.set(y, []);
                             foundY = y;
+                            // Insert Y position in sorted order (descending)
+                            let insertIndex = yPositions.findIndex(existingY => existingY < y);
+                            if (insertIndex === -1) insertIndex = yPositions.length;
+                            yPositions.splice(insertIndex, 0, y);
+                            lines.set(y, []);
                         }
                         
                         lines.get(foundY).push({
@@ -1260,9 +1279,6 @@
                     }
                 }
                 
-                console.log('Extracted table rows:', tableData.length);
-                console.log('Sample rows:', tableData.slice(0, 3));
-                
                 if (tableData.length < 2) {
                     loadingOverlay.classList.remove('active');
                     showStatus('Konnte keine Tabellendaten aus dem PDF extrahieren.', 'error');
@@ -1278,136 +1294,11 @@
             }
         }
 
-        function parsePDFTextToTable(textItems) {
-            // Filter out header/footer text
-            const filteredItems = textItems.filter(item => {
-                const text = item.text.trim();
-                if (!text) return false;
-                
-                if (text.includes('Auffüllprotokoll') || 
-                    text.includes('Druckzeit') || 
-                    text.includes('Benutzer') ||
-                    text.includes('Prozent') ||
-                    text.includes('Variante') ||
-                    text.includes('Gesamtanzahl') ||
-                    /^Seite$/.test(text) ||
-                    /^\d+ \/ \d+$/.test(text) ||
-                    /^\d{2}\.\d{2}\.\d{4}/.test(text) ||
-                    /^Patrick Weber$/.test(text) ||
-                    /^\d+\s*%$/.test(text)) {
-                    return false;
-                }
-                return true;
-            });
-            
-            console.log('Filtered items count:', filteredItems.length);
-            console.log('Sample items:', filteredItems.slice(0, 10).map(i => ({x: i.x.toFixed(1), y: i.y.toFixed(1), text: i.text})));
-            
-            // Sort by X position to group into columns
-            const sortedByX = [...filteredItems].sort((a, b) => a.x - b.x);
-            
-            // Detect distinct X positions (columns)
-            const xPositions = [];
-            const xThreshold = 8; // Smaller threshold for tighter grouping
-            
-            for (const item of sortedByX) {
-                let found = false;
-                for (const xPos of xPositions) {
-                    if (Math.abs(item.x - xPos) < xThreshold) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    xPositions.push(item.x);
-                }
-            }
-            
-            xPositions.sort((a, b) => a - b);
-            console.log('Detected column X positions:', xPositions.map(x => x.toFixed(1)));
-            
-            // Group items into columns
-            const columns = xPositions.map(() => []);
-            
-            for (const item of filteredItems) {
-                let closestCol = 0;
-                let minDist = Math.abs(item.x - xPositions[0]);
-                
-                for (let i = 1; i < xPositions.length; i++) {
-                    const dist = Math.abs(item.x - xPositions[i]);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        closestCol = i;
-                    }
-                }
-                
-                columns[closestCol].push(item);
-            }
-            
-            // Sort each column by Y position (descending - top to bottom)
-            columns.forEach(col => col.sort((a, b) => b.y - a.y));
-            
-            console.log('Column counts:', columns.map(col => col.length));
-            console.log('First column sample:', columns[0]?.slice(0, 5).map(i => i.text));
-            
-            // Identify header row and data start
-            // Look for columns containing header text
-            const headers = [];
-            let maxHeaderIndex = 0;
-            
-            for (let colIdx = 0; colIdx < columns.length; colIdx++) {
-                const col = columns[colIdx];
-                let headerText = '';
-                let dataStart = 0;
-                
-                // Find first occurrence of 4-digit number (data starts)
-                for (let i = 0; i < col.length; i++) {
-                    if (/^\d{4}$/.test(col[i].text)) {
-                        dataStart = i;
-                        break;
-                    }
-                }
-                
-                // Header is the first non-empty text before data
-                for (let i = 0; i < Math.min(dataStart || 3, col.length); i++) {
-                    const text = col[i].text.trim();
-                    if (text && !text.includes('QR')) {
-                        headerText = text;
-                        break;
-                    }
-                }
-                
-                headers.push(headerText || `Col${colIdx + 1}`);
-                maxHeaderIndex = Math.max(maxHeaderIndex, dataStart);
-            }
-            
-            console.log('Headers:', headers);
-            console.log('Data starts at index:', maxHeaderIndex);
-            
-            // Build rows by transposing columns
-            const numRows = Math.max(...columns.map(col => col.length - maxHeaderIndex));
-            const tableData = [headers];
-            
-            for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
-                const row = columns.map(col => {
-                    const itemIdx = maxHeaderIndex + rowIdx;
-                    return itemIdx < col.length ? col[itemIdx].text : '';
-                });
-                
-                // Only include rows with data in first column
-                if (row[0] && row[0].trim()) {
-                    tableData.push(row);
-                }
-            }
-            
-            console.log('Generated table rows:', tableData.length);
-            console.log('Sample row:', tableData[1]);
-            
-            return tableData;
-        }
-
         function handleXLSXFile(file) {
             const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            // Clear QR code cache for new file to prevent memory leak
+            qrCodeCache.clear();
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -1500,6 +1391,13 @@
                     return;
                 }
                 
+                // Validate that ARTIKEL and LAGERPLATZ are different columns
+                if (ARTIKEL_INDEX === LAGERPLATZ_INDEX) {
+                    loadingOverlay.classList.remove('active');
+                    showStatus('Die "Artikel" und "Lagerplatz" Spalten müssen unterschiedlich sein.', 'error');
+                    return;
+                }
+                
                 // Detect sort columns
                 AUFFUELLBEDARF_INDEX = headers.findIndex(h => h.toLowerCase().includes('auffüllbedarf'));
                 PROZENTUAL_INDEX = headers.findIndex(h => h.toLowerCase().includes('proz') && h.toLowerCase().includes('ausgabemenge'));
@@ -1524,16 +1422,11 @@
                     saveColumnPreferences();
                 }
 
-                displayTable(headers, data);
-                updateStats();
+                displayTable(headers, sortedData);
                 
                 document.getElementById('exportBtn').disabled = false;
                 document.getElementById('printBtn').disabled = false;
                 document.getElementById('customizeBtn').disabled = false;
-                
-                // Don't automatically sort - keep PDF order
-                sortedData = [...data];
-                displayTable(headers, sortedData);
                 
                 // Hide loading spinner
                 loadingOverlay.classList.remove('active');
@@ -1543,15 +1436,6 @@
                 loadingOverlay.classList.remove('active');
                 showStatus('Fehler beim Verarbeiten der Daten: ' + error.message, 'error');
             }
-        }
-        
-        function updateStats() {
-            // Stats section removed
-        }
-
-        function sortData() {
-            // Sorting disabled - keeping original PDF order
-            return;
         }
 
         function displayTable(headers, rows) {
@@ -1654,12 +1538,6 @@
                 const groupClass = isGroupStart ? ' group-start' : '';
                 const leIdClass = sameLeId ? ' same-leid' : '';
                 
-                // Debug logging - show all rows with same LE-ID or rows with 187-01 lagerplatz
-                const lagerplatz = String(row[2] || '');
-                if ((sameLeId || lagerplatz.includes('187-01')) && rowIndex >= 405 && rowIndex <= 425) {
-                    console.log(`Row ${rowIndex}: Lagerplatz="${lagerplatz}", Current_LP_Col="${currentLagerplatz}", Last_LP="${lastLagerplatz}", isGroupStart=${isGroupStart}, LE-ID="${currentLeId}", PrevLE-ID="${prevLeId}", sameLeId=${sameLeId}, classes="${groupClass}${leIdClass}"`);
-                }
-                
                 return `<tr class="${groupClass}${leIdClass}">` + visibleIndices.map((colIndex, visibleIndex) => {
                     let value = row[colIndex];
                     // Format dates in German format (robust detection for all potential date values)
@@ -1685,11 +1563,12 @@
                         } else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value)) {
                             // US format mm/dd/yy or mm/dd/yyyy, convert to German
                             let dateStr = value;
-                            // Convert 2-digit year to 4-digit year (assume 20xx for modern dates)
+                            // Convert 2-digit year to 4-digit year using pivot year approach
                             const parts = value.split('/');
                             if (parts[2] && parts[2].length === 2) {
                                 const year = parseInt(parts[2]);
-                                parts[2] = 2000 + year; // Convert 25 -> 2025
+                                // Years 0-29 are 2000-2029, years 30-99 are 1930-1999
+                                parts[2] = year < 30 ? 2000 + year : 1900 + year;
                                 dateStr = parts.join('/');
                             }
                             const date = new Date(dateStr);
@@ -1833,7 +1712,7 @@
                 icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
             }
             
-            status.innerHTML = `<div class="status ${type}">${icon} ${message}</div>`;
+            status.innerHTML = `<div class="status ${type}">${icon} ${escapeHtml(message)}</div>`;
         }
     </script>
 </body>
