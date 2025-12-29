@@ -54,7 +54,7 @@ Quick QR code generation for product labeling and tracking.
 - **Customizable Size**: Adjustable QR code dimensions
 - **Print-Ready**: High-resolution output for printing
 
-### 📈 Stock Change Analysis (`bestandsveränderung/`)
+### 📈 Stock Change Analysis (`bestandsveraenderung/`)
 Business analysis tool for stock movements and financial impacts from XLSX files.
 
 **Features:**
@@ -139,7 +139,7 @@ selgros/
 ├── labels.html                   # Label Printing System
 ├── Wareneingang.html            # Goods Receipt Application
 │
-├── bestandsveränderung/          # Stock Change Analysis
+├── bestandsveraenderung/          # Stock Change Analysis
 │   ├── index.html               # Main application
 │   ├── CHANGELOG.md             # Change log
 │   ├── README.md                # Documentation
