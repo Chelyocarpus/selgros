@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protokoll mit QR-Codes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-light: #818cf8;
+            --success: #10b981;
+            --success-hover: #059669;
+            --accent: #ec4899;
+            --bg: #f8fafc;
+            --bg-secondary: #f1f5f9;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --radius-sm: 0.375rem;
+            --radius: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+            color: var(--text);
+            line-height: 1.6;
+            font-size: 15px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+        }
+        
+        .controls {
+            padding: 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1.25rem;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+            background: linear-gradient(to bottom, rgba(248, 250, 252, 0.5), transparent);
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+        }
+        
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(248, 250, 252, 0.8);
+            backdrop-filter: blur(10px);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-lg);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            z-index: 0;
+            pointer-events: auto;
+        }
+        
+        .file-input-wrapper input[type="file"]:focus + .file-input-label,
+        .file-input-label.focused {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        .file-input-wrapper input[type="file"]:focus {
+            outline: none;
+        }
+        
+        select {
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            color: var(--text);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        select:hover {
+            border-color: var(--primary-light);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+        
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+            box-shadow: 0 6px 20px rgba(107, 114, 128, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-print {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(55, 65, 81, 0.3);
+        }
+        
+        .btn-print:hover:not(:disabled) {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            box-shadow: 0 6px 20px rgba(55, 65, 81, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #status:empty {
+            display: none;
+        }
+        
+        .status {
+            margin: 0;
+            padding: 1.25rem 1.5rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .status.success {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(52, 211, 153, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            color: var(--text);
+            border-left: 4px solid var(--success);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .status.info {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(34, 211, 238, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            color: var(--text);
+            border-left: 4px solid #06b6d4;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .status.error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(248, 113, 113, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            color: var(--text);
+            border-left: 4px solid #dc2626;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .table-container {
+            max-height: 65vh;
+            overflow: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        /* Narrow column for specific headers */
+        th:contains("Maximale Füllmenge") {
+            max-width: 120px;
+            width: 120px;
+        }
+        
+        td[data-column="maximale-füllmenge"] {
+            max-width: 120px;
+            width: 120px;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        
+        th {
+            background: rgba(248, 250, 252, 0.98);
+            backdrop-filter: blur(10px);
+            font-weight: 700;
+            color: var(--text);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tbody tr {
+            transition: var(--transition);
+        }
+        
+        /* Thinner border between rows with same LE-ID */
+        tbody tr.same-leid td {
+            border-bottom: 1px solid rgba(226, 232, 240, 0.2) !important;
+        }
+        
+        tbody tr:hover {
+            background: rgba(99, 102, 241, 0.04);
+            transform: scale(1.002);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        tbody tr:nth-child(even) {
+            background: linear-gradient(to right, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.3));
+        }
+        
+        /* Thicker borders between different Lagerplätze */
+        tbody tr.group-start {
+            border-top: 2px solid var(--text);
+        }
+        
+        tbody tr.group-start td {
+            border-top: 2px solid var(--text);
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, rgba(254, 243, 199, 0.6) 0%, rgba(253, 230, 138, 0.4) 100%) !important;
+            font-weight: 600;
+        }
+        
+        .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.4;
+            transition: var(--transition);
+        }
+        
+        .empty-state:hover svg {
+            opacity: 0.6;
+            transform: scale(1.05);
+        }
+        
+        /* Loading Spinner */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        .loading-overlay.active {
+            display: flex;
+        }
+        
+        .loading-content {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            padding: 2.5rem 3rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            text-align: center;
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1.5rem;
+            border: 4px solid rgba(99, 102, 241, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+        
+        .loading-subtext {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin: 0.5rem 0 0;
+        }
+        
+        .empty-state p {
+            font-size: 0.875rem;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn-group {
+                margin-left: 0;
+            }
+        }
+        
+        /* Print Styles */
+        @media print {
+            body {
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            body > .container {
+                max-width: 100%;
+                padding: 0;
+            }
+            
+            body > .container > header,
+            header,
+            .controls,
+            #status,
+            .stats,
+            .no-print,
+            .print-header {
+                display: none !important;
+            }
+            
+            .card {
+                box-shadow: none;
+                border: none;
+            }
+            
+            .table-container {
+                max-height: none;
+                overflow: visible;
+            }
+            
+            table {
+                font-size: 9pt;
+                width: 100%;
+            }
+            
+            th, td {
+                padding: 4pt 6pt;
+                border: 1px solid #ccc;
+            }
+            
+            th {
+                background: #f0f0f0 !important;
+                color: #333 !important;
+                position: static;
+            }
+            
+            #tableHead {
+                display: none !important;
+            }
+            
+            th.highlight {
+                background: #ffe699 !important;
+            }
+            
+            .highlight {
+                background: #fff9e6 !important;
+            }
+            
+            tbody tr:nth-child(even) {
+                background: #f9f9f9 !important;
+            }
+            
+            tbody tr:hover {
+                background: inherit !important;
+            }
+            
+            @page {
+                margin: 0.5cm;
+            }
+        }
+        
+        .print-header {
+            display: none;
+        }
+        
+        /* Column Selector Modal */
+        .column-selector {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .column-selector-content {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            max-width: 540px;
+            width: 90%;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .column-selector-header {
+            padding: 1.75rem 2rem;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(248, 250, 252, 0.4), transparent);
+        }
+        
+        .column-selector-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.025em;
+        }
+        
+        .column-selector-close {
+            background: none;
+            border: none;
+            font-size: 1.75rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+            transition: var(--transition);
+        }
+        
+        .column-selector-close:hover {
+            color: var(--text);
+            background: rgba(99, 102, 241, 0.1);
+            transform: rotate(90deg);
+        }
+        
+        .column-selector-body {
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .column-checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        
+        .column-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            min-width: 200px;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius);
+            transition: var(--transition);
+        }
+        
+        .column-checkbox-item:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .column-checkbox-item input[type="checkbox"] {
+            margin: 0;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+        
+        .column-checkbox-item label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+            cursor: pointer;
+            margin: 0;
+            transition: var(--transition);
+        }
+        
+        .column-checkbox-item:hover label {
+            color: var(--primary);
+        }
+        
+        .column-selector-footer {
+            padding: 1.75rem 2rem;
+            border-top: 1px solid rgba(226, 232, 240, 0.6);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            background: linear-gradient(to top, rgba(248, 250, 252, 0.4), transparent);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Protokoll mit QR-Codes</h1>
+        </header>
+        
+        <div class="card">
+            <div class="controls">
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".pdf" />
+                    <div class="file-input-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <span id="fileLabel">PDF Datei auswählen</span>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="customizeBtn" class="btn-secondary" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3h.01"/>
+                            <path d="M12 8h.01"/>
+                            <path d="M12 13h.01"/>
+                            <path d="M12 18h.01"/>
+                        </svg>
+                        Spalten anpassen
+                    </button>
+                    <button id="exportBtn" class="btn-success" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Exportieren
+                    </button>
+                    <button id="printBtn" class="btn-print" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"/>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                            <rect x="6" y="14" width="12" height="8"/>
+                        </svg>
+                        Drucken
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Column Selector Modal -->
+            <div id="columnSelector" class="column-selector" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="columnSelectorTitle">
+                <div class="column-selector-content">
+                    <div class="column-selector-header">
+                        <h3 id="columnSelectorTitle">Sichtbare Spalten auswählen</h3>
+                        <button class="column-selector-close" aria-label="Modal schließen">&times;</button>
+                    </div>
+                    <div class="column-selector-body" id="columnCheckboxes">
+                        <!-- Checkboxes will be generated dynamically -->
+                    </div>
+                    <div class="column-selector-footer">
+                        <button class="btn-secondary">Alle auswählen</button>
+                        <button class="btn-secondary">Alle abwählen</button>
+                        <button class="btn-primary">Anwenden</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="status"></div>
+            
+            <div class="print-header">
+                <h1>XLSX Sortier-Tool - Lagerbestand</h1>
+                <p id="printDate"></p>
+            </div>
+            
+            <div class="table-container">
+                <table id="dataTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="100" style="padding: 0;">
+                                <div class="empty-state">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                    </svg>
+                                    <p>Wähle eine XLSX- oder PDF-Datei aus, um zu beginnen</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p class="loading-text">Datei wird verarbeitet...</p>
+            <p class="loading-subtext">Bitte warten</p>
+        </div>
+    </div>
+
+    <script>
+        let workbook = null;
+        let headers = [];
+        let data = [];
+        let sortedData = [];
+        let visibleColumns = []; // Array of column indices that are visible
+        let dateColumns = new Set(); // Set of column indices that contain date values
+
+        // Spaltenindizes (dynamically detected)
+        let ARTIKEL_INDEX = -1;
+        let AUFFUELLBEDARF_INDEX = -1;
+        let PROZENTUAL_INDEX = -1;
+        let LAGERPLATZ_INDEX = -1;
+
+        // Excel date serial number constants
+        // Excel stores dates as serial numbers where:
+        // - Day 0 = January 0, 1900 (but Excel incorrectly treats 1900 as a leap year)
+        // - Day 1 = January 1, 1900
+        // - JavaScript epoch starts January 1, 1970
+        // - The offset between Excel and JS epochs is 25569 days
+        const EXCEL_EPOCH_OFFSET = 25569;  // Days between Excel epoch (1900) and Unix epoch (1970)
+        const EXCEL_DATE_MIN = 40000;      // Approximate start of reasonable date range (~2009)
+        const EXCEL_DATE_MAX = 50000;      // Approximate end of reasonable date range (~2036)
+
+
+        
+        // Configure PDF.js worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // Focus management for modals
+        let lastFocusedElement = null;
+
+        // Cache for generated QR codes to avoid regenerating
+        const qrCodeCache = new Map();
+
+        // Generate QR code as data URL using qrcode.js library with caching
+        function generateQRCode(text, size = 32) {
+            if (!text || text === '') return '';
+            
+            // Create cache key from text and size
+            const cacheKey = `${text}_${size}`;
+            
+            // Return cached QR code if available
+            if (qrCodeCache.has(cacheKey)) {
+                return qrCodeCache.get(cacheKey);
+            }
+            
+            try {
+                // Create a temporary container
+                tempDiv = document.createElement('div');
+                
+                // Generate QR code synchronously
+                qr = new QRCode(tempDiv, {
+                    text: String(text),
+                    width: size,
+                    height: size,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.L
+                });
+                
+                // Get the canvas (QRCode.js may create it asynchronously in some cases)
+                const canvas = tempDiv.querySelector('canvas');
+                let dataUrl = '';
+                
+                if (canvas) {
+                    dataUrl = canvas.toDataURL('image/png');
+                } else {
+                    // Fallback: create a simple placeholder image
+                    console.warn('QRCode canvas not found, using fallback for:', text);
+                    const fallbackCanvas = document.createElement('canvas');
+                    fallbackCanvas.width = size;
+                    fallbackCanvas.height = size;
+                    const ctx = fallbackCanvas.getContext('2d');
+                    
+                    // Create a simple pattern
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, size, size);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(size * 0.2, size * 0.2, size * 0.6, size * 0.6);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(size * 0.3, size * 0.3, size * 0.4, size * 0.4);
+                    
+                    dataUrl = fallbackCanvas.toDataURL('image/png');
+                }
+                
+                // Cache the result
+                qrCodeCache.set(cacheKey, dataUrl);
+                
+                // Clean up: clear the temporary div and remove references
+                tempDiv.innerHTML = '';
+                // Clear QRCode instance references to prevent memory leaks
+                if (qr && qr._oDrawing) {
+                    qr._oDrawing._elCanvas = null;
+                    qr._oDrawing._el = null;
+                }
+                
+                return dataUrl;
+            } catch (error) {
+                console.error('QR Code generation error:', error);
+                // Clean up resources even on error
+                if (tempDiv) tempDiv.innerHTML = '';
+                return '';
+            }
+        }
+
+        // Load column preferences from localStorage
+        function loadColumnPreferences() {
+            try {
+                const saved = localStorage.getItem('visibleColumns');
+                if (saved) {
+                    visibleColumns = JSON.parse(saved);
+                } else {
+                    // Default: show all columns
+                    visibleColumns = [];
+                }
+            } catch (error) {
+                console.warn('Unable to load column preferences from localStorage:', error);
+                // Fallback: show all columns
+                visibleColumns = [];
+            }
+        }
+
+        // Save column preferences to localStorage
+        function saveColumnPreferences() {
+            try {
+                localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns));
+            } catch (error) {
+                console.warn('Unable to save column preferences to localStorage:', error);
+                // Silently fail - user preferences won't be persisted, but app continues to work
+            }
+        }
+
+        // Toggle column selector modal
+        function toggleColumnSelector() {
+            const selector = document.getElementById('columnSelector');
+            if (selector.style.display === 'none' || selector.style.display === '') {
+                showColumnSelector();
+            } else {
+                hideColumnSelector();
+            }
+        }
+
+        // Handle keyboard events for modal
+        function handleModalKeydown(event) {
+            const selector = document.getElementById('columnSelector');
+            if (selector.style.display !== 'none' && selector.style.display !== '') {
+                if (event.key === 'Escape') {
+                    hideColumnSelector();
+                }
+            }
+        }
+
+        // HTML escaping function to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Show column selector with checkboxes
+        function showColumnSelector() {
+            const selector = document.getElementById('columnSelector');
+            const checkboxesContainer = document.getElementById('columnCheckboxes');
+            
+            // Store the currently focused element
+            lastFocusedElement = document.activeElement;
+            
+            // Generate checkboxes for each column
+            checkboxesContainer.innerHTML = '<div class="column-checkbox-group">' + 
+                headers.map((header, index) => {
+                    const isChecked = visibleColumns.length === 0 || visibleColumns.includes(index);
+                    const safeHeader = escapeHtml(header || 'Spalte ' + (index + 1));
+                    return `
+                        <div class="column-checkbox-item">
+                            <input type="checkbox" id="col_${index}" ${isChecked ? 'checked' : ''} onchange="handleColumnCheckboxChange(this, ${index})">
+                            <label for="col_${index}">${safeHeader}</label>
+                        </div>
+                    `;
+                }).join('') + '</div>';
+            
+            selector.style.display = 'flex';
+            
+            // Focus the first checkbox or close button
+            const firstCheckbox = checkboxesContainer.querySelector('input[type="checkbox"]');
+            if (firstCheckbox) {
+                firstCheckbox.focus();
+            } else {
+                // Fallback to close button
+                const closeButton = selector.querySelector('.column-selector-close');
+                if (closeButton) closeButton.focus();
+            }
+        }
+
+        // Hide column selector
+        function hideColumnSelector() {
+            document.getElementById('columnSelector').style.display = 'none';
+            
+            // Restore focus to the previously focused element
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+                lastFocusedElement = null;
+            }
+        }
+
+        // Select all columns
+        function selectAllColumns() {
+            const checkboxes = document.querySelectorAll('#columnCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        }
+
+        // Deselect all columns
+        function deselectAllColumns() {
+            const checkboxes = document.querySelectorAll('#columnCheckboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+
+        // Apply column selection
+        function applyColumnSelection() {
+            const checkboxes = document.querySelectorAll('#columnCheckboxes input[type="checkbox"]');
+            
+            // Count how many are currently checked
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            
+            if (checkedCount === 0) {
+                // Prevent applying when no columns are selected
+                showStatus('Mindestens eine Spalte muss ausgewählt sein.', 'info');
+                return;
+            }
+            
+            // Collect the checked states
+            visibleColumns = [];
+            checkboxes.forEach((cb, index) => {
+                if (cb.checked) {
+                    visibleColumns.push(index);
+                }
+            });
+            
+            saveColumnPreferences();
+            displayTable(headers, sortedData.length > 0 ? sortedData : data);
+            hideColumnSelector();
+            showStatus(`${visibleColumns.length} von ${headers.length} Spalten werden angezeigt`, 'success');
+        }
+
+        // Hide column selector when clicking outside
+        document.getElementById('columnSelector').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideColumnSelector();
+            }
+        });
+
+        // Handle keyboard events for modal accessibility
+        document.addEventListener('keydown', handleModalKeydown);
+
+        // Handle column checkbox changes to prevent unchecking the last column
+        function handleColumnCheckboxChange(checkbox, index) {
+            if (!checkbox.checked) {
+                // Count how many checkboxes are currently checked
+                const checkboxes = document.querySelectorAll('#columnCheckboxes input[type="checkbox"]');
+                const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+                
+                // If this would be the last unchecked box, prevent it
+                if (checkedCount === 0) {
+                    checkbox.checked = true;
+                    showStatus('Mindestens eine Spalte muss ausgewählt sein.', 'info');
+                }
+            }
+        }
+
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+
+
+        // Button event listeners
+        document.getElementById('customizeBtn').addEventListener('click', toggleColumnSelector);
+        document.getElementById('exportBtn').addEventListener('click', exportData);
+        document.getElementById('printBtn').addEventListener('click', printTable);
+        document.querySelector('.column-selector-close').addEventListener('click', hideColumnSelector);
+        document.querySelector('.column-selector-footer .btn-secondary:nth-child(1)').addEventListener('click', selectAllColumns);
+        document.querySelector('.column-selector-footer .btn-secondary:nth-child(2)').addEventListener('click', deselectAllColumns);
+        document.querySelector('.column-selector-footer .btn-primary').addEventListener('click', applyColumnSelection);
+
+        // File input accessibility
+        const fileInput = document.getElementById('fileInput');
+        const fileInputLabel = document.querySelector('.file-input-label');
+        
+        // Make label focusable and handle activation
+        fileInputLabel.setAttribute('tabindex', '0');
+        fileInputLabel.addEventListener('click', function() {
+            fileInput.click();
+        });
+        fileInputLabel.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
+        
+        // Handle label focus to show focus styles
+        fileInputLabel.addEventListener('focus', function() {
+            this.classList.add('focused');
+        });
+        
+        fileInputLabel.addEventListener('blur', function() {
+            this.classList.remove('focused');
+        });
+
+        async function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Show loading spinner
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.classList.add('active');
+            
+            // Dateiname anzeigen
+            document.getElementById('fileLabel').textContent = file.name;
+
+            const fileExtension = file.name.toLowerCase().split('.').pop();
+
+            if (fileExtension === 'pdf') {
+                await handlePDFFile(file);
+            } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+                handleXLSXFile(file);
+            } else {
+                loadingOverlay.classList.remove('active');
+                showStatus('Nicht unterstütztes Dateiformat. Bitte wählen Sie eine XLSX- oder PDF-Datei.', 'error');
+            }
+        }
+
+        async function handlePDFFile(file) {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                // Use pdfjs to extract text with better layout analysis
+                let allText = '';
+                
+                // Process all pages
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const textContent = await page.getTextContent();
+                    
+                    // Group text items by line (Y position)
+                    const lines = new Map();
+                    const yThreshold = 3;
+                    
+                    for (const item of textContent.items) {
+                        const text = item.str.trim();
+                        if (!text) continue;
+                        
+                        // Skip headers/footers
+                        if (text.includes('Auffüllprotokoll') || 
+                            text.includes('Druckzeit') || 
+                            text.includes('Benutzer') ||
+                            /^\d{2}\.\d{2}\.\d{4}/.test(text) ||
+                            text.includes('Prozent') ||
+                            text === 'Patrick Weber') {
+                            continue;
+                        }
+                        
+                        const y = item.transform[5];
+                        let foundY = null;
+                        
+                        for (const existingY of lines.keys()) {
+                            if (Math.abs(y - existingY) < yThreshold) {
+                                foundY = existingY;
+                                break;
+                            }
+                        }
+                        
+                        if (foundY === null) {
+                            lines.set(y, []);
+                            foundY = y;
+                        }
+                        
+                        lines.get(foundY).push({
+                            x: item.transform[4],
+                            text: text
+                        });
+                    }
+                    
+                    // Sort lines by Y (top to bottom) and join text within each line
+                    const sortedLines = Array.from(lines.entries())
+                        .sort((a, b) => b[0] - a[0])
+                        .map(([y, items]) => {
+                            items.sort((a, b) => a.x - b.x);
+                            return items.map(i => i.text).join(' ');
+                        });
+                    
+                    allText += sortedLines.join('\n') + '\n';
+                }
+                
+                // Parse the text line by line
+                const lines = allText.split('\n').filter(line => line.trim());
+                
+                // Find header line
+                let headerIndex = lines.findIndex(line => 
+                    line.includes('POS') && line.includes('Artikel') && line.includes('Ziel')
+                );
+                
+                if (headerIndex === -1) headerIndex = 0;
+                
+                // Parse table data
+                const tableData = [];
+                const headers = ['POS', 'M', 'Reserve', 'LE-ID', 'Ziel', 'Artikel', 'Bezeichnung', 'PAL', 'Menge', 'ME'];
+                tableData.push(headers);
+                
+                // Pattern to match data rows
+                // Format: POS [M] Reserve LE-ID Ziel Artikel Description PAL Menge ME
+                const dataPattern = /^(\d{4})\s*([X])?\s*([\d\-\.]+)\s+(\d{20})\s+([A-Z]-[\d\-\.]+)\s+(\d{1,7})\s*(.+?)\s+(\d+)\s+(\d+)\s+([A-Z]+\d*)$/;
+                
+                for (let i = headerIndex + 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const match = line.match(dataPattern);
+                    if (match) {
+                        const [, pos, m, reserve, leId, ziel, artikel, bezeichnung, pal, menge, me] = match;
+                        tableData.push([
+                            pos,
+                            m || '',
+                            reserve,
+                            leId,
+                            ziel,
+                            artikel,
+                            bezeichnung.trim(),
+                            pal,
+                            menge,
+                            me
+                        ]);
+                    } else {
+                        // Try lenient pattern
+                        const lenientPattern = /^(\d{4})\s*([X])?\s*([\d\-\.]+)\s+(\d{20})\s+([A-Z]-[\d\-\.]+)\s+(\d{1,7})\s*(.+)/;
+                        const lenientMatch = line.match(lenientPattern);
+                        
+                        if (lenientMatch) {
+                            const [, pos, m, reserve, leId, ziel, artikel, rest] = lenientMatch;
+                            
+                            // Try to extract PAL, Menge, ME from the rest
+                            const restPattern = /^(.+?)\s+(\d+)\s+(\d+)\s+([A-Z]+\d*)$/;
+                            const restMatch = rest.match(restPattern);
+                            
+                            if (restMatch) {
+                                const [, bezeichnung, pal, menge, me] = restMatch;
+                                tableData.push([pos, m || '', reserve, leId, ziel, artikel, bezeichnung.trim(), pal, menge, me]);
+                            }
+                        }
+                    }
+                }
+                
+                console.log('Extracted table rows:', tableData.length);
+                console.log('Sample rows:', tableData.slice(0, 3));
+                
+                if (tableData.length < 2) {
+                    loadingOverlay.classList.remove('active');
+                    showStatus('Konnte keine Tabellendaten aus dem PDF extrahieren.', 'error');
+                    return;
+                }
+                
+                processExtractedData(tableData);
+                
+            } catch (error) {
+                loadingOverlay.classList.remove('active');
+                console.error('PDF parsing error:', error);
+                showStatus('Fehler beim Lesen der PDF-Datei: ' + error.message, 'error');
+            }
+        }
+
+        function parsePDFTextToTable(textItems) {
+            // Filter out header/footer text
+            const filteredItems = textItems.filter(item => {
+                const text = item.text.trim();
+                if (!text) return false;
+                
+                if (text.includes('Auffüllprotokoll') || 
+                    text.includes('Druckzeit') || 
+                    text.includes('Benutzer') ||
+                    text.includes('Prozent') ||
+                    text.includes('Variante') ||
+                    text.includes('Gesamtanzahl') ||
+                    /^Seite$/.test(text) ||
+                    /^\d+ \/ \d+$/.test(text) ||
+                    /^\d{2}\.\d{2}\.\d{4}/.test(text) ||
+                    /^Patrick Weber$/.test(text) ||
+                    /^\d+\s*%$/.test(text)) {
+                    return false;
+                }
+                return true;
+            });
+            
+            console.log('Filtered items count:', filteredItems.length);
+            console.log('Sample items:', filteredItems.slice(0, 10).map(i => ({x: i.x.toFixed(1), y: i.y.toFixed(1), text: i.text})));
+            
+            // Sort by X position to group into columns
+            const sortedByX = [...filteredItems].sort((a, b) => a.x - b.x);
+            
+            // Detect distinct X positions (columns)
+            const xPositions = [];
+            const xThreshold = 8; // Smaller threshold for tighter grouping
+            
+            for (const item of sortedByX) {
+                let found = false;
+                for (const xPos of xPositions) {
+                    if (Math.abs(item.x - xPos) < xThreshold) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    xPositions.push(item.x);
+                }
+            }
+            
+            xPositions.sort((a, b) => a - b);
+            console.log('Detected column X positions:', xPositions.map(x => x.toFixed(1)));
+            
+            // Group items into columns
+            const columns = xPositions.map(() => []);
+            
+            for (const item of filteredItems) {
+                let closestCol = 0;
+                let minDist = Math.abs(item.x - xPositions[0]);
+                
+                for (let i = 1; i < xPositions.length; i++) {
+                    const dist = Math.abs(item.x - xPositions[i]);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestCol = i;
+                    }
+                }
+                
+                columns[closestCol].push(item);
+            }
+            
+            // Sort each column by Y position (descending - top to bottom)
+            columns.forEach(col => col.sort((a, b) => b.y - a.y));
+            
+            console.log('Column counts:', columns.map(col => col.length));
+            console.log('First column sample:', columns[0]?.slice(0, 5).map(i => i.text));
+            
+            // Identify header row and data start
+            // Look for columns containing header text
+            const headers = [];
+            let maxHeaderIndex = 0;
+            
+            for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+                const col = columns[colIdx];
+                let headerText = '';
+                let dataStart = 0;
+                
+                // Find first occurrence of 4-digit number (data starts)
+                for (let i = 0; i < col.length; i++) {
+                    if (/^\d{4}$/.test(col[i].text)) {
+                        dataStart = i;
+                        break;
+                    }
+                }
+                
+                // Header is the first non-empty text before data
+                for (let i = 0; i < Math.min(dataStart || 3, col.length); i++) {
+                    const text = col[i].text.trim();
+                    if (text && !text.includes('QR')) {
+                        headerText = text;
+                        break;
+                    }
+                }
+                
+                headers.push(headerText || `Col${colIdx + 1}`);
+                maxHeaderIndex = Math.max(maxHeaderIndex, dataStart);
+            }
+            
+            console.log('Headers:', headers);
+            console.log('Data starts at index:', maxHeaderIndex);
+            
+            // Build rows by transposing columns
+            const numRows = Math.max(...columns.map(col => col.length - maxHeaderIndex));
+            const tableData = [headers];
+            
+            for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
+                const row = columns.map(col => {
+                    const itemIdx = maxHeaderIndex + rowIdx;
+                    return itemIdx < col.length ? col[itemIdx].text : '';
+                });
+                
+                // Only include rows with data in first column
+                if (row[0] && row[0].trim()) {
+                    tableData.push(row);
+                }
+            }
+            
+            console.log('Generated table rows:', tableData.length);
+            console.log('Sample row:', tableData[1]);
+            
+            return tableData;
+        }
+
+        function handleXLSXFile(file) {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Use setTimeout to ensure spinner is rendered before processing
+                setTimeout(() => {
+                    try {
+                        const arrayBuffer = e.target.result;
+                        workbook = XLSX.read(arrayBuffer, { 
+                            type: 'array', 
+                            cellDates: true,
+                            dateNF: 'DD.MM.YYYY'
+                        });
+                        
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        
+                        // Detect date columns by checking cell types
+                        dateColumns.clear();
+                        const range = XLSX.utils.decode_range(firstSheet['!ref']);
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            // Check first few data rows for date types
+                            let dateCount = 0;
+                            const samplesToCheck = Math.min(10, range.e.r - range.s.r);
+                            for (let R = range.s.r + 1; R <= range.s.r + samplesToCheck; ++R) {
+                                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                                const cell = firstSheet[cellAddress];
+                                if (cell && (cell.t === 'd' || (cell.t === 'n' && cell.w && cell.w.includes('/'))))  {
+                                    dateCount++;
+                                }
+                            }
+                            // If more than half of sampled cells are dates, treat column as date column
+                            if (dateCount > samplesToCheck / 2) {
+                                dateColumns.add(C);
+                            }
+                        }
+                        
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
+                            header: 1, 
+                            raw: false, 
+                            dateNF: 'DD.MM.YYYY',
+                            defval: null
+                        });
+                        
+                        if (jsonData.length < 2) {
+                            loadingOverlay.classList.remove('active');
+                            showStatus('Die Datei enthält keine Daten.', 'info');
+                            return;
+                        }
+
+                        processExtractedData(jsonData);
+                        
+                    } catch (error) {
+                        loadingOverlay.classList.remove('active');
+                        showStatus('Fehler beim Lesen der Datei: ' + error.message, 'error');
+                    }
+                }, 50);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processExtractedData(jsonData) {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            try {
+                headers = jsonData[0].map(h => String(h || '').trim());
+                
+                // Detect indices dynamically - support multiple naming conventions
+                ARTIKEL_INDEX = headers.findIndex(h => h.toLowerCase().includes('artikel'));
+                
+                // Look for Lagerplatz, Ziel (target), or Reserve columns
+                LAGERPLATZ_INDEX = headers.findIndex(h => {
+                    const lower = h.toLowerCase();
+                    return lower.includes('lagerplatz') || lower.includes('ziel') || lower.includes('reserve');
+                });
+                
+                // If Ziel is found, prefer it over Reserve
+                const zielIndex = headers.findIndex(h => h.toLowerCase().includes('ziel'));
+                if (zielIndex !== -1) {
+                    LAGERPLATZ_INDEX = zielIndex;
+                }
+                
+                if (ARTIKEL_INDEX === -1) {
+                    loadingOverlay.classList.remove('active');
+                    showStatus('Die Datei muss eine "Artikel"-Spalte enthalten.', 'error');
+                    return;
+                }
+                
+                if (LAGERPLATZ_INDEX === -1) {
+                    loadingOverlay.classList.remove('active');
+                    showStatus('Die Datei muss eine "Lagerplatz", "Ziel" oder "Reserve"-Spalte enthalten.', 'error');
+                    return;
+                }
+                
+                // Detect sort columns
+                AUFFUELLBEDARF_INDEX = headers.findIndex(h => h.toLowerCase().includes('auffüllbedarf'));
+                PROZENTUAL_INDEX = headers.findIndex(h => h.toLowerCase().includes('proz') && h.toLowerCase().includes('ausgabemenge'));
+                
+                // Look for Menge (quantity) column for sorting
+                const mengeIndex = headers.findIndex(h => h.toLowerCase() === 'menge');
+                
+                // Filter out rows without Artikel
+                // For Lagerplatz/Ziel, allow empty values as some rows might not have a target
+                data = jsonData.slice(1).filter(row => {
+                    if (row.length === 0) return false;
+                    const artikel = row[ARTIKEL_INDEX];
+                    return artikel !== undefined && artikel !== null && String(artikel).trim() !== '';
+                });
+                sortedData = [...data];
+
+                // Load column preferences
+                loadColumnPreferences();
+                if (visibleColumns.length === 0) {
+                    // If no preferences saved, show all columns
+                    visibleColumns = headers.map((_, i) => i);
+                    saveColumnPreferences();
+                }
+
+                displayTable(headers, data);
+                updateStats();
+                
+                document.getElementById('exportBtn').disabled = false;
+                document.getElementById('printBtn').disabled = false;
+                document.getElementById('customizeBtn').disabled = false;
+                
+                // Don't automatically sort - keep PDF order
+                sortedData = [...data];
+                displayTable(headers, sortedData);
+                
+                // Hide loading spinner
+                loadingOverlay.classList.remove('active');
+                
+                showStatus(`${data.length} Zeilen erfolgreich geladen`, 'success');
+            } catch (error) {
+                loadingOverlay.classList.remove('active');
+                showStatus('Fehler beim Verarbeiten der Daten: ' + error.message, 'error');
+            }
+        }
+        
+        function updateStats() {
+            // Stats section removed
+        }
+
+        function sortData() {
+            // Sorting disabled - keeping original PDF order
+            return;
+        }
+
+        function displayTable(headers, rows) {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+
+            // Filter headers and data to only show visible columns
+            const visibleHeaders = headers.filter((_, i) => visibleColumns.includes(i));
+            const visibleIndices = visibleColumns;
+
+            // Header erstellen - add QR columns after Artikel and Lagerplatz
+            thead.innerHTML = '<tr>' + visibleHeaders.map((h, visibleIndex) => {
+                const originalIndex = visibleIndices[visibleIndex];
+                const highlight = '';
+                const safeHeader = escapeHtml(h || 'Spalte ' + (originalIndex+1));
+                
+                // Check if this header should be narrower
+                const headerLower = (h || '').toLowerCase();
+                let headerStyle = '';
+                if (headerLower.includes('maximale') && headerLower.includes('füllmenge')) {
+                    headerStyle = ' style="max-width: 120px; width: 120px;"';
+                }
+                
+                let headerHTML = `<th${highlight}${headerStyle}>${safeHeader}</th>`;
+                
+                // Add QR column header after Reserve (index 2)
+                if (originalIndex === 2) {
+                    headerHTML += '<th style="text-align: center; width: 50px;">QR</th>';
+                }
+                // Add QR column header after LE-ID (index 3)
+                if (originalIndex === 3) {
+                    headerHTML += '<th style="text-align: center; width: 50px;">QR</th>';
+                }
+                // Add QR column header after Artikel
+                if (originalIndex === ARTIKEL_INDEX) {
+                    headerHTML += '<th style="text-align: center; width: 50px;">QR</th>';
+                }
+                // Add QR column header after Lagerplatz
+                if (originalIndex === LAGERPLATZ_INDEX) {
+                    headerHTML += '<th style="text-align: center; width: 50px;">QR</th>';
+                }
+                
+                return headerHTML;
+            }).join('') + '</tr>';
+
+            // Daten erstellen mit Gruppen-Markierung
+            let lastLagerplatz = null;
+            let groupIndex = 0;
+            
+            // Generate QR codes synchronously
+            const qrCodeMap = new Map();
+            
+            // Collect all unique cell contents that need QR codes
+            const qrContents = new Set();
+            rows.forEach(row => {
+                const reserveContent = row[2]; // Reserve column
+                const leIdContent = row[3]; // LE-ID column
+                const artikelContent = row[ARTIKEL_INDEX];
+                const lagerplatzContent = row[LAGERPLATZ_INDEX];
+                if (reserveContent) qrContents.add(String(reserveContent));
+                if (leIdContent) qrContents.add(String(leIdContent));
+                if (artikelContent) qrContents.add(String(artikelContent));
+                if (lagerplatzContent) {
+                    // Store original content as key, but generate QR without R-, K-, Z- prefix
+                    const content = String(lagerplatzContent);
+                    qrContents.add(content);
+                }
+            });
+            
+            // Generate QR codes for all unique contents
+            for (const content of qrContents) {
+                // For Lagerplatz/Ziel, remove R-, K-, Z- prefix for QR code
+                let qrContent = content;
+                if (content.match(/^[RKZ]-/)) {
+                    qrContent = content.substring(2); // Remove first 2 characters (e.g., "R-")
+                }
+                const qrCodeUrl = generateQRCode(qrContent);
+                if (qrCodeUrl) {
+                    qrCodeMap.set(content, qrCodeUrl);
+                }
+            }
+            
+            tbody.innerHTML = rows.map((row, rowIndex) => {
+                // Use Reserve column (index 2) for visual grouping instead of Ziel
+                const currentLagerplatz = String(row[2] || '');  // Reserve/Lagerplatz column
+                const nextLagerplatz = rowIndex < rows.length - 1 ? String(rows[rowIndex + 1][2] || '') : null;
+                const isGroupStart = currentLagerplatz !== lastLagerplatz;
+                const isGroupEnd = nextLagerplatz !== currentLagerplatz;
+                
+                // Check if current and previous row have same LE-ID (column 3)
+                const currentLeId = String(row[3] || '');
+                const prevLeId = rowIndex > 0 ? String(rows[rowIndex - 1][3] || '') : '';
+                const sameLeId = !!(currentLeId && prevLeId && currentLeId === prevLeId);
+                
+                if (isGroupStart) {
+                    groupIndex++;
+                    lastLagerplatz = currentLagerplatz;
+                }
+                
+                const groupClass = isGroupStart ? ' group-start' : '';
+                const leIdClass = sameLeId ? ' same-leid' : '';
+                
+                // Debug logging - show all rows with same LE-ID or rows with 187-01 lagerplatz
+                const lagerplatz = String(row[2] || '');
+                if ((sameLeId || lagerplatz.includes('187-01')) && rowIndex >= 405 && rowIndex <= 425) {
+                    console.log(`Row ${rowIndex}: Lagerplatz="${lagerplatz}", Current_LP_Col="${currentLagerplatz}", Last_LP="${lastLagerplatz}", isGroupStart=${isGroupStart}, LE-ID="${currentLeId}", PrevLE-ID="${prevLeId}", sameLeId=${sameLeId}, classes="${groupClass}${leIdClass}"`);
+                }
+                
+                return `<tr class="${groupClass}${leIdClass}">` + visibleIndices.map((colIndex, visibleIndex) => {
+                    let value = row[colIndex];
+                    // Format dates in German format (robust detection for all potential date values)
+                    let formattedValue = value;
+                    
+                    if (value instanceof Date) {
+                        formattedValue = value.toLocaleDateString('de-DE');
+                    } else if (typeof value === 'number' && value > EXCEL_DATE_MIN && value < EXCEL_DATE_MAX) {
+                        // Excel-Datum-Seriennummer: Convert Excel serial number to JavaScript Date
+                        const date = new Date((value - EXCEL_EPOCH_OFFSET) * 86400 * 1000);
+                        formattedValue = date.toLocaleDateString('de-DE');
+                    } else if (typeof value === 'string') {
+                        // Check if string looks like a date and format it
+                        if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(value)) {
+                            // Already in German format dd.mm.yyyy, keep as is
+                            formattedValue = value;
+                        } else if (/^\d{4}-\d{1,2}-\d{1,2}/.test(value)) {
+                            // ISO date string, convert to German format
+                            const date = new Date(value);
+                            if (!isNaN(date.getTime())) {
+                                formattedValue = date.toLocaleDateString('de-DE');
+                            }
+                        } else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value)) {
+                            // US format mm/dd/yy or mm/dd/yyyy, convert to German
+                            let dateStr = value;
+                            // Convert 2-digit year to 4-digit year (assume 20xx for modern dates)
+                            const parts = value.split('/');
+                            if (parts[2] && parts[2].length === 2) {
+                                const year = parseInt(parts[2]);
+                                parts[2] = 2000 + year; // Convert 25 -> 2025
+                                dateStr = parts.join('/');
+                            }
+                            const date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                formattedValue = date.toLocaleDateString('de-DE');
+                            }
+                        }
+                    }
+                    
+                    // Use formatted value if it changed
+                    if (formattedValue !== value) {
+                        value = formattedValue;
+                    }
+                    
+                    const highlight = '';
+                    let cellContent = value !== undefined && value !== null ? value : '';
+                    const safeCellContent = escapeHtml(String(cellContent));
+                    
+                    // Check if this column header indicates it should be narrower
+                    const headerName = headers[colIndex] || '';
+                    const headerNameLower = headerName.toLowerCase();
+                    let cellStyle = '';
+                    if (headerNameLower.includes('maximale') && headerNameLower.includes('füllmenge')) {
+                        cellStyle = ' style="max-width: 120px; width: 120px; word-wrap: break-word;"';
+                    }
+                    
+                    let cellHTML = `<td${highlight}${cellStyle}>${safeCellContent}</td>`;
+                    
+                    // Add QR code column after Reserve (index 2)
+                    if (colIndex === 2 && cellContent) {
+                        const qrCodeUrl = qrCodeMap.get(String(cellContent));
+                        if (qrCodeUrl) {
+                            cellHTML += `<td style="text-align: center; padding: 0.5rem;">
+                                <img src="${qrCodeUrl}" alt="QR" style="width: 32px; height: 32px; display: block; margin: 0 auto;" title="Reserve: ${safeCellContent}" />
+                            </td>`;
+                        } else {
+                            cellHTML += '<td></td>';
+                        }
+                    }
+                    
+                    // Add QR code column after LE-ID (index 3)
+                    if (colIndex === 3 && cellContent) {
+                        const qrCodeUrl = qrCodeMap.get(String(cellContent));
+                        if (qrCodeUrl) {
+                            cellHTML += `<td style="text-align: center; padding: 0.5rem;">
+                                <img src="${qrCodeUrl}" alt="QR" style="width: 32px; height: 32px; display: block; margin: 0 auto;" title="LE-ID: ${safeCellContent}" />
+                            </td>`;
+                        } else {
+                            cellHTML += '<td></td>';
+                        }
+                    }
+                    
+                    // Add QR code column after Artikel
+                    if (colIndex === ARTIKEL_INDEX && cellContent) {
+                        const qrCodeUrl = qrCodeMap.get(String(cellContent));
+                        if (qrCodeUrl) {
+                            cellHTML += `<td style="text-align: center; padding: 0.5rem;">
+                                <img src="${qrCodeUrl}" alt="QR" style="width: 32px; height: 32px; display: block; margin: 0 auto;" title="Artikel: ${safeCellContent}" />
+                            </td>`;
+                        } else {
+                            cellHTML += '<td></td>';
+                        }
+                    }
+                    
+                    // Add QR code column after Lagerplatz
+                    if (colIndex === LAGERPLATZ_INDEX && cellContent) {
+                        const qrCodeUrl = qrCodeMap.get(String(cellContent));
+                        if (qrCodeUrl) {
+                            cellHTML += `<td style="text-align: center; padding: 0.5rem;">
+                                <img src="${qrCodeUrl}" alt="QR" style="width: 32px; height: 32px; display: block; margin: 0 auto;" title="Lagerplatz: ${safeCellContent}" />
+                            </td>`;
+                        } else {
+                            cellHTML += '<td></td>';
+                        }
+                    }
+                    
+                    return cellHTML;
+                }).join('') + '</tr>';
+            }).join('');
+        }
+
+        function exportData() {
+            if (sortedData.length === 0) {
+                showStatus('Keine Daten zum Exportieren vorhanden.', 'info');
+                return;
+            }
+
+            // Neues Workbook erstellen
+            const newWB = XLSX.utils.book_new();
+            
+            // Filter data to only include visible columns
+            const visibleHeaders = headers.filter((_, i) => visibleColumns.includes(i));
+            const exportRows = sortedData.map(row => visibleColumns.map(colIndex => row[colIndex]));
+            
+            const exportData = [visibleHeaders, ...exportRows];
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            
+            // Spaltenbreiten setzen
+            ws['!cols'] = visibleHeaders.map(() => ({ wch: 20 }));
+            
+            XLSX.utils.book_append_sheet(newWB, ws, 'Sortierte Daten');
+            
+            // Dateiname mit Timestamp
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+            const filename = `sortiert_${timestamp}.xlsx`;
+            
+            XLSX.writeFile(newWB, filename);
+            showStatus(`Datei "${filename}" wurde heruntergeladen`, 'success');
+        }
+        
+        function printTable() {
+            if (sortedData.length === 0) {
+                showStatus('Keine Daten zum Drucken vorhanden.', 'info');
+                return;
+            }
+            
+            // Set print date
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('de-DE', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('printDate').textContent = `Gedruckt am: ${dateStr}`;
+            
+            window.print();
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            let icon;
+            
+            if (type === 'success') {
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+            } else if (type === 'error') {
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>';
+            } else {
+                // Default to info/warning icon
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+            }
+            
+            status.innerHTML = `<div class="status ${type}">${icon} ${message}</div>`;
+        }
+    </script>
+</body>
+</html>
