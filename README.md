@@ -54,10 +54,48 @@ Quick QR code generation for product labeling and tracking.
 - **Customizable Size**: Adjustable QR code dimensions
 - **Print-Ready**: High-resolution output for printing
 
+### 📈 Stock Change Analysis (`bestandsveränderung/`)
+Business analysis tool for stock movements and financial impacts from XLSX files.
+
+**Features:**
+- **Business Analysis**: Complete statistics on movements, items, quantities, and values
+- **Financial Impact**: Detailed profit/loss analysis with margin calculations
+- **Item Search**: Detailed view of write-offs, additions, and movement history per item
+- **Data Preview**: Tabular display with configurable row counts and export options
+- **Responsive Design**: Optimized for desktop and mobile with accessibility support
+
+### 📋 Protocol Sorting (`protokoll/`)
+XLSX sorting and visualization tool with QR code generation and intelligent column detection.
+
+**Features:**
+- **Dynamic Column Detection**: Automatic recognition of key columns (item, storage location, refill needs)
+- **QR Code Generation**: Automatic QR codes for items and storage locations
+- **Sorting Options**: Sort by refill needs, percentage, or storage location
+- **Column Highlighting**: Visual emphasis on important columns
+- **Export/Print**: Direct export and printing capabilities
+
+### 📄 Protocol to QR (`protokoll2qr/`)
+Protocol processing tool with QR code integration for PDF and XLSX files.
+
+**Features:**
+- **PDF Analysis**: Process protocol documents with QR code generation
+- **Data Extraction**: Intelligent parsing of protocol data
+- **QR Integration**: Embedded QR codes for quick access
+- **Responsive Interface**: Clean, accessible design with Tailwind CSS
+
+### 🔳 Advanced QR Code Generator (`qrcode/`)
+Advanced QR code creation tool with customization options.
+
+**Features:**
+- **Styling Options**: Custom colors, shapes, and designs
+- **High Resolution**: Print-ready high-quality output
+- **Dark Mode Support**: Automatic theme adaptation
+- **Export Formats**: Multiple output formats for various uses
+
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Modern web browser (Chrome 90+, Firefox 88+, Edge 90+, Safari 14+)
+- Modern web browser (latest stable versions recommended: Chrome 120+, Firefox 120+, Edge 120+, Safari 17+)
 - No installation required - all applications run client-side
 - Enable localStorage and IndexedDB in browser settings
 
@@ -101,6 +139,13 @@ selgros/
 ├── labels.html                   # Label Printing System
 ├── Wareneingang.html            # Goods Receipt Application
 │
+├── bestandsveränderung/          # Stock Change Analysis
+│   ├── index.html               # Main application
+│   ├── CHANGELOG.md             # Change log
+│   ├── README.md                # Documentation
+│   ├── css/                     # Stylesheets
+│   └── js/                      # JavaScript modules
+│
 ├── lagerbestand/                 # Warehouse Stock Monitoring
 │   ├── index.html               # Main application
 │   ├── force-clear-storage.html # Storage reset utility
@@ -108,6 +153,18 @@ selgros/
 │   ├── css/                     # Stylesheets
 │   ├── js/                      # JavaScript modules
 │   └── docs/                    # Comprehensive documentation
+│
+├── protokoll/                    # Protocol Sorting Tool
+│   ├── index.html               # Main application
+│   ├── CHANGELOG.md             # Change log
+│   ├── README.md                # Documentation
+│
+├── protokoll2qr/                 # Protocol to QR Tool
+│   ├── index.html               # Main application
+│   ├── analyze_pdf.py           # PDF analysis script
+│
+├── qrcode/                       # Advanced QR Code Generator
+│   └── index.html               # Main application
 │
 ├── verkaufsanalyse/              # Sales Analysis
 │   ├── index.html               # Main application
