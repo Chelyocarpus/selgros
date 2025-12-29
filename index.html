@@ -172,12 +172,6 @@
         .app-card {
             animation: fadeIn 0.5s ease forwards;
         }
-
-        .app-card:nth-child(1) { animation-delay: 0.1s; }
-        .app-card:nth-child(2) { animation-delay: 0.2s; }
-        .app-card:nth-child(3) { animation-delay: 0.3s; }
-        .app-card:nth-child(4) { animation-delay: 0.4s; }
-        .app-card:nth-child(5) { animation-delay: 0.5s; }
     </style>
 </head>
 <body>
@@ -191,9 +185,9 @@
         <main>
             <div class="apps-grid">
                 <!-- Lagerbestand App -->
-                <a href="lagerbestand/index.html" class="app-card">
+                <a href="lagerbestand/index.html" class="app-card" style="animation-delay: 0.1s;">
                     <div class="app-icon">
-                        <i class="fas fa-warehouse"></i>
+                        <i class="fas fa-warehouse" aria-hidden="true"></i>
                     </div>
                     <h2>Lagerbestand</h2>
                     <p>Warehouse Warning System - Bestandsüberwachung, Materialverwaltung und Berichtsanalyse</p>
@@ -201,9 +195,9 @@
                 </a>
 
                 <!-- Verkaufsanalyse App -->
-                <a href="verkaufsanalyse/index.html" class="app-card">
+                <a href="verkaufsanalyse/index.html" class="app-card" style="animation-delay: 0.2s;">
                     <div class="app-icon">
-                        <i class="fas fa-chart-line"></i>
+                        <i class="fas fa-chart-line" aria-hidden="true"></i>
                     </div>
                     <h2>Verkaufsanalyse</h2>
                     <p>Analyse und Visualisierung von Verkaufsdaten mit umfangreichen Statistiken</p>
@@ -211,9 +205,9 @@
                 </a>
 
                 <!-- Wareneingang App -->
-                <a href="wareneingang/index.html" class="app-card">
+                <a href="wareneingang/index.html" class="app-card" style="animation-delay: 0.3s;">
                     <div class="app-icon">
-                        <i class="fas fa-truck-loading"></i>
+                        <i class="fas fa-truck-loading" aria-hidden="true"></i>
                     </div>
                     <h2>Wareneingang</h2>
                     <p>Verwaltung und Dokumentation des Wareneingangs</p>
@@ -221,9 +215,9 @@
                 </a>
 
                 <!-- Labels App -->
-                <a href="labels/index.html" class="app-card">
+                <a href="labels/index.html" class="app-card" style="animation-delay: 0.4s;">
                     <div class="app-icon">
-                        <i class="fas fa-tags"></i>
+                        <i class="fas fa-tags" aria-hidden="true"></i>
                     </div>
                     <h2>Etiketten</h2>
                     <p>Drucken Sie professionelle Etiketten mit Bildern</p>
@@ -231,12 +225,42 @@
                 </a>
 
                 <!-- QR Code Generator -->
-                <a href="qrcode/index.html" class="app-card">
+                <a href="qrcode/index.html" class="app-card" style="animation-delay: 0.5s;">
                     <div class="app-icon">
-                        <i class="fas fa-qrcode"></i>
+                        <i class="fas fa-qrcode" aria-hidden="true"></i>
                     </div>
                     <h2>QR-Code Generator</h2>
-                    <p>Generieren Sie QR-Codes für verschiedene Anwendungen</p>
+                    <p>Erweiterter QR-Code-Generator mit Anpassungsoptionen</p>
+                    <span class="app-badge">Tools</span>
+                </a>
+
+                <!-- Bestandsveränderung App -->
+                <a href="bestandsveraenderung/index.html" class="app-card" style="animation-delay: 0.6s;">
+                    <div class="app-icon">
+                        <i class="fas fa-chart-bar" aria-hidden="true"></i>
+                    </div>
+                    <h2>Bestandsveränderung</h2>
+                    <p>Business Analyse Tool - Analyse von Bestandsbewegungen und finanziellen Auswirkungen</p>
+                    <span class="app-badge">Analytics</span>
+                </a>
+
+                <!-- Protokoll App -->
+                <a href="protokoll/index.html" class="app-card" style="animation-delay: 0.7s;">
+                    <div class="app-icon">
+                        <i class="fas fa-sort" aria-hidden="true"></i>
+                    </div>
+                    <h2>Protokoll Sortierung</h2>
+                    <p>XLSX Sortier-Tool mit QR-Code-Generierung</p>
+                    <span class="app-badge">Tools</span>
+                </a>
+
+                <!-- Protokoll2QR App -->
+                <a href="protokoll2qr/index.html" class="app-card" style="animation-delay: 0.8s;">
+                    <div class="app-icon">
+                        <i class="fas fa-file-pdf" aria-hidden="true"></i>
+                    </div>
+                    <h2>Protokoll mit QR</h2>
+                    <p>Protokoll-Verarbeitung mit QR-Code-Generierung für PDF-Dateien</p>
                     <span class="app-badge">Tools</span>
                 </a>
             </div>
