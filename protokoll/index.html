@@ -839,6 +839,7 @@
 
         // Dynamic column indices (detected from headers)
         let ARTIKEL_INDEX = 0;           // Spalte "Artikel"
+        let ARTIKELKURZTEXT_INDEX = -1;  // Spalte "Artikelkurztext"
         let AUFFUELLBEDARF_INDEX = 8;   // Spalte "Auffüllbedarf"
         let PROZENTUAL_INDEX = 9;        // Spalte "proz. Ausgabemenge"
         let LAGERPLATZ_INDEX = 5;        // Spalte "Lagerplatz"
@@ -870,8 +871,16 @@
          * This makes the application work with different column arrangements
          */
         function detectColumnIndices(headers) {
+            // Helper function to find best match: prefers exact match over partial match
+            const findBestMatch = (currentIndex, newIndex, headerLower, exactMatch) => {
+                if (currentIndex === -1) return newIndex;
+                if (headerLower === exactMatch) return newIndex; // Exact match always wins
+                return currentIndex; // Keep first partial match
+            };
+            
             // Reset indices to defaults
             ARTIKEL_INDEX = -1;
+            ARTIKELKURZTEXT_INDEX = -1;
             AUFFUELLBEDARF_INDEX = -1;
             PROZENTUAL_INDEX = -1;
             LAGERPLATZ_INDEX = -1;
@@ -885,16 +894,17 @@
                 
                 // Detect Artikel column
                 if (headerLower === 'artikel' || headerLower.includes('artikel')) {
-                    if (ARTIKEL_INDEX === -1 || headerLower === 'artikel') {
-                        ARTIKEL_INDEX = index;
-                    }
+                    ARTIKEL_INDEX = findBestMatch(ARTIKEL_INDEX, index, headerLower, 'artikel');
+                }
+                
+                // Detect Artikelkurztext column
+                if (headerLower.includes('artikelkurztext') || headerLower.includes('kurztext')) {
+                    ARTIKELKURZTEXT_INDEX = findBestMatch(ARTIKELKURZTEXT_INDEX, index, headerLower, 'artikelkurztext');
                 }
                 
                 // Detect Lagerplatz column
                 if (headerLower === 'lagerplatz' || headerLower.includes('lagerplatz')) {
-                    if (LAGERPLATZ_INDEX === -1 || headerLower === 'lagerplatz') {
-                        LAGERPLATZ_INDEX = index;
-                    }
+                    LAGERPLATZ_INDEX = findBestMatch(LAGERPLATZ_INDEX, index, headerLower, 'lagerplatz');
                 }
                 
                 // Detect Auffüllbedarf column
@@ -920,6 +930,7 @@
             
             console.log('Detected column indices:', {
                 ARTIKEL_INDEX,
+                ARTIKELKURZTEXT_INDEX,
                 LAGERPLATZ_INDEX,
                 AUFFUELLBEDARF_INDEX,
                 PROZENTUAL_INDEX,
@@ -1187,7 +1198,7 @@
             } else if (AUFFUELLBEDARF_INDEX !== -1) {
                 currentSortColumn = AUFFUELLBEDARF_INDEX;
             } else {
-                // Fallback to first numeric column
+                // Fallback to first column (no numeric detection implemented)
                 currentSortColumn = 0;
             }
             if (data.length > 0) {
@@ -1298,22 +1309,28 @@
                         } else if (PROZENTUAL_INDEX !== -1) {
                             currentSortColumn = PROZENTUAL_INDEX;
                         } else {
-                            // Find first numeric column as fallback
+                            // Fallback: use first column (no numeric detection implemented)
                             currentSortColumn = 0;
                         }
                         
                         // Filter out rows without required data
-                        // If Artikel column exists, require it to have data
-                        // Otherwise, just filter out completely empty rows
+                        // Use detected column indices rather than assuming positions
                         data = jsonData.slice(1).filter(row => {
                             if (row.length === 0) return false;
                             
                             // If Artikel column exists, require it to have data
                             if (ARTIKEL_INDEX !== -1) {
                                 const artikel = row[ARTIKEL_INDEX];
-                                const artikelName = row[ARTIKEL_INDEX + 1]; // Assume next column is Artikelkurztext
-                                return artikel !== undefined && artikel !== null && artikel !== '' &&
-                                       artikelName !== undefined && artikelName !== null && artikelName !== '';
+                                
+                                // If Artikelkurztext column detected, require it too
+                                if (ARTIKELKURZTEXT_INDEX !== -1) {
+                                    const artikelName = row[ARTIKELKURZTEXT_INDEX];
+                                    return artikel !== undefined && artikel !== null && artikel !== '' &&
+                                           artikelName !== undefined && artikelName !== null && artikelName !== '';
+                                }
+                                
+                                // Only Artikel required if Artikelkurztext not found
+                                return artikel !== undefined && artikel !== null && artikel !== '';
                             }
                             
                             // Otherwise, just ensure row has some data
