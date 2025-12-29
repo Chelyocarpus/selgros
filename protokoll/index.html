@@ -838,11 +838,12 @@
         let dateColumns = new Set(); // Set of column indices that contain date values
 
         // Dynamic column indices (detected from headers)
-        let ARTIKEL_INDEX = 0;           // Spalte "Artikel"
+        // All initialized to -1 to indicate "not found" until detection runs
+        let ARTIKEL_INDEX = -1;           // Spalte "Artikel"
         let ARTIKELKURZTEXT_INDEX = -1;  // Spalte "Artikelkurztext"
-        let AUFFUELLBEDARF_INDEX = 8;   // Spalte "Auffüllbedarf"
-        let PROZENTUAL_INDEX = 9;        // Spalte "proz. Ausgabemenge"
-        let LAGERPLATZ_INDEX = 5;        // Spalte "Lagerplatz"
+        let AUFFUELLBEDARF_INDEX = -1;   // Spalte "Auffüllbedarf"
+        let PROZENTUAL_INDEX = -1;        // Spalte "proz. Ausgabemenge"
+        let LAGERPLATZ_INDEX = -1;        // Spalte "Lagerplatz"
         let WARENEINGANGSDATUM_INDEX = -1; // Spalte "Wareneingangsdatum"
         
         // Columns that should have QR codes (detected from headers)
@@ -858,7 +859,7 @@
         const EXCEL_DATE_MIN = 40000;      // Approximate start of reasonable date range (~2009)
         const EXCEL_DATE_MAX = 50000;      // Approximate end of reasonable date range (~2036)
 
-        let currentSortColumn = AUFFUELLBEDARF_INDEX;
+        let currentSortColumn = -1; // Will be set after column detection
 
         // Focus management for modals
         let lastFocusedElement = null;
@@ -1197,9 +1198,19 @@
                 currentSortColumn = WARENEINGANGSDATUM_INDEX;
             } else if (AUFFUELLBEDARF_INDEX !== -1) {
                 currentSortColumn = AUFFUELLBEDARF_INDEX;
-            } else {
-                // Fallback to first column (no numeric detection implemented)
-                currentSortColumn = 0;
+            } else if (currentSortColumn === -1 || currentSortColumn >= headers.length) {
+                // No valid sort column found, try to find first numeric column
+                currentSortColumn = -1;
+                for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+                    const hasNumericData = data.slice(0, Math.min(5, data.length)).some(row => {
+                        const val = row[colIdx];
+                        return val !== undefined && val !== null && !isNaN(parseFloat(val));
+                    });
+                    if (hasNumericData) {
+                        currentSortColumn = colIdx;
+                        break;
+                    }
+                }
             }
             if (data.length > 0) {
                 sortData();
@@ -1309,8 +1320,23 @@
                         } else if (PROZENTUAL_INDEX !== -1) {
                             currentSortColumn = PROZENTUAL_INDEX;
                         } else {
-                            // Fallback: use first column (no numeric detection implemented)
-                            currentSortColumn = 0;
+                            // Fallback: find first column with numeric-like data
+                            currentSortColumn = -1;
+                            for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+                                // Check if this column has any numeric values in first few rows
+                                const hasNumericData = data.slice(0, Math.min(5, data.length)).some(row => {
+                                    const val = row[colIdx];
+                                    return val !== undefined && val !== null && !isNaN(parseFloat(val));
+                                });
+                                if (hasNumericData) {
+                                    currentSortColumn = colIdx;
+                                    break;
+                                }
+                            }
+                            // If still no column found, default to 0 (better than -1)
+                            if (currentSortColumn === -1 && headers.length > 0) {
+                                currentSortColumn = 0;
+                            }
                         }
                         
                         // Filter out rows without required data
@@ -1460,7 +1486,8 @@
                         return valueB - valueA;
                     });
                     
-                    // Schritt 2: Gruppieren nach Lagerplatz, Reihenfolge basiert auf höchster Priorität pro Lagerplatz
+                    // Schritt 2: Gruppieren nach Lagerplatz (nur wenn Lagerplatz-Spalte erkannt wurde)
+                    // Falls keine Lagerplatz-Spalte vorhanden, wird nur nach Priorität sortiert
                     if (LAGERPLATZ_INDEX !== -1) {
                         const processedLagerplaetze = new Set();
                         
@@ -1648,14 +1675,14 @@
                     if (qrCodeColumns.includes(colIndex)) {
                         const qrCodeUrl = cellContent ? qrCodeMap.get(String(cellContent)) : null;
                         const columnName = headers[colIndex] || 'Column';
-                        const isOddRow = rowIndex % 2 === 0; // 0-indexed, so even index = odd row number
+                        const isEvenIndex = rowIndex % 2 === 0; // Even index (0,2,4...) = odd row number (1,3,5...)
                         
                         if (qrCodeUrl) {
                             const qrSize = 43;
                             const qrImg = `<img src="${qrCodeUrl}" alt="QR" style="width: ${qrSize}px; height: ${qrSize}px; display: block; margin: 0 auto; image-rendering: crisp-edges; image-rendering: pixelated; background: white; padding: 1px; border-radius: 2px;" title="${columnName}: ${safeCellContent}" />`;
                             
-                            // Stagger: odd rows in first column, even rows in second column
-                            if (isOddRow) {
+                            // Stagger: even indices (odd rows) in first column, odd indices (even rows) in second column
+                            if (isEvenIndex) {
                                 cellHTML += `<td style="text-align: center; padding: 0.25rem;">${qrImg}</td>`;
                                 cellHTML += '<td></td>';
                             } else {
