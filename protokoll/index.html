@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XLSX Sortier-Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -512,6 +512,26 @@
             .print-header {
                 display: none !important;
             }
+
+            .page-number {
+                display: block;
+                position: fixed;
+                bottom: 0.5cm;
+                right: 1cm;
+                width: auto;
+                font-size: 10pt;
+                color: #888;
+                z-index: 9999;
+            }
+            .page-number:after {
+                content: "Seite " counter(page);
+            }
+            html, body {
+                counter-reset: page 1;
+            }
+            @page {
+                counter-increment: page;
+            }
             
             .card {
                 box-shadow: none;
@@ -738,7 +758,7 @@
                     <label for="sortColumn">Sortieren nach:</label>
                     <select id="sortColumn">
                         <option value="auffuellbedarf">Auffüllbedarf</option>
-                        <option value="prozentual">Proz. Ausgabemenge</option>
+                        <option value="prozentual">Füllgrad %</option>
                         <option value="lagerplatz-asc">Lagerplatz (A-Z)</option>
                         <option value="lagerplatz-desc">Lagerplatz (Z-A)</option>
                         <option value="wareneingangsdatum">Wareneingangsdatum</option>
@@ -843,6 +863,7 @@
         let ARTIKELKURZTEXT_INDEX = -1;  // Spalte "Artikelkurztext"
         let AUFFUELLBEDARF_INDEX = -1;   // Spalte "Auffüllbedarf"
         let PROZENTUAL_INDEX = -1;        // Spalte "proz. Ausgabemenge"
+        let MAXIMALE_FUELLMENGE_INDEX = -1; // Spalte "Maximale Füllmenge des Regalplatzes"
         let LAGERPLATZ_INDEX = -1;        // Spalte "Lagerplatz"
         let WARENEINGANGSDATUM_INDEX = -1; // Spalte "Wareneingangsdatum"
         
@@ -867,6 +888,9 @@
         // Cache for generated QR codes to avoid regenerating
         const qrCodeCache = new Map();
         
+        // QR code display size in pixels
+        const QR_CODE_SIZE = 43;
+        
         /**
          * Detect column indices based on header names (case-insensitive, partial matching)
          * This makes the application work with different column arrangements
@@ -884,6 +908,7 @@
             ARTIKELKURZTEXT_INDEX = -1;
             AUFFUELLBEDARF_INDEX = -1;
             PROZENTUAL_INDEX = -1;
+            MAXIMALE_FUELLMENGE_INDEX = -1;
             LAGERPLATZ_INDEX = -1;
             WARENEINGANGSDATUM_INDEX = -1;
             qrCodeColumns = [];
@@ -918,6 +943,12 @@
                     PROZENTUAL_INDEX = index;
                 }
                 
+                // Detect Maximale Füllmenge column
+                if ((headerLower.includes('maximale') && headerLower.includes('füllmenge')) ||
+                    (headerLower.includes('max') && headerLower.includes('füllmenge'))) {
+                    MAXIMALE_FUELLMENGE_INDEX = index;
+                }
+                
                 // Detect Wareneingangsdatum column
                 if (headerLower.includes('wareneingang')) {
                     WARENEINGANGSDATUM_INDEX = index;
@@ -935,13 +966,14 @@
                 LAGERPLATZ_INDEX,
                 AUFFUELLBEDARF_INDEX,
                 PROZENTUAL_INDEX,
+                MAXIMALE_FUELLMENGE_INDEX,
                 WARENEINGANGSDATUM_INDEX,
                 qrCodeColumns
             });
         }
 
-        // Generate QR code as data URL using qrcode.js library with caching
-        function generateQRCode(text, size = 32) {
+        // Generate QR code as data URL using QRious library with caching
+        function generateQRCode(text, size = QR_CODE_SIZE) {
             if (!text || text === '') return '';
             
             // Create cache key from text and size
@@ -953,73 +985,38 @@
             }
             
             try {
-                // Create a temporary container
-                tempDiv = document.createElement('div');
+                const textStr = String(text);
                 
                 // Dynamically adjust error correction based on content length
-                // Shorter content = higher error correction for reliability
-                // Longer content = lower error correction to keep QR simple and scannable
-                const textStr = String(text);
+                // QRious uses: 'L' (7%), 'M' (15%), 'Q' (25%), 'H' (30%)
                 let errorCorrection;
                 if (textStr.length <= 10) {
-                    errorCorrection = QRCode.CorrectLevel.Q;  // 25% - short codes are reliable
+                    errorCorrection = 'Q';  // 25% - short codes are reliable
                 } else if (textStr.length <= 20) {
-                    errorCorrection = QRCode.CorrectLevel.L;  // 7% - medium length
+                    errorCorrection = 'M';  // 15% - medium length
                 } else {
-                    errorCorrection = QRCode.CorrectLevel.L;  // 7% - long codes need simpler patterns
+                    errorCorrection = 'L';  // 7% - long codes need simpler patterns
                 }
                 
-                // Generate QR code synchronously
-                qr = new QRCode(tempDiv, {
-                    text: textStr,
-                    width: size,
-                    height: size,
-                    colorDark: '#000000',
-                    colorLight: '#ffffff',
-                    correctLevel: errorCorrection
+                // Generate QR code using QRious
+                const qr = new QRious({
+                    value: textStr,
+                    size: size,
+                    foreground: '#000000',
+                    background: '#ffffff',
+                    level: errorCorrection,
+                    padding: 0
                 });
                 
-                // Get the canvas (QRCode.js may create it asynchronously in some cases)
-                const canvas = tempDiv.querySelector('canvas');
-                let dataUrl = '';
-                
-                if (canvas) {
-                    dataUrl = canvas.toDataURL('image/png');
-                } else {
-                    // Fallback: create a simple placeholder image
-                    console.warn('QRCode canvas not found, using fallback for:', text);
-                    const fallbackCanvas = document.createElement('canvas');
-                    fallbackCanvas.width = size;
-                    fallbackCanvas.height = size;
-                    const ctx = fallbackCanvas.getContext('2d');
-                    
-                    // Create a simple pattern
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, size, size);
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(size * 0.2, size * 0.2, size * 0.6, size * 0.6);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(size * 0.3, size * 0.3, size * 0.4, size * 0.4);
-                    
-                    dataUrl = fallbackCanvas.toDataURL('image/png');
-                }
+                // Get the data URL directly from QRious
+                const dataUrl = qr.toDataURL('image/png');
                 
                 // Cache the result
                 qrCodeCache.set(cacheKey, dataUrl);
                 
-                // Clean up: clear the temporary div and remove references
-                tempDiv.innerHTML = '';
-                // Clear QRCode instance references to prevent memory leaks
-                if (qr && qr._oDrawing) {
-                    qr._oDrawing._elCanvas = null;
-                    qr._oDrawing._el = null;
-                }
-                
                 return dataUrl;
             } catch (error) {
                 console.error('QR Code generation error:', error);
-                // Clean up resources even on error
-                if (tempDiv) tempDiv.innerHTML = '';
                 return '';
             }
         }
@@ -1477,13 +1474,39 @@
                         return;
                     }
                     
-                    sortColumnName = sortValue === 'prozentual' ? 'proz. Ausgabemenge' : 'Auffüllbedarf';
+                    sortColumnName = sortValue === 'prozentual' ? 'Füllgrad %' : 'Auffüllbedarf';
                     
                     // Schritt 1: Nach Priorität sortieren (absteigend)
                     const sortedByPriority = [...data].sort((a, b) => {
-                        const valueA = parseFloat(a[currentSortColumn]) || 0;
-                        const valueB = parseFloat(b[currentSortColumn]) || 0;
-                        return valueB - valueA;
+                        let valueA, valueB;
+                        
+                        // If sorting by percentage, calculate it dynamically
+                        if (sortValue === 'prozentual' && AUFFUELLBEDARF_INDEX !== -1 && MAXIMALE_FUELLMENGE_INDEX !== -1) {
+                            const auffuellbedarfA = parseFloat(a[AUFFUELLBEDARF_INDEX]) || 0;
+                            const maxFuellmengeA = parseFloat(a[MAXIMALE_FUELLMENGE_INDEX]) || 0;
+                            valueA = maxFuellmengeA > 0 ? (auffuellbedarfA / maxFuellmengeA * 100) : 0;
+                            
+                            const auffuellbedarfB = parseFloat(b[AUFFUELLBEDARF_INDEX]) || 0;
+                            const maxFuellmengeB = parseFloat(b[MAXIMALE_FUELLMENGE_INDEX]) || 0;
+                            valueB = maxFuellmengeB > 0 ? (auffuellbedarfB / maxFuellmengeB * 100) : 0;
+                            
+                            // Primary sort: by percentage (descending)
+                            const percentDiff = valueB - valueA;
+                            if (percentDiff !== 0) return percentDiff;
+                            
+                            // Secondary sort: by Lagerplatz (ascending) when percentages are equal
+                            if (LAGERPLATZ_INDEX !== -1) {
+                                const lagerplatzA = String(a[LAGERPLATZ_INDEX] || '').toLowerCase();
+                                const lagerplatzB = String(b[LAGERPLATZ_INDEX] || '').toLowerCase();
+                                return lagerplatzA.localeCompare(lagerplatzB);
+                            }
+                            
+                            return 0;
+                        } else {
+                            valueA = parseFloat(a[currentSortColumn]) || 0;
+                            valueB = parseFloat(b[currentSortColumn]) || 0;
+                            return valueB - valueA;
+                        }
                     });
                     
                     // Schritt 2: Gruppieren nach Lagerplatz (nur wenn Lagerplatz-Spalte erkannt wurde)
@@ -1534,7 +1557,14 @@
             thead.innerHTML = '<tr>' + visibleHeaders.map((h, visibleIndex) => {
                 const originalIndex = visibleIndices[visibleIndex];
                 const highlight = (originalIndex === currentSortColumn || originalIndex === LAGERPLATZ_INDEX) ? ' class="highlight"' : '';
-                const safeHeader = escapeHtml(h || 'Spalte ' + (originalIndex+1));
+                
+                // Override header text for calculated percentage column
+                let headerText = h;
+                if (originalIndex === PROZENTUAL_INDEX) {
+                    headerText = 'Füllgrad %';
+                }
+                
+                const safeHeader = escapeHtml(headerText || 'Spalte ' + (originalIndex+1));
                 
                 // Check if this header should be auto-width
                 const headerLower = (h || '').toLowerCase();
@@ -1646,6 +1676,19 @@
                         value = formattedValue;
                     }
                     
+                    // Calculate percentage for proz. Ausgabemenge column
+                    if (colIndex === PROZENTUAL_INDEX && AUFFUELLBEDARF_INDEX !== -1 && MAXIMALE_FUELLMENGE_INDEX !== -1) {
+                        const auffuellbedarf = parseFloat(row[AUFFUELLBEDARF_INDEX]);
+                        const maxFuellmenge = parseFloat(row[MAXIMALE_FUELLMENGE_INDEX]);
+                        
+                        if (!isNaN(auffuellbedarf) && !isNaN(maxFuellmenge) && maxFuellmenge > 0) {
+                            const percentage = (auffuellbedarf / maxFuellmenge * 100).toFixed(1);
+                            value = `${percentage}%`;
+                        } else {
+                            value = '-';
+                        }
+                    }
+                    
                     const highlight = (colIndex === currentSortColumn || colIndex === LAGERPLATZ_INDEX) ? ' class="highlight"' : '';
                     let cellContent = value !== undefined && value !== null ? value : '';
                     const safeCellContent = escapeHtml(String(cellContent));
@@ -1678,8 +1721,7 @@
                         const isEvenIndex = rowIndex % 2 === 0; // Even index (0,2,4...) = odd row number (1,3,5...)
                         
                         if (qrCodeUrl) {
-                            const qrSize = 43;
-                            const qrImg = `<img src="${qrCodeUrl}" alt="QR" style="width: ${qrSize}px; height: ${qrSize}px; display: block; margin: 0 auto; image-rendering: crisp-edges; image-rendering: pixelated; background: white; padding: 1px; border-radius: 2px;" title="${columnName}: ${safeCellContent}" />`;
+                            const qrImg = `<img src="${qrCodeUrl}" alt="QR" style="width: ${QR_CODE_SIZE}px; height: ${QR_CODE_SIZE}px; display: block; margin: 0 auto; image-rendering: crisp-edges; image-rendering: pixelated;" title="${columnName}: ${safeCellContent}" />`;
                             
                             // Stagger: even indices (odd rows) in first column, odd indices (even rows) in second column
                             if (isEvenIndex) {
@@ -1733,19 +1775,58 @@
                 showStatus('Keine Daten zum Drucken vorhanden.', 'info');
                 return;
             }
-            
+
             // Set print date
             const now = new Date();
-            const dateStr = now.toLocaleDateString('de-DE', { 
-                day: '2-digit', 
-                month: '2-digit', 
+            const dateStr = now.toLocaleDateString('de-DE', {
+                day: '2-digit',
+                month: '2-digit',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
             });
             document.getElementById('printDate').textContent = `Gedruckt am: ${dateStr}`;
-            
+
+            // Advanced: Insert page number rows every N rows (estimate for A4 portrait, 10pt font, no header/footer)
+            const ROWS_PER_PAGE = 13; // Adjust as needed for your layout
+            const tbody = document.getElementById('tableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            let inserted = [];
+            let totalPages = Math.ceil(rows.length / ROWS_PER_PAGE);
+            for (let page = 1; page <= totalPages; page++) {
+                // Calculate the index of the last row for this page
+                let endRowIdx = page * ROWS_PER_PAGE - 1;
+                if (endRowIdx >= rows.length) endRowIdx = rows.length - 1;
+                // Avoid duplicate for last page if already inserted
+                if (endRowIdx < 0) continue;
+                // Only insert if not already a page-break-row
+                if (!rows[endRowIdx].classList.contains('page-break-row')) {
+                    const pageRow = document.createElement('tr');
+                    pageRow.className = 'page-break-row';
+                    const td = document.createElement('td');
+                    td.colSpan = rows[0].children.length;
+                    td.style.textAlign = 'right';
+                    td.style.fontWeight = 'bold';
+                    td.style.background = '#f8fafc';
+                    td.textContent = `Seite ${page}`;
+                    pageRow.appendChild(td);
+                    rows[endRowIdx].after(pageRow);
+                    inserted.push(pageRow);
+                }
+            }
+
+            // Add CSS for page-break after the inserted row
+            const style = document.createElement('style');
+            style.id = 'page-break-style';
+            style.textContent = `@media print { tr.page-break-row { page-break-after: always !important; background: #f8fafc !important; } }`;
+            document.head.appendChild(style);
+
             window.print();
+
+            // Cleanup: Remove inserted page number rows and style after printing
+            inserted.forEach(row => row.remove());
+            const styleElem = document.getElementById('page-break-style');
+            if (styleElem) styleElem.remove();
         }
 
         function showStatus(message, type) {

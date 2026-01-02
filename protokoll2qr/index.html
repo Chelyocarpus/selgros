@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Protokoll mit QR-Codes</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -838,7 +838,7 @@
         // Cache for generated QR codes to avoid regenerating
         const qrCodeCache = new Map();
 
-        // Generate QR code as data URL using qrcode.js library with caching
+        // Generate QR code as data URL using QRious library with caching
         function generateQRCode(text, size = 32) {
             if (!text || text === '') return '';
             
@@ -851,60 +851,25 @@
             }
             
             try {
-                // Create a temporary container
-                const tempDiv = document.createElement('div');
-                
-                // Generate QR code synchronously
-                const qr = new QRCode(tempDiv, {
-                    text: String(text),
-                    width: size,
-                    height: size,
-                    colorDark: '#000000',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.L
+                // Create QRious instance
+                const qr = new QRious({
+                    value: String(text),
+                    size: size,
+                    level: 'L', // Error correction level
+                    background: 'white',
+                    foreground: 'black',
+                    padding: null // auto padding
                 });
                 
-                // Get the canvas (QRCode.js may create it asynchronously in some cases)
-                const canvas = tempDiv.querySelector('canvas');
-                let dataUrl = '';
-                
-                if (canvas) {
-                    dataUrl = canvas.toDataURL('image/png');
-                } else {
-                    // Fallback: create a simple placeholder image
-                    console.warn('QRCode canvas not found, using fallback for:', text);
-                    const fallbackCanvas = document.createElement('canvas');
-                    fallbackCanvas.width = size;
-                    fallbackCanvas.height = size;
-                    const ctx = fallbackCanvas.getContext('2d');
-                    
-                    // Create a simple pattern
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, size, size);
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(size * 0.2, size * 0.2, size * 0.6, size * 0.6);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(size * 0.3, size * 0.3, size * 0.4, size * 0.4);
-                    
-                    dataUrl = fallbackCanvas.toDataURL('image/png');
-                }
+                // Get data URL from canvas
+                const dataUrl = qr.toDataURL('image/png');
                 
                 // Cache the result
                 qrCodeCache.set(cacheKey, dataUrl);
                 
-                // Clean up: clear the temporary div and remove references
-                tempDiv.innerHTML = '';
-                // Clear QRCode instance references to prevent memory leaks
-                if (qr && qr._oDrawing) {
-                    qr._oDrawing._elCanvas = null;
-                    qr._oDrawing._el = null;
-                }
-                
                 return dataUrl;
             } catch (error) {
                 console.error('QR Code generation error:', error);
-                // Clean up resources even on error
-                if (tempDiv) tempDiv.innerHTML = '';
                 return '';
             }
         }
