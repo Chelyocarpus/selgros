@@ -391,7 +391,7 @@ UIManager.prototype.addMaterial = function() {
         // Refresh list
         this.renderMaterialsList();
 
-        this.showToast(`<i class="fa-solid fa-plus"></i> Material ${SecurityUtils.escapeHTML(code)} added successfully! Capacity set to ${SecurityUtils.escapeHTML(capacity)}.`, 'success', 'Added');
+        this.showToast(`<i class="fa-solid fa-plus"></i> Material ${SecurityUtils.escapeHTML(String(code))} added successfully! Capacity set to ${Number(capacity)}.`, 'success', 'Added');
     } catch (error) {
         this.showToast('Error adding material: ' + SecurityUtils.escapeHTML(error.message), 'error');
     }

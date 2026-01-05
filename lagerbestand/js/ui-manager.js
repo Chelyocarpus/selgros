@@ -1102,7 +1102,7 @@ class UIManager {
                     promoCapacity: promoCapacity
                 });
                 
-                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${SecurityUtils.escapeHTML(code)} updated successfully!`;
+                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${SecurityUtils.escapeHTML(String(code))} updated successfully!`;
                 
                 if (changeDetection.hasChanges) {
                     toastMessage += ` ${changeDetection.changes.join(', ')}.`;
@@ -1112,9 +1112,9 @@ class UIManager {
                 
                 this.showToast(toastMessage, 'success', 'Updated');
             } else if (mode === 'quickadd') {
-                this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${SecurityUtils.escapeHTML(code)} quickly added! Capacity set to ${capacityNum}.`, 'success', 'Quick Added');
+                this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${SecurityUtils.escapeHTML(String(code))} quickly added! Capacity set to ${Number(capacityNum)}.`, 'success', 'Quick Added');
             } else {
-                this.showToast(`<i class="fa-solid fa-plus"></i> Material ${SecurityUtils.escapeHTML(code)} added successfully! Capacity set to ${capacityNum}.`, 'success', 'Added');
+                this.showToast(`<i class="fa-solid fa-plus"></i> Material ${SecurityUtils.escapeHTML(String(code))} added successfully! Capacity set to ${Number(capacityNum)}.`, 'success', 'Added');
             }
 
         } catch (error) {
@@ -1147,7 +1147,7 @@ class UIManager {
                 this.updateUndoRedoButtons();
             }
             
-            this.showToast(`<i class="fa-solid fa-trash-can"></i> Material ${SecurityUtils.escapeHTML(code)} deleted successfully`, 'success');
+            this.showToast(`<i class="fa-solid fa-trash-can"></i> Material ${SecurityUtils.escapeHTML(String(code))} deleted successfully`, 'success');
             
             // Refresh results if data is displayed
             const inputData = document.getElementById('inputData').value.trim();
@@ -2048,35 +2048,35 @@ class UIManager {
             
             // Handle material changes
             if (details.materialCode) {
-                description = `<strong>${SecurityUtils.escapeHTML(details.materialCode)}</strong>`;
+                description = `<strong>${SecurityUtils.escapeHTML(String(details.materialCode))}</strong>`;
                 if (details.materialName && details.materialName !== details.materialCode) {
-                    description += ` (${SecurityUtils.escapeHTML(details.materialName)})`;
+                    description += ` (${SecurityUtils.escapeHTML(String(details.materialName))})`;
                 }
                 
                 if (details.action === 'add' && details.capacity) {
                     const safeCapacity = Number.isFinite(Number(details.capacity))
                         ? Number(details.capacity)
-                        : SecurityUtils.escapeHTML(details.capacity);
+                        : SecurityUtils.escapeHTML(String(details.capacity));
                     description += ` - ${this.t('capacity') || 'Kapazität'}: ${safeCapacity}`;
                 } else if (details.action === 'edit' && details.changes) {
-                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.changes)}</small>`;
+                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(String(details.changes))}</small>`;
                 }
             }
             // Handle group changes
             else if (details.groupName || details.groupId) {
-                description = `<strong>${SecurityUtils.escapeHTML(details.groupName || details.groupId)}</strong>`;
+                description = `<strong>${SecurityUtils.escapeHTML(String(details.groupName || details.groupId))}</strong>`;
                 
                 if (details.action === 'add' && details.color) {
                     description += ` <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${SecurityUtils.validateColor(details.color)}; vertical-align: middle;"></span>`;
                 } else if (details.action === 'edit' && details.changes) {
-                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.changes)}</small>`;
+                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(String(details.changes))}</small>`;
                 }
             }
             // Handle bulk delete
             else if (details.action === 'bulk_delete' && details.count) {
                 description = `${details.count} ${this.t('materials') || 'Materialien'}`;
                 if (details.materialCodes) {
-                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(details.materialCodes)}</small>`;
+                    description += `<br><small style="color: var(--text-secondary);">${SecurityUtils.escapeHTML(String(details.materialCodes))}</small>`;
                 }
             }
             
@@ -2858,7 +2858,7 @@ class UIManager {
                     : this.t('groupUngrouped');
 
                 // Show success message with escaped values to prevent XSS
-                const message = `<i class="fa-solid fa-tag"></i> ${SecurityUtils.escapeHTML(materialCode)}: ${SecurityUtils.escapeHTML(oldGroupName)} → ${SecurityUtils.escapeHTML(newGroupName)}`;
+                const message = `<i class="fa-solid fa-tag"></i> ${SecurityUtils.escapeHTML(String(materialCode))}: ${SecurityUtils.escapeHTML(String(oldGroupName))} → ${SecurityUtils.escapeHTML(String(newGroupName))}`;
                 this.showToast(message, 'success', this.t('categoryUpdated') || 'Category Updated');
 
                 // Update the visual indicator
@@ -2867,7 +2867,7 @@ class UIManager {
                 // Announce to screen readers
                 if (typeof accessibilityManager !== 'undefined' && accessibilityManager) {
                     accessibilityManager.announce(
-                        `Material ${SecurityUtils.escapeHTML(materialCode)} moved to ${SecurityUtils.escapeHTML(newGroupName)}`,
+                        `Material ${SecurityUtils.escapeHTML(String(materialCode))} moved to ${SecurityUtils.escapeHTML(String(newGroupName))}`,
                         'polite'
                     );
                 }
