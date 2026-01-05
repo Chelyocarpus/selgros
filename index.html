@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Selgros - Portal</title>
-    <link rel="shortcut icon" type="image/x-icon" href="https://www.selgros.de/themes/contrib/garnet/dist/assets/branding/logo-selgros3d.svg">
+    <title>Application Portal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
@@ -42,12 +41,6 @@
             padding: 30px;
             border-radius: 15px;
             box-shadow: var(--card-shadow);
-        }
-
-        header img {
-            max-width: 300px;
-            height: auto;
-            margin-bottom: 20px;
         }
 
         h1 {
@@ -143,20 +136,6 @@
             color: var(--primary-color);
         }
 
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
-            }
-
-            .apps-grid {
-                grid-template-columns: 1fr;
-            }
-
-            header img {
-                max-width: 200px;
-            }
-        }
-
         /* Animation */
         @keyframes fadeIn {
             from {
@@ -177,9 +156,8 @@
 <body>
     <div class="container">
         <header>
-            <img src="https://www.selgros.de/themes/contrib/garnet/dist/assets/branding/logo-selgros3d.svg" alt="Selgros Logo">
-            <h1>Portal</h1>
-            <p class="subtitle">Wählen Sie eine Anwendung aus</p>
+            <h1>Application Portal</h1>
+            <p class="subtitle">Select an application</p>
         </header>
 
         <main>
@@ -267,15 +245,7 @@
         </main>
 
         <footer>
-            <p>&copy; 2025 Selgros Portal. Alle Anwendungen sind Client-seitig und sicher.</p>
-            <div class="footer-links">
-                <a href="https://www.selgros.de" target="_blank">
-                    <i class="fas fa-globe"></i> Selgros Website
-                </a>
-                <a href="#" onclick="alert('Version 1.0.0'); return false;">
-                    <i class="fas fa-info-circle"></i> Info
-                </a>
-            </div>
+            <p>&copy; 2025 Application Portal.</p>
         </footer>
     </div>
 
@@ -290,7 +260,7 @@
             });
 
             // Log portal access (optional)
-            console.log('Selgros Portal loaded at:', new Date().toLocaleString('de-DE'));
+            console.log('Application Portal loaded at:', new Date().toLocaleString('de-DE'));
         });
     </script>
 </body>

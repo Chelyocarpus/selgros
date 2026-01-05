@@ -1102,7 +1102,7 @@ class UIManager {
                     promoCapacity: promoCapacity
                 });
                 
-                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${code} updated successfully!`;
+                let toastMessage = `<i class="fa-solid fa-pen-to-square"></i> Material ${SecurityUtils.escapeHTML(code)} updated successfully!`;
                 
                 if (changeDetection.hasChanges) {
                     toastMessage += ` ${changeDetection.changes.join(', ')}.`;
@@ -1112,9 +1112,9 @@ class UIManager {
                 
                 this.showToast(toastMessage, 'success', 'Updated');
             } else if (mode === 'quickadd') {
-                this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${code} quickly added! Capacity set to ${capacityNum}.`, 'success', 'Quick Added');
+                this.showToast(`<i class="fa-solid fa-bolt"></i> Material ${SecurityUtils.escapeHTML(code)} quickly added! Capacity set to ${capacityNum}.`, 'success', 'Quick Added');
             } else {
-                this.showToast(`<i class="fa-solid fa-plus"></i> Material ${code} added successfully! Capacity set to ${capacityNum}.`, 'success', 'Added');
+                this.showToast(`<i class="fa-solid fa-plus"></i> Material ${SecurityUtils.escapeHTML(code)} added successfully! Capacity set to ${capacityNum}.`, 'success', 'Added');
             }
 
         } catch (error) {
@@ -1147,7 +1147,7 @@ class UIManager {
                 this.updateUndoRedoButtons();
             }
             
-            this.showToast(`<i class="fa-solid fa-trash-can"></i> Material ${code} deleted successfully`, 'success');
+            this.showToast(`<i class="fa-solid fa-trash-can"></i> Material ${SecurityUtils.escapeHTML(code)} deleted successfully`, 'success');
             
             // Refresh results if data is displayed
             const inputData = document.getElementById('inputData').value.trim();

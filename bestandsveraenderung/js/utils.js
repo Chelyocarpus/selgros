@@ -37,13 +37,131 @@ const Utils = {
     },
 
     /**
-     * Check if file type is supported
+     * Check if file type is supported (basic extension check)
      * @param {string} fileName - File name
      * @returns {boolean} True if supported
      */
     isSupportedFileType(fileName) {
         const extension = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
         return CONSTANTS.SUPPORTED_FILE_TYPES.includes(extension);
+    },
+
+    /**
+     * Validate file type using magic numbers (file signatures)
+     * @param {File} file - File to validate
+     * @returns {Promise<{valid: boolean, type: string, message: string}>}
+     */
+    async validateFileType(file) {
+        const validTypes = {
+            // Excel file signatures
+            'xlsx': {
+                signature: [0x50, 0x4B, 0x03, 0x04], // ZIP archive (xlsx is ZIP-based)
+                extensions: ['.xlsx']
+            },
+            'xlsb': {
+                signature: [0x50, 0x4B, 0x03, 0x04], // ZIP archive (xlsb is also ZIP-based)
+                extensions: ['.xlsb']
+            },
+            'xls': {
+                signature: [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1], // OLE/CFB
+                extensions: ['.xls']
+            }
+        };
+
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                try {
+                    const arr = new Uint8Array(e.target.result);
+                    const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                    
+                    // Check XLSX signature
+                    if (this.matchesSignature(arr, validTypes.xlsx.signature)) {
+                        if (extension === '.xlsx') {
+                            resolve({ 
+                                valid: true, 
+                                type: 'xlsx', 
+                                message: Utils.getMessage('FILE_VALID_EXCEL_XLSX') 
+                            });
+                        } else if (extension === '.xlsb') {
+                            resolve({ 
+                                valid: true, 
+                                type: 'xlsb', 
+                                message: Utils.getMessage('FILE_VALID_EXCEL_XLSB') 
+                            });
+                        } else {
+                            // File has ZIP signature but wrong extension
+                            resolve({ 
+                                valid: false, 
+                                type: 'mismatch', 
+                                message: Utils.getMessage('FILE_TYPE_MISMATCH') 
+                            });
+                        }
+                        return;
+                    }
+                    
+                    // Check XLS signature
+                    if (this.matchesSignature(arr, validTypes.xls.signature)) {
+                        if (extension === '.xls') {
+                            resolve({ 
+                                valid: true, 
+                                type: 'xls', 
+                                message: Utils.getMessage('FILE_VALID_EXCEL_XLS') 
+                            });
+                        } else {
+                            // File has OLE signature but wrong extension
+                            resolve({ 
+                                valid: false, 
+                                type: 'mismatch', 
+                                message: Utils.getMessage('FILE_TYPE_MISMATCH') 
+                            });
+                        }
+                        return;
+                    }
+                    
+                    // No matching signature found
+                    resolve({ 
+                        valid: false, 
+                        type: 'unknown', 
+                        message: `${Utils.getMessage('UNSUPPORTED_FILE_TYPE')}: ${file.type || extension}` 
+                    });
+                } catch (error) {
+                    console.error('Error validating file type:', error);
+                    resolve({ 
+                        valid: false, 
+                        type: 'error', 
+                        message: Utils.getMessage('FILE_VALIDATION_ERROR') 
+                    });
+                }
+            };
+            
+            reader.onerror = () => {
+                resolve({ 
+                    valid: false, 
+                    type: 'error', 
+                    message: Utils.getMessage('FILE_READ_ERROR') 
+                });
+            };
+            
+            // Read first 8 bytes for magic number check
+            reader.readAsArrayBuffer(file.slice(0, 8));
+        });
+    },
+
+    /**
+     * Check if file signature matches expected bytes
+     * @param {Uint8Array} arr - File bytes
+     * @param {number[]} signature - Expected signature bytes
+     * @returns {boolean}
+     */
+    matchesSignature(arr, signature) {
+        if (!signature) return false;
+        
+        for (let i = 0; i < signature.length; i++) {
+            if (arr[i] !== signature[i]) return false;
+        }
+        return true;
     },
 
     /**
