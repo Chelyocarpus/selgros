@@ -1,5 +1,27 @@
 # Bestandsveränderung - Update Summary
 
+## Security Fix (2026-01-05)
+
+### XSS Vulnerability Fixes 🔒
+**Security Improvements:**
+- **Fixed XSS vulnerabilities in table rendering** - All user-provided data from Excel/CSV files is now properly sanitized
+- **Sanitized article data** - Article names and descriptions are escaped before display
+- **Sanitized movement types** - Movement type names are escaped to prevent script injection
+- **Sanitized user data** - Username fields are escaped before rendering
+- **Added security documentation** - Comprehensive security guidelines added to project
+
+**Technical Details:**
+- Applied `Utils.sanitizeHTML()` to all user-controlled fields in `business-ui-renderer.js`
+- Fixed 4 critical XSS attack vectors in data tables
+- All Excel/CSV imported data now passes through sanitization layer
+- Follows OWASP XSS prevention best practices
+
+**Impact:**
+- Prevents malicious script execution from crafted Excel files
+- Protects against stored XSS attacks
+- Improves overall application security posture
+- No functionality changes - purely security hardening
+
 ## Latest Changes (November 14, 2025)
 
 ### Sidebar Search Integration ✅

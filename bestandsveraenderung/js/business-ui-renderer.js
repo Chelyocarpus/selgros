@@ -195,8 +195,8 @@ const BusinessUIRenderer = {
             const table = this.createTable(
                 ['Artikel', 'Artikeltext', 'Menge', 'Wert Hauswähr.', 'VK-Verlust'],
                 writeOffs.topArticles.map(art => [
-                    art.artikel,
-                    art.artikeltext,
+                    Utils.sanitizeHTML(art.artikel),
+                    Utils.sanitizeHTML(art.artikeltext),
                     Utils.formatNumber(art.quantity),
                     this.formatCurrency(-Math.abs(art.betragHaus)),
                     this.formatCurrency(-Math.abs(art.vkWert))
@@ -263,8 +263,8 @@ const BusinessUIRenderer = {
         const table = this.createTable(
             ['Artikel', 'Artikeltext', 'Bewegungen', 'Netto-Menge', 'Menge Abschr.', 'Menge Zugänge', 'Wert Hauswähr.', 'Wert Hauswähr / Netto-Menge'],
             filteredArticles.map(art => [
-                art.artikel,
-                art.artikeltext,
+                Utils.sanitizeHTML(art.artikel),
+                Utils.sanitizeHTML(art.artikeltext),
                 Utils.formatNumber(art.movements),
                 Utils.formatNumber(art.totalQuantity),
                 Utils.formatNumber(art.writeOffs),
@@ -295,7 +295,7 @@ const BusinessUIRenderer = {
         const table = this.createTable(
             ['Bewegungsart', 'Anzahl', 'Menge', 'Wert Hauswähr.', 'EK-Wert', 'VK-Wert', 'Profit'],
             filteredMovements.map(mov => [
-                mov.bewegungsart,
+                Utils.sanitizeHTML(mov.bewegungsart),
                 Utils.formatNumber(mov.count),
                 Utils.formatNumber(mov.totalQuantity),
                 this.formatCurrency(mov.totalBetragHaus),
@@ -326,7 +326,7 @@ const BusinessUIRenderer = {
         const table = this.createTable(
             ['Benutzer', 'Bewegungen', 'Artikel', 'Menge', 'Wert Hauswähr.'],
             filteredUsers.map(user => [
-                user.benutzer,
+                Utils.sanitizeHTML(user.benutzer),
                 Utils.formatNumber(user.movements),
                 Utils.formatNumber(user.uniqueArticles),
                 Utils.formatNumber(user.totalQuantity),
@@ -398,6 +398,7 @@ const BusinessUIRenderer = {
             const tr = document.createElement('tr');
             row.forEach(cell => {
                 const td = document.createElement('td');
+                // Cell content is pre-sanitized when passed to createTable
                 td.innerHTML = cell;
                 
                 // Extract data-order from span and apply to td for proper sorting

@@ -244,6 +244,7 @@ class SecurityUtils {
      */
     static matchesSignature(arr, signature) {
         if (!signature) return false;
+        if (!arr || arr.length < signature.length) return false;
         
         for (let i = 0; i < signature.length; i++) {
             if (arr[i] !== signature[i]) return false;

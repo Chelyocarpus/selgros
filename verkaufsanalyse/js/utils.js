@@ -52,6 +52,39 @@ const debounce = (func, wait) => {
     };
 };
 
+// Security utilities to prevent XSS attacks
+class SecurityUtils {
+    /**
+     * Escape HTML entities to prevent XSS
+     * @param {string} str - String to escape
+     * @returns {string} Escaped string
+     */
+    static escapeHTML(str) {
+        if (!str || typeof str !== 'string') return '';
+        const entityMap = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+            '/': '&#x2F;'
+        };
+        return str.replace(/[&<>"'\/]/g, char => entityMap[char]);
+    }
+    
+    /**
+     * Sanitize HTML by converting to text and back to entities
+     * @param {string} str - String to sanitize
+     * @returns {string} Sanitized string
+     */
+    static sanitizeHTML(str) {
+        if (!str || typeof str !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+}
+
 // Export utilities
 window.utils = {
     parseGermanNumber,
@@ -61,3 +94,6 @@ window.utils = {
     calculateBrutto,
     debounce
 };
+
+// Export SecurityUtils globally
+window.SecurityUtils = SecurityUtils;

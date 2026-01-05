@@ -29,19 +29,33 @@ const CONSTANTS = {
             FILE_TOO_LARGE: 'Die Datei ist zu groß. Maximum: 50MB',
             INVALID_FILE_TYPE: 'Ungültiger Dateityp. Bitte wählen Sie eine XLSX-, XLS- oder XLSB-Datei.',
             FILE_READ_ERROR: 'Fehler beim Lesen der Datei',
+            FILE_VALIDATION_ERROR: 'Fehler bei der Dateivalidierung',
+            FILE_CORRUPTED: 'Die Datei scheint beschädigt oder ungültig zu sein',
+            FILE_TYPE_MISMATCH: 'Die Dateistruktur stimmt nicht mit der Dateierweiterung überein',
+            UNSUPPORTED_FILE_TYPE: 'Nicht unterstützter Dateityp',
             NO_SHEETS_FOUND: 'Keine Arbeitsblätter gefunden',
             NO_DATA_FOUND: 'Keine Daten im ausgewählten Arbeitsblatt gefunden',
             EXPORT_SUCCESS: 'Export erfolgreich',
-            SELECT_SHEET_FIRST: 'Bitte wählen Sie zuerst ein Arbeitsblatt aus'
+            SELECT_SHEET_FIRST: 'Bitte wählen Sie zuerst ein Arbeitsblatt aus',
+            FILE_VALID_EXCEL_XLSX: 'Gültige Excel-Datei (XLSX)',
+            FILE_VALID_EXCEL_XLS: 'Gültige Excel-Datei (XLS)',
+            FILE_VALID_EXCEL_XLSB: 'Gültige Excel-Datei (XLSB)'
         },
         en: {
             FILE_TOO_LARGE: 'File is too large. Maximum: 50MB',
             INVALID_FILE_TYPE: 'Invalid file type. Please select an XLSX, XLS, or XLSB file.',
             FILE_READ_ERROR: 'Error reading file',
+            FILE_VALIDATION_ERROR: 'File validation error',
+            FILE_CORRUPTED: 'The file appears to be corrupted or invalid',
+            FILE_TYPE_MISMATCH: 'File structure does not match the file extension',
+            UNSUPPORTED_FILE_TYPE: 'Unsupported file type',
             NO_SHEETS_FOUND: 'No worksheets found',
             NO_DATA_FOUND: 'No data found in selected worksheet',
             EXPORT_SUCCESS: 'Export successful',
-            SELECT_SHEET_FIRST: 'Please select a worksheet first'
+            SELECT_SHEET_FIRST: 'Please select a worksheet first',
+            FILE_VALID_EXCEL_XLSX: 'Valid Excel file (XLSX)',
+            FILE_VALID_EXCEL_XLS: 'Valid Excel file (XLS)',
+            FILE_VALID_EXCEL_XLSB: 'Valid Excel file (XLSB)'
         }
     },
     

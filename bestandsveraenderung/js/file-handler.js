@@ -85,21 +85,41 @@ const FileHandler = {
             // Hide error messages
             UIRenderer.hideError();
 
-            // Validate file
-            const validationError = this.validateFile(file);
-            if (validationError) {
-                UIRenderer.showError(validationError);
+            // Validate file size first
+            const sizeError = this.validateFileSize(file);
+            if (sizeError) {
+                UIRenderer.showError(sizeError);
+                return;
+            }
+
+            // Validate file type using magic numbers
+            const typeValidation = await Utils.validateFileType(file);
+            if (!typeValidation.valid) {
+                const errorMsg = typeValidation.type === 'mismatch' 
+                    ? `${typeValidation.message}\n\n${Utils.getMessage('FILE_CORRUPTED')}` 
+                    : typeValidation.message;
+                UIRenderer.showError(errorMsg);
                 return;
             }
 
             // Store current file
             this.currentFile = file;
 
-            // Show file info
-            this.displayFileInfo(file);
+            // Show file info with validation result
+            this.displayFileInfo(file, typeValidation);
 
-            // Read file
-            const workbook = await this.readFile(file);
+            // Read file with enhanced error handling
+            let workbook;
+            try {
+                workbook = await this.readFile(file);
+            } catch (readError) {
+                console.error('File read error:', readError);
+                throw new Error(`${Utils.getMessage('FILE_READ_ERROR')}: ${readError.message || 'Unknown error'}`);
+            }
+            
+            if (!workbook) {
+                throw new Error(Utils.getMessage('FILE_CORRUPTED'));
+            }
             
             if (!Utils.isValidWorkbook(workbook)) {
                 throw new Error(Utils.getMessage('NO_SHEETS_FOUND'));
@@ -125,19 +145,17 @@ const FileHandler = {
     },
 
     /**
-     * Validate file
+     * Validate file size
      * @param {File} file - File to validate
      * @returns {string|null} Error message or null if valid
      */
-    validateFile(file) {
-        // Check file size
+    validateFileSize(file) {
+        if (file.size === 0) {
+            return Utils.getMessage('FILE_CORRUPTED');
+        }
+        
         if (file.size > CONSTANTS.MAX_FILE_SIZE) {
             return Utils.getMessage('FILE_TOO_LARGE');
-        }
-
-        // Check file type
-        if (!Utils.isSupportedFileType(file.name)) {
-            return Utils.getMessage('INVALID_FILE_TYPE');
         }
 
         return null;
@@ -146,8 +164,9 @@ const FileHandler = {
     /**
      * Display file information
      * @param {File} file - File object
+     * @param {Object} validation - Validation result (optional)
      */
-    displayFileInfo(file) {
+    displayFileInfo(file, validation = null) {
         const { FILE_INFO, FILE_NAME, FILE_SIZE, FILE_DATE } = CONSTANTS.ELEMENTS;
         
         const fileInfoEl = Utils.getElement(FILE_INFO);

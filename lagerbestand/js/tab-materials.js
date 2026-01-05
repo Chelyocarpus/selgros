@@ -391,7 +391,7 @@ UIManager.prototype.addMaterial = function() {
         // Refresh list
         this.renderMaterialsList();
 
-        this.showToast(`<i class="fa-solid fa-plus"></i> Material ${code} added successfully! Capacity set to ${capacity}.`, 'success', 'Added');
+        this.showToast(`<i class="fa-solid fa-plus"></i> Material ${SecurityUtils.escapeHTML(String(code))} added successfully! Capacity set to ${Number(capacity)}.`, 'success', 'Added');
     } catch (error) {
         this.showToast('Error adding material: ' + SecurityUtils.escapeHTML(error.message), 'error');
     }
@@ -1954,14 +1954,14 @@ UIManager.prototype.saveGroup = function(groupId) {
         // Edit existing group
         success = this.dataManager.updateGroup(groupId, { name, description, color });
         if (success) {
-            this.showToast(`Group "${name}" updated successfully!`, 'success');
+            this.showToast(`Group "${SecurityUtils.escapeHTML(name)}" updated successfully!`, 'success');
         }
     } else {
         // Create new group
         const newGroupId = this.dataManager.createGroup(name, description, color);
         if (newGroupId) {
             success = true;
-            this.showToast(`Group "${name}" created successfully!`, 'success');
+            this.showToast(`Group "${SecurityUtils.escapeHTML(name)}" created successfully!`, 'success');
         }
     }
     
