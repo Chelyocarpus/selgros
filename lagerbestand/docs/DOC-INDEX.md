@@ -122,6 +122,22 @@ Welcome to the Warehouse Early Warning System documentation! This file helps you
 
 ---
 
+### <a name="api-batching"></a>⚡ API-BATCHING.md
+**Purpose**: GraphQL operation batching and API optimization  
+**Best for**: Developers, performance optimization  
+**Contains**:
+- Operation batching overview
+- Performance metrics (95% API call reduction)
+- Configuration options
+- API reference for batching methods
+- How it works (technical details)
+- Monitoring and debugging
+- Best practices and edge cases
+
+**Read this if**: You want to understand how API call optimization works or need to configure batching behavior
+
+---
+
 ## 🎯 Quick Navigation
 
 ### By Role
@@ -177,6 +193,12 @@ Welcome to the Warehouse Early Warning System documentation! This file helps you
 - [DATA-PERSISTENCE.md](DATA-PERSISTENCE.md) - Local storage layers
 - [CLOUD-SYNC.md](CLOUD-SYNC.md) - Cloud synchronization setup
 - [CROSS-TAB-SYNC.md](CROSS-TAB-SYNC.md) - Multi-tab synchronization
+- [API-BATCHING.md](#api-batching) - GraphQL operation batching and optimization
+
+### Performance
+- [PERFORMANCE.md](PERFORMANCE.md) - Performance optimizations and caching
+- [API-BATCHING.md](#api-batching) - API call reduction strategies
+- [QUICK-REFERENCE.md](QUICK-REFERENCE.md) - Keyboard shortcuts and tips
 
 ---
 
