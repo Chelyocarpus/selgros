@@ -108,6 +108,9 @@ class CloudSyncManager {
         const previousEnabled = this.settings.enabled;
         
         this.settings = { ...this.settings, ...newSettings };
+        // Reset stale status/errors after settings changes so UI does not keep showing old failures
+        this.settings.lastSyncStatus = null;
+        this.syncErrors = [];
         this.saveSettings();
         this.setupAutoSync();
         
@@ -317,8 +320,30 @@ class CloudSyncManager {
             throw new Error(`File "${filename}" not found in gist`);
         }
 
-        const { content } = response.files[filename];
-        const backupData = JSON.parse(content);
+        const file = response.files[filename];
+        let content;
+
+        // GitHub API truncates content over ~1MB - fetch raw URL instead
+        if (file.truncated) {
+            console.log('CloudSync: Gist content truncated, fetching raw URL...');
+            const rawResponse = await fetch(file.raw_url);
+            
+            if (!rawResponse.ok) {
+                throw new Error(`Failed to fetch raw gist content: ${rawResponse.status}`);
+            }
+            
+            content = await rawResponse.text();
+        } else {
+            content = file.content;
+        }
+
+        let backupData;
+        try {
+            backupData = JSON.parse(content);
+        } catch (parseError) {
+            console.error('CloudSync: JSON parse error. Content length:', content?.length, 'First 100 chars:', content?.substring(0, 100));
+            throw new Error(`Failed to parse cloud data: ${parseError.message}. Data may be corrupted or too large.`);
+        }
 
         // Validate and import
         const validation = this.dataManager.validateBackup(backupData);
@@ -714,6 +739,11 @@ class CloudSyncManager {
     // Setup beforeunload handler to warn about unsynced changes
     setupBeforeUnloadHandler() {
         window.addEventListener('beforeunload', (e) => {
+            // Skip warning when GitHub Projects is the primary backend (saves are immediate)
+            if (this.dataManager && this.dataManager.storageBackend === 'github') {
+                return;
+            }
+            
             // Only show warning if cloud sync is enabled and there are unsynced changes
             if (this.settings.enabled && 
                 this.settings.provider !== 'none' && 

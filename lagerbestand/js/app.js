@@ -132,42 +132,52 @@ function showKeyboardShortcuts() {
 }
 
 // Initialize on DOM load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Initialize performance monitoring and memory management
     PerformanceUtils.init();
-    
-    // Set initial language and update HTML lang attribute
-    const currentLang = languageManager.getCurrentLanguage();
-    document.documentElement.lang = currentLang;
-    document.getElementById('languageSelect').value = currentLang;
-    
-    // Update UI language
-    ui.updateLanguage();
-    
-    // Render modals (needed globally)
-    renderMaterialModal();
-    renderViewReportModal();
-    
-    // Initialize cloud sync early to track all changes (lightweight operation)
-    ui.initCloudSync();
-    
-    // Initialize only the active tab (Check Stock) on load
-    renderCheckStockTab();
-    tabsInitialized.check = true;
-    
-    // Initialize undo/redo buttons (lightweight operation)
-    ui.updateUndoRedoButtons();
-    
-    // Setup drag and drop
-    setupDragAndDrop();
-    
-    // Setup keyboard shortcuts
-    setupKeyboardShortcuts();
-    
-    // Setup tabs scroll indicator
-    setupTabsScrollIndicator();
-    
-    console.log('[Performance] Initial load complete - other tabs will load on demand');
+
+    ui.showLoading(languageManager.t('initializingData'));
+
+    try {
+        // Wait for data manager to initialize
+        await dataManager.waitForInitialization();
+        console.log('[Performance] Data Manager initialization complete');
+        
+        // Set initial language and update HTML lang attribute
+        const currentLang = languageManager.getCurrentLanguage();
+        document.documentElement.lang = currentLang;
+        document.getElementById('languageSelect').value = currentLang;
+        
+        // Update UI language
+        ui.updateLanguage();
+        
+        // Render modals (needed globally)
+        renderMaterialModal();
+        renderViewReportModal();
+        
+        // Initialize cloud sync early to track all changes (lightweight operation)
+        ui.initCloudSync();
+        
+        // Initialize only the active tab (Check Stock) on load
+        renderCheckStockTab();
+        tabsInitialized.check = true;
+        
+        // Initialize undo/redo buttons (lightweight operation)
+        ui.updateUndoRedoButtons();
+        
+        // Setup drag and drop
+        setupDragAndDrop();
+        
+        // Setup keyboard shortcuts
+        setupKeyboardShortcuts();
+        
+        // Setup tabs scroll indicator
+        setupTabsScrollIndicator();
+        
+        console.log('[Performance] Initial load complete - other tabs will load on demand');
+    } finally {
+        ui.hideLoading();
+    }
 });
 
 // Cleanup on page unload to prevent memory leaks

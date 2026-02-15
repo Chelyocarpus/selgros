@@ -90,6 +90,38 @@ Welcome to the Warehouse Early Warning System documentation! This file helps you
 
 ---
 
+### <a name="github-projects"></a>☁️ GITHUB-PROJECTS-INTEGRATION.md
+**Purpose**: Complete guide to GitHub Projects cloud backend  
+**Best for**: Teams, multi-device users, cloud sync users  
+**Contains**:
+- Setup and configuration guide
+- Real-time collaboration features
+- Conflict resolution strategies
+- API reference and architecture
+- Troubleshooting and best practices
+- Security considerations
+- Performance metrics
+
+**Read this if**: You want to use GitHub Projects as your database or enable team collaboration
+
+---
+
+### <a name="storage-architecture"></a>🗄️ STORAGE-ARCHITECTURE.md
+**Purpose**: Clear explanation of all storage options  
+**Best for**: New users, anyone confused about storage  
+**Contains**:
+- Visual storage diagram
+- Comparison of Local vs Cloud vs Backup
+- Clear distinction between Gist and Projects
+- Common scenarios and recommendations
+- Migration guide
+- FAQ and troubleshooting
+- Pro tips
+
+**Read this if**: You're confused about the difference between storage options or need to choose the right storage backend
+
+---
+
 ## 🎯 Quick Navigation
 
 ### By Role
@@ -265,6 +297,12 @@ This documentation is designed to be:
 | "Which file do I edit?" | FILE-MAP.md |
 | "How does it work?" | FILE-ORGANIZATION.md |
 | "Show me a diagram" | ARCHITECTURE.md |
+| "What's the difference between storage options?" | STORAGE-ARCHITECTURE.md |
+| "Should I use Local or Cloud storage?" | STORAGE-ARCHITECTURE.md |
+| "What is GitHub Gist vs Projects?" | STORAGE-ARCHITECTURE.md |
+| "How do I enable cloud sync?" | GITHUB-PROJECTS-INTEGRATION.md |
+| "How do I resolve conflicts?" | GITHUB-PROJECTS-INTEGRATION.md |
+| "Can multiple people use this?" | GITHUB-PROJECTS-INTEGRATION.md |
 | "Where do I start?" | This file! |
 
 ---
@@ -277,6 +315,7 @@ You now have comprehensive documentation covering:
 - ✅ Developer reference
 - ✅ Architecture guide
 - ✅ Visual diagrams
+- ✅ Cloud sync & collaboration
 - ✅ Project summary
 - ✅ This index
 
@@ -284,5 +323,5 @@ You now have comprehensive documentation covering:
 
 ---
 
-*Last updated: 2025-10-02*  
+*Last updated: 2026-02-15*  
 *Documentation maintained with ❤️*
