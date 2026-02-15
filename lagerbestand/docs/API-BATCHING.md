@@ -80,9 +80,28 @@ this.batchConfig = {
     enabled: true,              // Enable/disable batching
     debounceMs: 100,           // Wait time to collect operations
     maxBatchSize: 20,          // Max operations per batch
-    immediateOperations: []    // Operations that skip batching
+    immediateOperations: []    // Operation types that bypass batching
 };
 ```
+
+### Immediate Operations
+
+Operations listed in `immediateOperations` array bypass batching and execute immediately. This is useful for time-sensitive or critical operations.
+
+```javascript
+// Configure specific operation types to bypass batching
+this.batchConfig.immediateOperations = ['delete', 'updateField'];
+
+// Now these operations execute immediately
+await this.deleteProjectItem('item-id');        // Executes immediately
+await this.updateItemFieldValue('id', 'field'); // Executes immediately
+await this.createProjectItem('title', 'body');  // Still batched
+```
+
+**Use cases:**
+- **Critical operations** that need immediate feedback
+- **Time-sensitive updates** that can't wait for debounce
+- **Operations with dependencies** that must complete before next step
 
 ### Adjusting Debounce Time
 

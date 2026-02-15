@@ -298,8 +298,8 @@ class GitHubProjectsDBManager {
                 timestamp: Date.now()
             };
             
-            // Immediate execution for critical operations
-            if (immediate || !this.batchConfig.enabled) {
+            // Immediate execution for critical operations or operations in immediateOperations list
+            if (immediate || !this.batchConfig.enabled || this.batchConfig.immediateOperations.includes(type)) {
                 this.executeImmediateOperation(operation);
                 return;
             }
@@ -332,15 +332,19 @@ class GitHubProjectsDBManager {
             switch (operation.type) {
                 case 'create':
                     result = await this.createProjectItemDirect(operation.params.title, operation.params.body);
+                    this.invalidateProjectItemsCache();
                     break;
                 case 'update':
                     result = await this.updateProjectItemDirect(operation.params.itemId, operation.params.title, operation.params.body);
+                    this.invalidateProjectItemsCache();
                     break;
                 case 'delete':
                     result = await this.deleteProjectItemDirect(operation.params.itemId);
+                    this.invalidateProjectItemsCache();
                     break;
                 case 'updateField':
                     result = await this.updateItemFieldValueDirect(operation.params.itemId, operation.params.fieldId, operation.params.value);
+                    // Field updates don't affect projectItems cache structure
                     break;
                 default:
                     throw new Error(`Unknown operation type: ${operation.type}`);
@@ -498,7 +502,14 @@ class GitHubProjectsDBManager {
         // Resolve individual operations with their results
         operations.forEach(op => {
             try {
-                const opResult = result[op.alias];
+                // Security: Validate alias format to prevent property injection
+                if (!op.alias || typeof op.alias !== 'string' || !/^(create|update|delete|field)\d+$/.test(op.alias)) {
+                    op.reject(new Error(`Invalid operation alias: ${op.alias}`));
+                    return;
+                }
+                
+                // Safely access result property
+                const opResult = Object.prototype.hasOwnProperty.call(result, op.alias) ? result[op.alias] : null;
                 if (opResult) {
                     if (op.type === 'create') {
                         op.resolve(opResult.projectItem);
