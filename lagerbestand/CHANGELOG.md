@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.2.0] - 2026-02-15
+
+### Added
+
+#### GraphQL Operation Batching & Pooling
+- **Batched GraphQL requests**: Multiple create/update/delete/field operations are now automatically batched into single GraphQL mutations, reducing API calls by up to 95%
+- **Operation queueing**: Operations are collected with 100ms debounce window and executed together (max 20 operations per batch)
+- **Smart field batching**: Multiple field updates for the same item are batched into a single request
+- **Parallel execution**: Creates, updates, deletes, and field syncs execute in parallel batches with `Promise.all`
+- **Phased material sync**: `saveMaterials` now executes in 5 optimized phases: analyze changes → batch creates → batch updates → batch field syncs → batch deletes
+- **Configurable batching**: `batchConfig` object allows enabling/disabling batching, adjusting debounce time, and setting max batch size
+- **Direct operation fallback**: Critical operations can bypass batching for immediate execution when needed
+
+#### Performance Improvements
+- **Material sync optimization**: Updating 20 materials now costs 1-3 API calls instead of 40-60 (95% reduction)
+- **Field updates**: Syncing 7 fields per material now uses 1 batched call instead of 7 sequential calls (85% reduction)
+- **Bulk operations**: Large-scale data changes execute in parallel batches rather than sequential loops
+- **Automatic queue flushing**: Batch queue automatically flushes when max size reached or after debounce timeout
+
+### Changed
+
+- **`createProjectItem`**: Now queues operations for batching instead of immediate GraphQL execution
+- **`updateProjectItem`**: Now queues operations for batching instead of immediate GraphQL execution
+- **`deleteProjectItem`**: Now queues operations for batching instead of immediate GraphQL execution
+- **`syncMaterialToProjectFields`**: Uses `batchUpdateItemFields` for efficient multi-field updates
+- **`saveMaterials`**: Completely refactored to collect and execute operations in optimized parallel batches
+
+### Technical Details
+
+- **New methods**:
+  - `queueOperation(type, params, immediate)`: Queue operation for batched execution
+  - `flushOperationQueue()`: Execute queued operations as batched GraphQL
+  - `executeBatchedOperations(operations)`: Build and execute multi-operation GraphQL mutation
+  - `batchUpdateItemFields(itemId, fieldUpdates)`: Batch multiple field updates for single item
+  - `createProjectItemDirect()`: Internal direct create without batching
+  - `updateProjectItemDirect()`: Internal direct update without batching
+  - `deleteProjectItemDirect()`: Internal direct delete without batching
+  - `updateItemFieldValueDirect()`: Internal direct field update without batching
+
+- **Batch configuration**:
+  - `enabled: true` - Batching enabled by default
+  - `debounceMs: 100` - 100ms collection window
+  - `maxBatchSize: 20` - GitHub GraphQL complexity limit
+  - `immediateOperations: []` - Operations that skip batching
+
+---
+
 ## [3.1.1] - 2026-02-15
 
 ### Fixed

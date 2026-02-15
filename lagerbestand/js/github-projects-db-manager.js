@@ -78,6 +78,20 @@ class GitHubProjectsDBManager {
             resetTime: null
         };
         
+        // Operation batching/pooling for API call optimization
+        this.batchConfig = {
+            enabled: true, // Enable batching by default
+            debounceMs: 100, // Wait 100ms to collect operations
+            maxBatchSize: 20, // Max operations per batch (GitHub limit)
+            immediateOperations: ['getProjectId', 'getProjectFields'] // Critical operations that skip batching
+        };
+        
+        this.operationQueue = {
+            pending: [], // Queued operations
+            timeout: null, // Debounce timer
+            processing: false // Is batch currently processing
+        };
+        
         // Initialize
         this.init();
     }
@@ -264,6 +278,398 @@ class GitHubProjectsDBManager {
         }
     }
     
+    // =================== BATCHING/POOLING OPERATIONS ===================
+    
+    /**
+     * Queue an operation for batched execution
+     * @param {string} type - Operation type ('create', 'update', 'delete', 'updateField')
+     * @param {object} params - Operation parameters
+     * @param {boolean} immediate - Execute immediately without batching
+     * @returns {Promise} - Resolves when operation completes
+     */
+    queueOperation(type, params, immediate = false) {
+        return new Promise((resolve, reject) => {
+            const operation = {
+                id: `op_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                type,
+                params,
+                resolve,
+                reject,
+                timestamp: Date.now()
+            };
+            
+            // Immediate execution for critical operations or operations in immediateOperations list
+            if (immediate || !this.batchConfig.enabled || this.batchConfig.immediateOperations.includes(type)) {
+                this.executeImmediateOperation(operation);
+                return;
+            }
+            
+            // Add to queue
+            this.operationQueue.pending.push(operation);
+            
+            // Reset debounce timer
+            clearTimeout(this.operationQueue.timeout);
+            
+            // Schedule batch execution
+            this.operationQueue.timeout = setTimeout(() => {
+                this.flushOperationQueue();
+            }, this.batchConfig.debounceMs);
+            
+            // Force flush if max batch size reached
+            if (this.operationQueue.pending.length >= this.batchConfig.maxBatchSize) {
+                clearTimeout(this.operationQueue.timeout);
+                this.flushOperationQueue();
+            }
+        });
+    }
+    
+    /**
+     * Execute a single operation immediately
+     */
+    async executeImmediateOperation(operation) {
+        try {
+            let result;
+            switch (operation.type) {
+                case 'create':
+                    result = await this.createProjectItemDirect(operation.params.title, operation.params.body);
+                    this.invalidateProjectItemsCache();
+                    break;
+                case 'update':
+                    result = await this.updateProjectItemDirect(operation.params.itemId, operation.params.title, operation.params.body);
+                    this.invalidateProjectItemsCache();
+                    break;
+                case 'delete':
+                    result = await this.deleteProjectItemDirect(operation.params.itemId);
+                    this.invalidateProjectItemsCache();
+                    break;
+                case 'updateField':
+                    result = await this.updateItemFieldValueDirect(operation.params.itemId, operation.params.fieldId, operation.params.value);
+                    // Field updates don't affect projectItems cache structure
+                    break;
+                default:
+                    throw new Error(`Unknown operation type: ${operation.type}`);
+            }
+            operation.resolve(result);
+        } catch (error) {
+            operation.reject(error);
+        }
+    }
+    
+    /**
+     * Flush the operation queue and execute as batched GraphQL
+     */
+    async flushOperationQueue() {
+        if (this.operationQueue.processing || this.operationQueue.pending.length === 0) {
+            return;
+        }
+        
+        this.operationQueue.processing = true;
+        const operations = [...this.operationQueue.pending];
+        this.operationQueue.pending = [];
+        
+        console.log(`GitHubProjects: Flushing batch with ${operations.length} operations`);
+        
+        try {
+            await this.executeBatchedOperations(operations);
+        } catch (error) {
+            console.error('GitHubProjects: Batch execution failed:', error);
+            // Reject all operations in batch
+            operations.forEach(op => op.reject(error));
+        } finally {
+            this.operationQueue.processing = false;
+            
+            // If operations were queued during processing, schedule another flush
+            if (this.operationQueue.pending.length > 0) {
+                // Clear any existing timer to avoid duplicate flushes
+                clearTimeout(this.operationQueue.timeout);
+                // Schedule immediate flush for waiting operations
+                this.operationQueue.timeout = setTimeout(() => {
+                    this.flushOperationQueue();
+                }, 0);
+            }
+        }
+    }
+    
+    /**
+     * Execute multiple operations in a single batched GraphQL request
+     */
+    async executeBatchedOperations(operations) {
+        if (operations.length === 0) return;
+        
+        const projectId = await this.getProjectId();
+        
+        // Group operations by type for efficient batching
+        const creates = operations.filter(op => op.type === 'create');
+        const updates = operations.filter(op => op.type === 'update');
+        const deletes = operations.filter(op => op.type === 'delete');
+        const fieldUpdates = operations.filter(op => op.type === 'updateField');
+        
+        // Build batched mutation
+        const mutations = [];
+        const variables = { projectId };
+        
+        // Add create operations
+        creates.forEach((op, index) => {
+            const alias = `create${index}`;
+            mutations.push(`
+                ${alias}: addProjectV2DraftIssue(input: {
+                    projectId: $projectId
+                    title: $${alias}_title
+                    body: $${alias}_body
+                }) {
+                    projectItem { id }
+                }
+            `);
+            variables[`${alias}_title`] = op.params.title;
+            variables[`${alias}_body`] = op.params.body;
+            op.alias = alias;
+        });
+        
+        // Add update operations
+        updates.forEach((op, index) => {
+            const alias = `update${index}`;
+            mutations.push(`
+                ${alias}: updateProjectV2DraftIssue(input: {
+                    draftIssueId: $${alias}_itemId
+                    title: $${alias}_title
+                    body: $${alias}_body
+                }) {
+                    draftIssue { id }
+                }
+            `);
+            variables[`${alias}_itemId`] = op.params.itemId;
+            variables[`${alias}_title`] = op.params.title;
+            variables[`${alias}_body`] = op.params.body;
+            op.alias = alias;
+        });
+        
+        // Add delete operations
+        deletes.forEach((op, index) => {
+            const alias = `delete${index}`;
+            mutations.push(`
+                ${alias}: deleteProjectV2Item(input: {
+                    projectId: $projectId
+                    itemId: $${alias}_itemId
+                }) {
+                    deletedItemId
+                }
+            `);
+            variables[`${alias}_itemId`] = op.params.itemId;
+            op.alias = alias;
+        });
+        
+        // Add field update operations
+        fieldUpdates.forEach((op, index) => {
+            const alias = `field${index}`;
+            mutations.push(`
+                ${alias}: updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId
+                    itemId: $${alias}_itemId
+                    fieldId: $${alias}_fieldId
+                    value: $${alias}_value
+                }) {
+                    projectV2Item { id }
+                }
+            `);
+            variables[`${alias}_itemId`] = op.params.itemId;
+            variables[`${alias}_fieldId`] = op.params.fieldId;
+            variables[`${alias}_value`] = op.params.value;
+            op.alias = alias;
+        });
+        
+        if (mutations.length === 0) return;
+        
+        // Build variable definitions for the mutation
+        const varDefs = [];
+        varDefs.push('$projectId: ID!');
+        creates.forEach((op, i) => {
+            varDefs.push(`$create${i}_title: String!`);
+            varDefs.push(`$create${i}_body: String!`);
+        });
+        updates.forEach((op, i) => {
+            varDefs.push(`$update${i}_itemId: ID!`);
+            varDefs.push(`$update${i}_title: String`);
+            varDefs.push(`$update${i}_body: String`);
+        });
+        deletes.forEach((op, i) => {
+            varDefs.push(`$delete${i}_itemId: ID!`);
+        });
+        fieldUpdates.forEach((op, i) => {
+            varDefs.push(`$field${i}_itemId: ID!`);
+            varDefs.push(`$field${i}_fieldId: ID!`);
+            varDefs.push(`$field${i}_value: ProjectV2FieldValue!`);
+        });
+        
+        const batchMutation = `
+            mutation BatchOperations(${varDefs.join(', ')}) {
+                ${mutations.join('\n')}
+            }
+        `;
+        
+        // Execute batched request
+        const result = await this.makeGraphQLRequest(batchMutation, variables);
+        
+        // Resolve individual operations with their results
+        operations.forEach(op => {
+            try {
+                // Security: Validate alias format to prevent property injection
+                if (!op.alias || typeof op.alias !== 'string' || !/^(create|update|delete|field)\d+$/.test(op.alias)) {
+                    op.reject(new Error(`Invalid operation alias: ${op.alias}`));
+                    return;
+                }
+                
+                // Safely access result property
+                const opResult = Object.prototype.hasOwnProperty.call(result, op.alias) ? result[op.alias] : null;
+                if (opResult) {
+                    if (op.type === 'create') {
+                        op.resolve(opResult.projectItem);
+                    } else if (op.type === 'update') {
+                        op.resolve(opResult.draftIssue);
+                    } else if (op.type === 'delete') {
+                        op.resolve({ deletedItemId: opResult.deletedItemId });
+                    } else if (op.type === 'updateField') {
+                        op.resolve(opResult.projectV2Item);
+                    }
+                } else {
+                    op.reject(new Error(`No result for operation ${op.alias}`));
+                }
+            } catch (error) {
+                op.reject(error);
+            }
+        });
+        
+        // Invalidate cache after batch modifications
+        if (creates.length > 0 || updates.length > 0 || deletes.length > 0) {
+            this.invalidateProjectItemsCache();
+        }
+        
+        console.log(`GitHubProjects: Batch completed - ${creates.length} created, ${updates.length} updated, ${deletes.length} deleted, ${fieldUpdates.length} fields updated`);
+    }
+    
+    /**
+     * Batch update multiple fields for a single item
+     */
+    async batchUpdateItemFields(itemId, fieldUpdates) {
+        if (!fieldUpdates || fieldUpdates.length === 0) return;
+        
+        console.log(`GitHubProjects: Batch updating ${fieldUpdates.length} fields for item ${itemId}`);
+        
+        // Queue all field updates at once
+        const promises = fieldUpdates.map(update => 
+            this.queueOperation('updateField', {
+                itemId,
+                fieldId: update.fieldId,
+                value: update.value
+            })
+        );
+        
+        // Wait for all to complete
+        const results = await Promise.all(promises);
+        return results;
+    }
+    
+    // =================== DIRECT OPERATIONS (used internally) ===================
+    
+    async createProjectItemDirect(title, body) {
+        const projectId = await this.getProjectId();
+        
+        const mutation = `
+            mutation($projectId: ID!, $title: String!, $body: String!) {
+                addProjectV2DraftIssue(input: {
+                    projectId: $projectId
+                    title: $title
+                    body: $body
+                }) {
+                    projectItem {
+                        id
+                    }
+                }
+            }
+        `;
+        
+        const data = await this.makeGraphQLRequest(mutation, {
+            projectId,
+            title,
+            body
+        });
+        
+        return data.addProjectV2DraftIssue.projectItem;
+    }
+    
+    async updateProjectItemDirect(itemId, title, body) {
+        const mutation = `
+            mutation($draftIssueId: ID!, $title: String, $body: String) {
+                updateProjectV2DraftIssue(input: {
+                    draftIssueId: $draftIssueId
+                    title: $title
+                    body: $body
+                }) {
+                    draftIssue {
+                        id
+                    }
+                }
+            }
+        `;
+        
+        const data = await this.makeGraphQLRequest(mutation, {
+            draftIssueId: itemId,
+            title,
+            body
+        });
+        
+        return data.updateProjectV2DraftIssue.draftIssue;
+    }
+    
+    async deleteProjectItemDirect(itemId) {
+        const projectId = await this.getProjectId();
+        
+        const mutation = `
+            mutation($projectId: ID!, $itemId: ID!) {
+                deleteProjectV2Item(input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                }) {
+                    deletedItemId
+                }
+            }
+        `;
+        
+        const data = await this.makeGraphQLRequest(mutation, {
+            projectId,
+            itemId
+        });
+        
+        return data.deleteProjectV2Item;
+    }
+    
+    async updateItemFieldValueDirect(itemId, fieldId, value) {
+        const projectId = await this.getProjectId();
+        
+        const mutation = `
+            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValue!) {
+                updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: $value
+                }) {
+                    projectV2Item {
+                        id
+                    }
+                }
+            }
+        `;
+        
+        const data = await this.makeGraphQLRequest(mutation, {
+            projectId,
+            itemId,
+            fieldId,
+            value
+        });
+        
+        return data.updateProjectV2ItemFieldValue.projectV2Item;
+    }
+    
     getRateLimitStatus() {
         return {
             remaining: this.rateLimiter.remaining,
@@ -421,60 +827,13 @@ class GitHubProjectsDBManager {
     }
     
     async createProjectItem(title, body, fieldValues = {}) {
-        const projectId = await this.getProjectId();
-        
-        const mutation = `
-            mutation($projectId: ID!, $title: String!, $body: String!) {
-                addProjectV2DraftIssue(input: {
-                    projectId: $projectId
-                    title: $title
-                    body: $body
-                }) {
-                    projectItem {
-                        id
-                    }
-                }
-            }
-        `;
-        
-        const data = await this.makeGraphQLRequest(mutation, {
-            projectId,
-            title,
-            body
-        });
-        
-        // Invalidate projectItems cache after creating a new item
-        this.invalidateProjectItemsCache();
-        
-        return data.addProjectV2DraftIssue.projectItem;
+        // Use batching system for better performance
+        return await this.queueOperation('create', { title, body });
     }
     
     async updateProjectItem(itemId, title, body) {
-        // itemId must be a DraftIssue ID (DI_...), not a ProjectItem ID (PVTI_...)
-        const mutation = `
-            mutation($draftIssueId: ID!, $title: String, $body: String) {
-                updateProjectV2DraftIssue(input: {
-                    draftIssueId: $draftIssueId
-                    title: $title
-                    body: $body
-                }) {
-                    draftIssue {
-                        id
-                    }
-                }
-            }
-        `;
-        
-        const data = await this.makeGraphQLRequest(mutation, {
-            draftIssueId: itemId,
-            title,
-            body
-        });
-        
-        // Invalidate projectItems cache after updating an item
-        this.invalidateProjectItemsCache();
-        
-        return data.updateProjectV2DraftIssue;
+        // Use batching system for better performance
+        return await this.queueOperation('update', { itemId, title, body });
     }
     
     // =================== CUSTOM FIELDS ===================
@@ -727,16 +1086,21 @@ class GitHubProjectsDBManager {
                 ? fieldMappings.filter(m => onlyFields.includes(m.fieldName))
                 : fieldMappings;
             
-            // Update each field if it exists in the project
+            // Build batch field updates
+            const fieldUpdates = [];
             for (const mapping of mappingsToSync) {
                 const field = fields[mapping.fieldName];
                 if (field) {
-                    try {
-                        await this.updateItemFieldValue(itemId, field.id, mapping.value);
-                    } catch (error) {
-                        console.warn(`GitHubProjects: Could not update field "${mapping.fieldName}":`, error.message);
-                    }
+                    fieldUpdates.push({
+                        fieldId: field.id,
+                        value: mapping.value
+                    });
                 }
+            }
+            
+            // Execute as batched operation for better performance
+            if (fieldUpdates.length > 0) {
+                await this.batchUpdateItemFields(itemId, fieldUpdates);
             }
             
             console.log(`GitHubProjects: Synced material ${material.code} fields: ${mappingsToSync.map(m => m.fieldName).join(', ')}`);
@@ -746,28 +1110,8 @@ class GitHubProjectsDBManager {
     }
     
     async deleteProjectItem(itemId) {
-        const projectId = await this.getProjectId();
-        
-        const mutation = `
-            mutation($projectId: ID!, $itemId: ID!) {
-                deleteProjectV2Item(input: {
-                    projectId: $projectId
-                    itemId: $itemId
-                }) {
-                    deletedItemId
-                }
-            }
-        `;
-        
-        const data = await this.makeGraphQLRequest(mutation, {
-            projectId,
-            itemId
-        });
-        
-        // Invalidate projectItems cache after deleting an item
-        this.invalidateProjectItemsCache();
-        
-        return data.deleteProjectV2Item;
+        // Use batching system for better performance
+        return await this.queueOperation('delete', { itemId });
     }
     
     // =================== DATA SERIALIZATION ===================
@@ -842,14 +1186,17 @@ class GitHubProjectsDBManager {
                     }
                 });
                 
-                // Create/update each material — only sync fields for new or changed items
+                // Create/update each material — collect operations for batching
                 let created = 0, updated = 0, skipped = 0;
+                const updateOperations = [];
+                const createOperations = [];
+                const fieldSyncOperations = [];
                 
+                // Phase 1: Analyze changes and prepare operations
                 for (const [code, material] of Object.entries(materialsObj)) {
                     const title = `material_${code}`;
                     const body = JSON.stringify(material, null, 2);
                     
-                    let itemId;
                     if (existingMap[code]) {
                         // Check if data actually changed before updating
                         const existingBody = existingMap[code].content?.body;
@@ -858,44 +1205,109 @@ class GitHubProjectsDBManager {
                             continue; // No change — skip API call entirely
                         }
                         
-                        // Update existing — body + changed custom fields
-                        await this.updateProjectItem(existingMap[code].content.id, title, body);
-                        
-                        // Detect which display fields changed and sync them
-                        try {
-                            const oldData = JSON.parse(existingBody || '{}');
-                            const changedFields = [];
-                            if (oldData.group !== material.group) changedFields.push('Group');
-                            if (oldData.name !== material.name) changedFields.push('Material Name');
-                            if (oldData.capacity !== material.capacity) changedFields.push('MKT Capacity');
-                            if (oldData.promoCapacity !== material.promoCapacity) changedFields.push('Promo Capacity');
-                            if (oldData.promoActive !== material.promoActive) changedFields.push('Promo Active');
-                            if (changedFields.length > 0) {
-                                await this.syncMaterialToProjectFields(existingMap[code].id, material, changedFields);
-                            }
-                        } catch (fieldErr) {
-                            console.warn(`GitHubProjects: Could not sync changed fields for ${code}:`, fieldErr.message);
-                        }
-                        
-                        updated++;
+                        // Prepare update operation
+                        updateOperations.push({
+                            code,
+                            itemId: existingMap[code].content.id,
+                            projectItemId: existingMap[code].id,
+                            title,
+                            body,
+                            material,
+                            existingBody
+                        });
                     } else {
-                        // Create new
-                        const result = await this.createProjectItem(title, body);
-                        itemId = result.id;
-                        created++;
-                        
-                        // Sync custom fields only on creation (for GitHub Projects board display)
-                        await this.syncMaterialToProjectFields(itemId, material);
+                        // Prepare create operation
+                        createOperations.push({
+                            code,
+                            title,
+                            body,
+                            material
+                        });
                     }
                 }
                 
-                // Delete materials that no longer exist
+                // Phase 2: Execute creates in batch
+                if (createOperations.length > 0) {
+                    console.log(`GitHubProjects: Batching ${createOperations.length} material creates`);
+                    const createPromises = createOperations.map(op => 
+                        this.createProjectItem(op.title, op.body)
+                            .then(result => ({ ...op, itemId: result.id }))
+                    );
+                    const createResults = await Promise.all(createPromises);
+                    created = createResults.length;
+                    
+                    // Queue field syncs for new materials
+                    createResults.forEach(result => {
+                        fieldSyncOperations.push({
+                            itemId: result.itemId,
+                            material: result.material,
+                            onlyFields: null // Sync all fields for new items
+                        });
+                    });
+                }
+                
+                // Phase 3: Execute updates in batch
+                if (updateOperations.length > 0) {
+                    console.log(`GitHubProjects: Batching ${updateOperations.length} material updates`);
+                    const updatePromises = updateOperations.map(op => 
+                        this.updateProjectItem(op.itemId, op.title, op.body)
+                            .then(() => op)
+                    );
+                    await Promise.all(updatePromises);
+                    updated = updateOperations.length;
+                    
+                    // Detect changed fields for updates
+                    updateOperations.forEach(op => {
+                        try {
+                            const oldData = JSON.parse(op.existingBody || '{}');
+                            const changedFields = [];
+                            if (oldData.group !== op.material.group) changedFields.push('Group');
+                            if (oldData.name !== op.material.name) changedFields.push('Material Name');
+                            if (oldData.capacity !== op.material.capacity) changedFields.push('MKT Capacity');
+                            if (oldData.promoCapacity !== op.material.promoCapacity) changedFields.push('Promo Capacity');
+                            if (oldData.promoActive !== op.material.promoActive) changedFields.push('Promo Active');
+                            if (changedFields.length > 0) {
+                                fieldSyncOperations.push({
+                                    itemId: op.projectItemId,
+                                    material: op.material,
+                                    onlyFields: changedFields
+                                });
+                            }
+                        } catch (fieldErr) {
+                            console.warn(`GitHubProjects: Could not detect changed fields for ${op.code}:`, fieldErr.message);
+                        }
+                    });
+                }
+                
+                // Phase 4: Execute field syncs in batch
+                if (fieldSyncOperations.length > 0) {
+                    console.log(`GitHubProjects: Batching ${fieldSyncOperations.length} field sync operations`);
+                    const fieldPromises = fieldSyncOperations.map(op =>
+                        this.syncMaterialToProjectFields(op.itemId, op.material, op.onlyFields)
+                            .catch(err => console.warn(`GitHubProjects: Field sync failed:`, err.message))
+                    );
+                    await Promise.all(fieldPromises);
+                }
+                
+                // Phase 5: Delete materials that no longer exist (batched)
+                const deleteOperations = [];
                 for (const [code, item] of Object.entries(existingMap)) {
                     if (!materialsObj[code]) {
-                        await this.deleteProjectItem(item.id);
-                        console.log(`GitHubProjects: Deleted material ${code}`);
+                        deleteOperations.push({ code, itemId: item.id });
                     }
                 }
+                
+                if (deleteOperations.length > 0) {
+                    console.log(`GitHubProjects: Batching ${deleteOperations.length} material deletes`);
+                    const deletePromises = deleteOperations.map(op =>
+                        this.deleteProjectItem(op.itemId)
+                            .then(() => console.log(`GitHubProjects: Deleted material ${op.code}`))
+                    );
+                    await Promise.all(deletePromises);
+                }
+                
+                // Force flush any remaining queued operations
+                await this.flushOperationQueue();
                 
                 console.log(`GitHubProjects: Successfully synced materials — ${created} created, ${updated} updated, ${skipped} unchanged`);
             } else {
