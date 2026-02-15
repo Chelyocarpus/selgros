@@ -377,6 +377,16 @@ class GitHubProjectsDBManager {
             operations.forEach(op => op.reject(error));
         } finally {
             this.operationQueue.processing = false;
+            
+            // If operations were queued during processing, schedule another flush
+            if (this.operationQueue.pending.length > 0) {
+                // Clear any existing timer to avoid duplicate flushes
+                clearTimeout(this.operationQueue.timeout);
+                // Schedule immediate flush for waiting operations
+                this.operationQueue.timeout = setTimeout(() => {
+                    this.flushOperationQueue();
+                }, 0);
+            }
         }
     }
     
