@@ -4,8 +4,15 @@
 
 class DataManager {
     constructor() {
-        // Initialize Dexie database manager (primary storage)
-        this.dbManager = new DexieDBManager();
+        // Storage backend configuration
+        this.storageBackend = this.loadStorageBackendPreference();
+        
+        // Initialize database managers
+        this.dexieManager = new DexieDBManager();
+        this.githubManager = new GitHubProjectsDBManager();
+        
+        // Set active database manager based on preference
+        this.dbManager = this.getActiveDBManager();
         
         // Initialize action history for undo/redo
         this.actionHistory = [];
@@ -15,7 +22,7 @@ class DataManager {
         // Reference to cloud sync manager (set via setCloudSyncManager)
         this.cloudSyncManager = null;
         
-        // Load data from Dexie (with localStorage fallback)
+        // Load data from active database (with localStorage fallback)
         this.materials = {};
         this.archive = [];
         this.groups = {};
@@ -23,8 +30,82 @@ class DataManager {
         this.alertRules = null;
         this.storageTypeSettings = null;
         
-        // Async initialization
-        this.initializeData();
+        // Async initialization - wait for it to complete
+        this.initPromise = this.initializeData();
+    }
+    
+    // Wait for initialization to complete
+    async waitForInitialization() {
+        return this.initPromise;
+    }
+    
+    // Load storage backend preference from localStorage
+    loadStorageBackendPreference() {
+        try {
+            const preference = localStorage.getItem('storage_backend_preference');
+            return preference || 'dexie'; // Default to Dexie
+        } catch (error) {
+            console.warn('DataManager: Failed to load storage backend preference:', error);
+            return 'dexie';
+        }
+    }
+    
+    // Save storage backend preference to localStorage
+    saveStorageBackendPreference(backend) {
+        try {
+            localStorage.setItem('storage_backend_preference', backend);
+            this.storageBackend = backend;
+        } catch (error) {
+            console.error('DataManager: Failed to save storage backend preference:', error);
+        }
+    }
+    
+    // Get active database manager based on current preference
+    getActiveDBManager() {
+        if (this.storageBackend === 'github') {
+            return this.githubManager;
+        }
+        return this.dexieManager;
+    }
+    
+    // Switch storage backend
+    async switchStorageBackend(newBackend) {
+        if (newBackend !== 'dexie' && newBackend !== 'github') {
+            throw new Error('Invalid storage backend');
+        }
+        
+        // Save new preference
+        this.saveStorageBackendPreference(newBackend);
+        
+        // Update active database manager
+        this.dbManager = this.getActiveDBManager();
+        
+        // Reload data from new backend
+        await this.initializeData();
+        
+        console.log(`DataManager: Switched to ${newBackend} storage backend`);
+        return true;
+    }
+    
+    // Get current storage backend
+    getCurrentStorageBackend() {
+        return this.storageBackend;
+    }
+    
+    // Get all available storage backends with status
+    getAvailableStorageBackends() {
+        return {
+            dexie: {
+                name: 'IndexedDB (Dexie)',
+                available: this.dexieManager.checkAvailability(),
+                active: this.storageBackend === 'dexie'
+            },
+            github: {
+                name: 'GitHub Projects',
+                available: this.githubManager.checkAvailability(),
+                active: this.storageBackend === 'github'
+            }
+        };
     }
     
     // Set reference to cloud sync manager for change tracking
@@ -50,35 +131,91 @@ class DataManager {
     
     // Asynchronously load data from Dexie
     async initializeData() {
+        // Safe UI access helper — ui may not exist yet during initial construction
+        const safeShowLoading = (msg) => {
+            try { if (ui) ui.showLoading(msg); } catch (_) { /* ui not ready */ }
+        };
+        const safeHideLoading = () => {
+            try { if (ui) ui.hideLoading(); } catch (_) { /* ui not ready */ }
+        };
+        const safeT = (key, fallback) => {
+            try { return ui ? ui.t(key) : fallback; } catch (_) { return fallback; }
+        };
+
+        safeShowLoading(safeT('initializingData', 'Initializing data...'));
+        
         try {
             // Wait for Dexie to be ready (with timeout)
             const maxWaitTime = 2000; // 2 seconds
             const startTime = Date.now();
             
-            while (!this.dbManager.checkAvailability() && (Date.now() - startTime) < maxWaitTime) {
+            while (!this.dexieManager.checkAvailability() && (Date.now() - startTime) < maxWaitTime) {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
             
-            if (this.dbManager.checkAvailability()) {
-                // Load from Dexie
-                this.materials = await this.dbManager.loadMaterials().catch(() => ({}));
-                this.archive = await this.dbManager.loadArchive().catch(() => []);
-                this.groups = await this.dbManager.loadGroups().catch(() => ({}));
-                this.notes = await this.dbManager.loadNotes().catch(() => ({}));
-                this.alertRules = await this.dbManager.loadAlertRules().catch(() => null);
-                this.storageTypeSettings = await this.dbManager.loadStorageTypeSettings().catch(() => null);
+            const dexieReady = this.dexieManager.checkAvailability();
+            const isGitHubBackend = this.storageBackend === 'github';
+            
+            if (isGitHubBackend && dexieReady) {
+                // LOCAL-FIRST STRATEGY: Load from Dexie instantly, sync with GitHub in background
+                safeShowLoading(safeT('loadingLocalData', 'Loading local data...'));
                 
-                // Fallback to defaults if null
+                this.materials = await this.dexieManager.loadMaterials().catch(() => ({}));
+                this.archive = await this.dexieManager.loadArchive().catch(() => []);
+                this.groups = await this.dexieManager.loadGroups().catch(() => ({}));
+                this.notes = await this.dexieManager.loadNotes().catch(() => ({}));
+                this.alertRules = await this.dexieManager.loadAlertRules().catch(() => null);
+                this.storageTypeSettings = await this.dexieManager.loadStorageTypeSettings().catch(() => null);
+                
                 if (!this.alertRules) this.alertRules = this.getDefaultAlertRules();
                 if (!this.storageTypeSettings) this.storageTypeSettings = this.getDefaultStorageTypeSettings();
                 
-                console.log('DataManager: Loaded data from Dexie successfully');
+                const hasLocalData = Object.keys(this.materials).length > 0;
+                console.log(`DataManager: Loaded local mirror from Dexie (${Object.keys(this.materials).length} materials)`);
                 
-                // Set up cross-tab sync listener
+                // Set up cross-tab sync
+                this.setupCrossTabSync();
+                
+                // Trigger background sync with GitHub (non-blocking)
+                if (this.githubManager.checkAvailability()) {
+                    if (hasLocalData) {
+                        // Has local data — sync in background, don't block UI
+                        console.log('DataManager: Local data available, syncing with GitHub in background');
+                        this.syncLocalWithRemote().catch(err => {
+                            console.warn('DataManager: Background initial sync failed:', err.message);
+                        });
+                    } else {
+                        // No local data — must fetch from GitHub before showing UI
+                        safeShowLoading(safeT('loadingRemoteData', 'Loading data from GitHub...'));
+                        await this.syncLocalWithRemote();
+                    }
+                }
+            } else if (this.dbManager.checkAvailability()) {
+                // Standard Dexie-only or GitHub-without-Dexie path
+                safeShowLoading(safeT('loadingMaterials', 'Loading materials...'));
+                this.materials = await this.dbManager.loadMaterials().catch(() => ({}));
+                
+                safeShowLoading(safeT('loadingArchive', 'Loading archive...'));
+                this.archive = await this.dbManager.loadArchive().catch(() => []);
+                
+                safeShowLoading(safeT('loadingGroups', 'Loading groups...'));
+                this.groups = await this.dbManager.loadGroups().catch(() => ({}));
+                
+                safeShowLoading(safeT('loadingNotes', 'Loading notes...'));
+                this.notes = await this.dbManager.loadNotes().catch(() => ({}));
+                
+                safeShowLoading(safeT('loadingSettings', 'Loading settings...'));
+                this.alertRules = await this.dbManager.loadAlertRules().catch(() => null);
+                this.storageTypeSettings = await this.dbManager.loadStorageTypeSettings().catch(() => null);
+                
+                if (!this.alertRules) this.alertRules = this.getDefaultAlertRules();
+                if (!this.storageTypeSettings) this.storageTypeSettings = this.getDefaultStorageTypeSettings();
+                
+                console.log('DataManager: Loaded data from active backend successfully');
                 this.setupCrossTabSync();
             } else {
                 // Fallback to localStorage
-                console.warn('DataManager: Dexie not available, using localStorage fallback');
+                console.warn('DataManager: No database available, using localStorage fallback');
                 this.materials = this.loadMaterialsFromLocalStorage();
                 this.archive = this.loadArchiveFromLocalStorage();
                 this.groups = this.loadGroupsFromLocalStorage();
@@ -88,13 +225,96 @@ class DataManager {
             }
         } catch (error) {
             console.error('DataManager: Error during initialization:', error);
-            // Ultimate fallback to localStorage
             this.materials = this.loadMaterialsFromLocalStorage();
             this.archive = this.loadArchiveFromLocalStorage();
             this.groups = this.loadGroupsFromLocalStorage();
             this.notes = this.loadNotesFromLocalStorage();
             this.alertRules = this.loadAlertRulesFromLocalStorage();
             this.storageTypeSettings = this.loadStorageTypeSettingsFromLocalStorage();
+        }
+        
+        // Hide loading indicator
+        safeHideLoading();
+    }
+    
+    /**
+     * Sync local Dexie mirror with remote GitHub data.
+     * Fetches from GitHub API, updates in-memory state + Dexie mirror, re-renders UI.
+     */
+    async syncLocalWithRemote() {
+        if (!this.githubManager.checkAvailability()) return;
+        
+        try {
+            console.log('DataManager: Syncing local mirror with GitHub...');
+            
+            // Fetch fresh data from GitHub API
+            const remoteMaterials = await this.githubManager.loadMaterials().catch(() => null);
+            const remoteArchive = await this.githubManager.loadArchive().catch(() => null);
+            const remoteGroups = await this.githubManager.loadGroups().catch(() => null);
+            const remoteNotes = await this.githubManager.loadNotes().catch(() => null);
+            
+            let dataChanged = false;
+            
+            // Update in-memory state if remote has data
+            if (remoteMaterials && Object.keys(remoteMaterials).length > 0) {
+                this.materials = remoteMaterials;
+                dataChanged = true;
+            }
+            if (remoteArchive && remoteArchive.length > 0) {
+                this.archive = remoteArchive;
+                dataChanged = true;
+            }
+            if (remoteGroups && Object.keys(remoteGroups).length > 0) {
+                this.groups = remoteGroups;
+                dataChanged = true;
+            }
+            if (remoteNotes && Object.keys(remoteNotes).length > 0) {
+                this.notes = remoteNotes;
+                dataChanged = true;
+            }
+            
+            if (dataChanged) {
+                // Mirror to Dexie for next startup
+                await this.mirrorToLocalStorage();
+                
+                // Re-render UI if available
+                if (typeof ui !== 'undefined') {
+                    if (ui.renderMaterialsList) ui.renderMaterialsList();
+                    if (ui.renderGroupsList) ui.renderGroupsList();
+                    if (ui.renderNotesList) ui.renderNotesList();
+                }
+                
+                console.log('DataManager: Local mirror updated from GitHub');
+            } else {
+                console.log('DataManager: GitHub returned no data, keeping local');
+            }
+        } catch (error) {
+            console.error('DataManager: Failed to sync with GitHub:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Mirror current in-memory data to Dexie for fast local-first loading.
+     * Called after successful GitHub API fetches/saves.
+     */
+    async mirrorToLocalStorage() {
+        if (!this.dexieManager.checkAvailability()) return;
+        
+        try {
+            await Promise.all([
+                this.dexieManager.saveMaterials(this.materials).catch(e => 
+                    console.warn('DataManager: Failed to mirror materials to Dexie:', e.message)),
+                this.dexieManager.saveArchive(this.archive).catch(e => 
+                    console.warn('DataManager: Failed to mirror archive to Dexie:', e.message)),
+                this.dexieManager.saveGroups(this.groups).catch(e => 
+                    console.warn('DataManager: Failed to mirror groups to Dexie:', e.message)),
+                this.dexieManager.saveNotes(this.notes).catch(e => 
+                    console.warn('DataManager: Failed to mirror notes to Dexie:', e.message))
+            ]);
+            console.log('DataManager: Data mirrored to Dexie local storage');
+        } catch (error) {
+            console.warn('DataManager: Mirror to Dexie failed:', error.message);
         }
     }
     
@@ -107,50 +327,93 @@ class DataManager {
         this.dbManager.onSyncMessage(async (message) => {
             console.log('DataManager: Received sync message from another tab:', message.type);
             
+            const { data } = message;
+            
             try {
                 switch (message.type) {
                     case 'materials_updated':
-                    case 'material_saved':
-                    case 'material_deleted':
-                        // Reload materials from Dexie
-                        this.materials = await this.dbManager.loadMaterials();
-                        // Re-render materials tab if it's active and UI is available
+                        // Use broadcast data directly if available (no API call needed)
+                        this.materials = data?.materials || await this.dbManager.loadMaterials();
                         if (typeof ui !== 'undefined' && ui.renderMaterialsList) {
                             ui.renderMaterialsList();
                         }
                         break;
                         
                     case 'archive_updated':
-                        // Reload archive from Dexie
-                        this.archive = await this.dbManager.loadArchive();
-                        // Re-render archive tab if it's active and UI is available
+                        this.archive = data?.archive || await this.dbManager.loadArchive();
                         if (typeof ui !== 'undefined' && ui.renderArchiveList) {
                             ui.renderArchiveList();
                         }
                         break;
                         
                     case 'groups_updated':
-                        // Reload groups from Dexie
-                        this.groups = await this.dbManager.loadGroups();
-                        // Re-render materials list to show updated groups
-                        if (typeof ui !== 'undefined' && ui.renderMaterialsList) {
-                            ui.renderMaterialsList();
+                        this.groups = data?.groups || await this.dbManager.loadGroups();
+                        if (typeof ui !== 'undefined') {
+                            if (ui.renderMaterialsList) {
+                                ui.renderMaterialsList();
+                            }
+                            if (ui.renderGroupsList) {
+                                ui.renderGroupsList();
+                            }
                         }
                         break;
                         
                     case 'notes_updated':
-                        // Reload notes from Dexie
-                        this.notes = await this.dbManager.loadNotes();
-                        // Re-render notes list if available
+                        this.notes = data?.notes || await this.dbManager.loadNotes();
                         if (typeof ui !== 'undefined' && ui.renderNotesList) {
                             ui.renderNotesList();
                         }
                         break;
+                    
+                    case 'background_sync_complete':
+                        // Use snapshot data from broadcast if available
+                        if (data?.snapshot) {
+                            const { materials, groups, notes, archive } = data.snapshot;
+                            if (materials) this.materials = materials;
+                            if (groups) this.groups = groups;
+                            if (notes) this.notes = notes;
+                            if (archive) this.archive = archive;
+                        } else {
+                            // Fallback: reload from cache/API
+                            this.materials = await this.dbManager.loadMaterials().catch(() => ({}));
+                            this.archive = await this.dbManager.loadArchive().catch(() => []);
+                            this.groups = await this.dbManager.loadGroups().catch(() => ({}));
+                            this.notes = await this.dbManager.loadNotes().catch(() => ({}));
+                        }
+                        // Re-render active views
+                        if (typeof ui !== 'undefined') {
+                            if (ui.renderMaterialsList) ui.renderMaterialsList();
+                            if (ui.renderGroupsList) ui.renderGroupsList();
+                            if (ui.renderNotesList) ui.renderNotesList();
+                        }
+                        break;
+                    
+                    case 'conflicts_detected':
+                        // Show conflict notification to user
+                        if (typeof ui !== 'undefined' && ui.showToast) {
+                            const count = data?.count || 0;
+                            const msg = (typeof languageManager !== 'undefined')
+                                ? languageManager.t('syncConflictsFound').replace('{count}', count)
+                                : `${count} sync conflict(s) detected — review needed`;
+                            ui.showToast(msg, 'warning', 10000);
+                            if (ui.showConflictResolutionModal) {
+                                ui.showConflictResolutionModal();
+                            }
+                        }
+                        break;
                 }
                 
-                // Show toast notification
-                if (typeof ui !== 'undefined' && ui.showToast) {
-                    ui.showToast('📡 Data updated from another tab', 'info');
+                // Show toast notification for data changes
+                if (message.type !== 'conflicts_detected' && typeof ui !== 'undefined' && ui.showToast) {
+                    const syncMsg = (typeof languageManager !== 'undefined')
+                        ? languageManager.t('dataUpdatedFromTab') || 'Data updated from another tab'
+                        : 'Data updated from another tab';
+                    ui.showToast(syncMsg, 'info');
+                }
+                
+                // Mirror received data to Dexie for local-first loading
+                if (this.storageBackend === 'github' && message.type !== 'conflicts_detected') {
+                    this.mirrorToLocalStorage().catch(() => {});
                 }
             } catch (error) {
                 console.error('DataManager: Error handling sync message:', error);
@@ -245,9 +508,15 @@ class DataManager {
     // Save materials to Dexie (and localStorage as backup)
     async saveMaterials() {
         try {
-            // Primary: Save to Dexie
+            // Primary: Save to active backend
             if (this.dbManager.checkAvailability()) {
                 await this.dbManager.saveMaterials(this.materials);
+            }
+            
+            // Mirror to Dexie if GitHub is the active backend
+            if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                this.dexieManager.saveMaterials(this.materials).catch(e =>
+                    console.warn('DataManager: Dexie mirror failed for materials:', e.message));
             }
             
             // Backup: Save to localStorage
@@ -279,9 +548,15 @@ class DataManager {
             // Auto-cleanup before saving to prevent quota issues
             await this.cleanupArchiveIfNeeded();
             
-            // Primary: Save to Dexie
+            // Primary: Save to active backend
             if (this.dbManager.checkAvailability()) {
                 await this.dbManager.saveArchive(this.archive);
+            }
+            
+            // Mirror to Dexie if GitHub is the active backend
+            if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                this.dexieManager.saveArchive(this.archive).catch(e =>
+                    console.warn('DataManager: Dexie mirror failed for archive:', e.message));
             }
             
             // Backup: Save to localStorage (without raw data to save space)
@@ -433,9 +708,15 @@ class DataManager {
     // Save groups to Dexie (and localStorage as backup)
     async saveGroups() {
         try {
-            // Primary: Save to Dexie
+            // Primary: Save to active backend
             if (this.dbManager.checkAvailability()) {
                 await this.dbManager.saveGroups(this.groups);
+            }
+            
+            // Mirror to Dexie if GitHub is the active backend
+            if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                this.dexieManager.saveGroups(this.groups).catch(e =>
+                    console.warn('DataManager: Dexie mirror failed for groups:', e.message));
             }
             
             // Backup: Save to localStorage
@@ -462,9 +743,15 @@ class DataManager {
     // Save notes to Dexie (and localStorage as backup)
     async saveNotes() {
         try {
-            // Primary: Save to Dexie
+            // Primary: Save to active backend
             if (this.dbManager.checkAvailability()) {
                 await this.dbManager.saveNotes(this.notes);
+            }
+            
+            // Mirror to Dexie if GitHub is the active backend
+            if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                this.dexieManager.saveNotes(this.notes).catch(e =>
+                    console.warn('DataManager: Dexie mirror failed for notes:', e.message));
             }
             
             // Backup: Save to localStorage
@@ -1438,7 +1725,7 @@ class DataManager {
     // =================== MATERIAL GROUPS ===================
 
     // Create new group
-    createGroup(name, description = '', color = null) {
+    async createGroup(name, description = '', color = null) {
         if (!name || name.trim() === '') {
             throw new Error('Group name is required');
         }
@@ -1490,7 +1777,7 @@ class DataManager {
             color: color
         });
         
-        this.saveGroups();
+        await this.saveGroups();
         return groupId;
     }
 
@@ -1536,7 +1823,7 @@ class DataManager {
     }
 
     // Update group
-    updateGroup(groupId, updates) {
+    async updateGroup(groupId, updates) {
         if (this.groups[groupId]) {
             // Sanitize string fields if present
             const sanitizedUpdates = { ...updates };
@@ -1577,7 +1864,7 @@ class DataManager {
                 changes: changes.length > 0 ? changes.join(', ') : 'Aktualisiert'
             });
             
-            return this.saveGroups();
+            return await this.saveGroups();
         }
         return false;
     }

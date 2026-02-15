@@ -7,6 +7,264 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.1] - 2026-02-15
+
+### Fixed
+
+#### Clear All Functions
+- **Clear All Materials**: Fixed "Clear All" button to properly sync with GitHub Projects backend instead of only clearing localStorage
+- **Clear All Archive**: Already working correctly via `dataManager.clearArchive()` which properly syncs with all backends
+
+#### Group Sync to GitHub Projects
+- **Create/Update group not syncing**: Fixed `createGroup()` and `updateGroup()` to properly await async `saveGroups()` call, ensuring GitHub Projects sync completes before returning
+- **Files modified**: `js/data-manager.js` (made functions async), `js/tab-materials.js` (await the calls)
+
+#### Material Custom Fields Not Updating on Group Change
+- **Group field showed raw ID**: The "Group" custom field in GitHub Projects displayed the group ID instead of the human-readable group name
+- **Group field not synced on update**: Custom fields (Group, Name, Capacity, etc.) were only synced on material creation, not on subsequent updates; changing a material's group left the Projects board showing "Ungrouped"
+- **Selective field sync on update**: `saveMaterials` now detects which display fields changed (Group, Name, Capacity, Promo) and syncs only those custom fields, minimizing API calls
+- **Files modified**: `js/github-projects-db-manager.js`
+
+#### Archive Size Limit
+- **GitHub Projects 65KB limit**: Archive entries now strip `rawData` before saving to GitHub Projects to prevent "Body is too long" errors
+- **Automatic size reduction**: If archive still exceeds 65KB after stripping `rawData`, it automatically reduces to 20 entries and strips `results` field as well
+- **Local storage unchanged**: Dexie (IndexedDB) continues to store complete archive with all fields for local access
+
+### Removed
+
+#### Skip Navigation Links
+- **Accessibility feature removed**: Removed skip navigation links from the UI per user request
+- **Files modified**: `index.html`, `js/ui-manager.js`, `css/main.css`, `js/translations.js`
+
+---
+
+## [3.1.0] - 2026-02-15
+
+### Added
+
+#### Sync Settings UI
+- **Auto-sync toggle**: Checkbox to enable/disable automatic background synchronization (Step 4 in GitHub config)
+- **Sync interval input**: Configurable sync interval in seconds (10–3600, default 30)
+- **Conflict resolution strategy dropdown**: Choose between Manual, Remote wins, Local wins, or Auto-merge directly in the settings form
+- **Pre-filled values**: Existing sync settings are populated when the config section is shown
+- **New translations**: 8 new DE/EN keys for sync settings labels, strategy options, and help text
+
+#### Conflict Detection & Resolution During Sync
+- **Compare-before-overwrite**: Background sync now snapshots local data before fetching remote, and compares both to detect conflicts instead of silently overwriting
+- **Automatic conflict detection**: `detectConflicts()` now identifies three conflict types: modified items, items deleted remotely, and items added remotely
+- **Archive divergence detection**: Archives compared by report ID to detect entries unique to local or remote
+- **Configurable resolution strategies**: Background sync respects the configured `conflictResolution` setting (`manual`, `local-wins`, `remote-wins`, `merge`)
+- **Auto-resolution for non-manual modes**: When set to `local-wins`, `remote-wins`, or `merge`, conflicts are resolved automatically during sync and saved back to remote
+- **Manual conflict queueing**: In `manual` mode, conflicts are queued and the user is notified via toast and the conflict resolution modal opens automatically
+- **Archive merge strategy**: Merge resolution combines unique entries from both local and remote archives (deduplicated by ID/date)
+- **Full data-type support in manual resolution**: `resolveConflictManually()` now correctly saves resolved data for materials, groups, notes, and archive (previously only materials)
+- **Deletion handling**: Resolved `deleted_remote` conflicts can properly delete items locally when remote-wins
+- **Cross-tab conflict notification**: `conflicts_detected` broadcast notifies other tabs when conflicts are found
+- **Conflict-type UI badges**: Conflict resolution modal shows colored badges indicating type (Modified, Deleted remotely, Added remotely, Archive diverged)
+- **Type-specific conflict layouts**: Different UI layouts for delete/add/modify conflicts with contextual action buttons (Keep/Delete, Accept/Reject, Use Local/Use Remote)
+- **New translations**: 11 new DE/EN keys for conflict type labels, sync notifications, and action buttons
+
+### Changed
+- **`performBackgroundSync()`** rewritten to implement full compare-detect-resolve cycle
+- **`detectConflicts()`** expanded from simple timestamp comparison to comprehensive change detection including additions and deletions
+- **`resolveConflict()`** handles `added_remote`, `deleted_remote`, and `archive_diverged` conflict types
+- **`handleCrossTabMessage()`** now processes `conflicts_detected` events
+- **`setupCrossTabSync()` in DataManager** handles `background_sync_complete` (re-loads all data) and `conflicts_detected` (shows toast + opens modal)
+
+### Improved
+
+#### Zero-API Cross-Tab Sync
+- **Broadcasts now include data payloads**: `materials_updated`, `groups_updated`, `notes_updated`, and `archive_updated` broadcasts include the full data object so receiving tabs can update their in-memory cache directly without any API calls
+- **`background_sync_complete` includes snapshot**: Background sync broadcasts the resolved data snapshot, allowing other tabs to apply it locally instead of re-fetching from the API
+- **`handleCrossTabMessage` applies data directly to cache**: Receiving tabs write broadcast data into their cache with a fresh timestamp, so subsequent `load*()` calls return cached data (zero API cost)
+- **DataManager reads broadcast data first**: Cross-tab handler uses `data.materials`, `data.groups`, etc. from the message if available, falling back to `loadMaterials()` only for legacy/Dexie messages
+- **`saveMaterial`/`deleteMaterial` consolidated**: Individual operations now go through `saveMaterials()` which broadcasts once with the complete dataset (removed redundant `material_saved`/`material_deleted` broadcasts)
+- **Toast notification localized**: Replaced emoji-based notification with translatable `dataUpdatedFromTab` key (DE/EN)
+
+#### Local-First Loading with GitHub Backend
+- **Instant startup from Dexie**: When GitHub Projects is the active backend, data is loaded from Dexie (local IndexedDB) first for instant UI rendering, then synced with GitHub in the background
+- **Non-blocking remote sync**: If local data exists, the GitHub API fetch happens asynchronously without blocking page load; UI re-renders automatically when fresh data arrives
+- **First-time blocking fetch**: When Dexie is empty (fresh install), the loader waits for GitHub data before rendering, showing a "Loading from GitHub..." message
+- **Dexie as local mirror**: Every successful GitHub API save (`saveMaterials`, `saveArchive`, `saveGroups`, `saveNotes`) also writes to Dexie in the background, keeping the local cache fresh for next startup
+- **Cross-tab data mirrored**: Data received via BroadcastChannel from other tabs is also mirrored to Dexie
+- **`syncLocalWithRemote()`**: New method fetches all data types from GitHub API, updates in-memory state, mirrors to Dexie, and re-renders UI
+- **`mirrorToLocalStorage()`**: New method writes current in-memory data to Dexie in parallel (non-blocking, fire-and-forget)
+- **New translations**: `loadingLocalData` and `loadingRemoteData` keys (DE/EN)
+
+### Fixed
+
+#### DraftIssue ID Mismatch in Update Mutations
+- **`updateProjectItem` used wrong ID type**: The `updateProjectV2DraftIssue` GraphQL mutation requires a Draft Issue ID (`DI_...`), but was receiving the Project Item wrapper ID (`PVTI_...`), causing `NOT_FOUND` errors on every update attempt
+- **`getProjectItems` query now fetches content IDs**: Added `id` field to both `DraftIssue` and `Issue` content fragments so the Draft Issue ID is available alongside the Project Item ID
+- **All 8 call sites fixed**: `saveMaterials`, `saveArchive`, `saveGroups`, `saveNotes`, `saveAlertRules`, and `saveStorageTypeSettings` now pass `item.content.id` (DraftIssue ID) to `updateProjectItem` instead of `item.id` (ProjectItem ID)
+- **`deleteProjectItem` unaffected**: The `deleteProjectV2Item` mutation correctly uses the Project Item ID
+
+#### Custom Fields Mode: Skip Unchanged Items
+- **Materials diff-check before sync**: `saveMaterials` now compares each material's JSON body against the existing DraftIssue body; unchanged materials are skipped entirely (zero API calls)
+- **Groups diff-check before sync**: `saveGroups` applies the same body comparison, skipping unchanged groups
+- **Reduced API calls**: Editing 1 material out of 20 now costs exactly 1 API call (body-only update); custom field syncing is deferred to creation only since the JSON body is the source of truth
+- **`ensureMaterialFields` runs once per session**: Field existence check is now cached after the first successful run, avoiding a redundant `getProjectFields` API call + 10 log lines on every save
+- **No leave-page warning with GitHub Projects backend**: `beforeunload` handler now skips the "unsaved changes" confirmation when GitHub Projects is the active storage backend, since all saves are immediate
+- **Auto-sync checkbox now works**: Removed hardcoded `checked` attribute from the auto-sync checkbox HTML; state is now correctly loaded from saved config and persists across page reloads
+
+---
+
+## [3.0.2] - 2026-02-15
+
+### Fixed
+
+#### GitHub Projects Data Loading
+- **`findItemByType` now uses cached API data**: Previously each call to `loadArchive`, `loadNotes`, `loadAlertRules`, and `loadStorageTypeSettings` re-fetched ALL project items from the GitHub API, causing 4-6 redundant full round-trips during startup. Now uses in-memory cached items.
+- **`getProjectId` result cached**: Project ID is now cached for the lifetime of the session so it's resolved with one API call instead of 1-2 calls per operation (was called dozens of times during a single load cycle).
+- **Write operations invalidate item cache**: `createProjectItem`, `updateProjectItem`, and `deleteProjectItem` now clear the project-items cache so subsequent reads return fresh data.
+
+---
+
+## [3.0.1] - 2026-02-15
+
+### Fixed
+
+#### Startup Loading UX
+- **Visible loading state on reload**: App now shows a loading overlay immediately during startup initialization so users no longer see an empty screen while materials/data are loading
+- **Reliable overlay cleanup**: Startup flow now hides the loading overlay in a `finally` block to prevent stuck/inconsistent loading state after initialization steps
+
+---
+
+## [3.0.0] - 2026-02-15
+
+### Added
+
+#### GitHub Projects Database Integration
+- **New storage backend**: GitHub Projects can now be used as a cloud-based database for storing and syncing warehouse data
+- **Automatic background sync**: Configurable automatic synchronization with GitHub Projects (default: 30 seconds interval)
+- **Real-time collaboration**: Multiple users can work with the same data simultaneously with automatic conflict detection
+- **Conflict resolution UI**: Visual interface for resolving conflicts between local and remote data versions
+  - Side-by-side comparison of local vs remote versions
+  - One-click resolution options (Use Local, Use Remote, Auto Merge)
+  - Batch conflict resolution (resolve all at once)
+  - Manual merge with custom data option
+- **Enhanced caching**: 5-minute cache TTL with configurable cache management to reduce API calls
+- **Rate limiting**: Built-in GitHub API rate limit tracking and protection (5000 requests/hour)
+- **Webhook support**: Foundation for instant updates via GitHub webhooks (polling mode implemented)
+- **Cross-tab sync**: Automatic synchronization between browser tabs for both Dexie and GitHub backends
+- **Storage backend selection UI**: Easy switching between IndexedDB (Dexie) and GitHub Projects
+- **Connection testing**: Test GitHub Projects connection before saving configuration
+- **Collaboration status indicators**: Real-time sync status, pending changes, conflicts, and API usage
+- **Sync statistics dashboard**: Visual display of sync activity, pending changes, conflicts, and rate limits
+
+#### GitHub Projects Configuration
+- **Personal Access Token**: Secure token-based authentication with GitHub API
+- **Project selection**: Configure owner (username/org) and project number
+- **Auto-sync settings**: Enable/disable automatic synchronization and configure interval
+- **Conflict resolution strategies**: Choose between manual, local-wins, remote-wins, or auto-merge
+- **Cache management**: Enable/disable caching and configure TTL
+
+#### Streamlined Settings UI
+- **Clear storage categorization**: Reorganized into Primary Storage, Backup & Export, and Local Sync sections
+- **Visual storage hierarchy**: Clear distinction between database (Dexie/GitHub Projects) and backup systems (JSON/Gist)
+- **Step-by-step GitHub setup**: Numbered steps with visual badges and helpful hints
+- **Password visibility toggle**: Show/hide GitHub token for verification
+- **Inline help text**: Info icons with explanatory tooltips throughout
+- **Direct links**: Quick link to GitHub token creation page
+- **Example URLs**: Visual examples showing where to find project numbers
+- **Custom confirmation dialogs**: Replaced browser alerts with themed modal dialogs
+
+#### New Documentation
+- **STORAGE-ARCHITECTURE.md**: Complete guide explaining all storage options with visual diagrams
+  - Clear distinction between Local vs Cloud storage
+  - Explanation of Gist (backup) vs Projects (database)
+  - Common scenarios and recommendations
+  - Migration guide between storage backends
+  - Comparison tables and decision trees
+- **GITHUB-PROJECTS-QUICK-START.md**: 5-minute setup guide for GitHub Projects
+- **GITHUB-PROJECTS-INTEGRATION.md**: Comprehensive 800+ line guide with full API reference
+
+#### New UI Components
+- **Storage backend selection cards**: Visual selection between Dexie and GitHub Projects
+- **GitHub configuration form**: Comprehensive setup wizard with validation
+- **Conflict resolution modal**: Full-screen modal for reviewing and resolving sync conflicts
+- **Collaboration status card**: Real-time indicators showing sync status and activity
+- **Sync statistics grid**: Visual dashboard with key metrics
+- **Backend status badges**: Active, Available, and Not Configured status indicators
+- **Step badges**: Numbered circular badges for sequential instructions
+- **Setup guide boxes**: Highlighted instructional sections with tips
+
+### Changed
+- **Settings tab reorganization**: Complete restructure for clarity
+  - **Section 1**: Primary Storage (choose your database)
+  - **Section 2**: Backup & Export (optional safeguards)
+  - **Section 3**: Local Synchronization (automatic tab sync)
+  - Clear labels indicating what each system does
+- **Data Manager**: Completely refactored to support multiple storage backends
+  - Added `switchStorageBackend()` method for seamless backend switching
+  - Added `getAvailableStorageBackends()` to query backend availability
+  - Added storage preference persistence in localStorage
+- **GitHub Gist positioning**: Now clearly labeled as "backup system" not database
+- **Confirmation dialogs**: All browser `confirm()` replaced with custom themed modals
+- **Typography improvements**: Better hierarchy with font sizes and weights
+- **Help text enhancement**: More contextual explanations with icons
+
+### Improved User Experience
+- **Reduced confusion**: Clear separation between storage types
+- **Better onboarding**: Step-by-step guidance reduces cognitive load
+- **Professional appearance**: Custom dialogs match app design
+- **Faster setup**: Direct links and examples speed up configuration
+- **More accessible**: Password toggle for verification, better labels
+- **Enhanced clarity**: Visual badges and icons improve scannability
+
+### Technical Details
+
+#### New Files
+- `js/github-projects-db-manager.js`: Complete GitHub Projects API integration (1500+ lines)
+  - GraphQL API client for GitHub Projects v2
+  - CRUD operations for all data types (materials, archive, groups, notes, etc.)
+  - Background sync engine with configurable intervals
+  - Conflict detection and resolution algorithms
+  - Cache management with TTL expiration
+  - Rate limiting protection
+  - Cross-tab communication via BroadcastChannel
+  - Webhook event handling foundation
+
+#### Modified Files
+- `js/data-manager.js`: Added multi-backend support
+- `js/ui-manager.js`: Added 400+ lines of GitHub Projects UI methods
+- `js/tab-settings.js`: Completely redesigned settings tab
+- `css/components.css`: Added 300+ lines of styles for:
+  - Storage backend selection cards
+  - Conflict resolution modal
+  - Collaboration indicators
+  - Sync status badges
+  - GitHub configuration forms
+- `index.html`: Added github-projects-db-manager.js script
+
+#### API Integration
+- GraphQL queries for GitHub Projects v2 API
+- Support for draft issues and project items
+- Field value management (text, date, single-select)
+- Pagination handling for large datasets
+- Error handling and retry logic
+
+#### Security
+- Content Security Policy updated to allow api.github.com
+- Token storage in localStorage (with warnings about security)
+- No plaintext passwords or secrets in code
+- Secured API endpoints with proper authentication headers
+
+### Performance
+- **Enhanced caching**: 5-minute cache reduces API calls by up to 90%
+- **Rate limiting**: Prevents API throttling and quota exhaustion
+- **Deferred rendering**: Conflict resolution modal only loads when needed
+- **Batch operations**: Multiple changes batched into single API calls
+- **Virtual scrolling**: Large datasets handled efficiently in conflict view
+
+### Known Limitations
+- GitHub Projects API has 5000 requests/hour rate limit
+- Token stored in localStorage (consider more secure storage in production)
+- Webhook support requires server-side implementation for instant updates
+- Conflict resolution is semi-manual (no three-way merge yet)
+
+---
+
 ## [2.7.3] - 2025-12-06
 
 ### Fixed

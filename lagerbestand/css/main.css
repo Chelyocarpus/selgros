@@ -78,26 +78,6 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
-/* Skip Links for Accessibility */
-.skip-link {
-    position: absolute;
-    top: -40px;
-    left: 0;
-    background: var(--primary-color);
-    color: white;
-    padding: 8px 16px;
-    text-decoration: none;
-    border-radius: 0 0 4px 0;
-    z-index: 10000;
-    font-weight: 600;
-}
-
-.skip-link:focus {
-    top: 0;
-    outline: 3px solid var(--focus-color);
-    outline-offset: 2px;
-}
-
 /* Screen Reader Only */
 .sr-only {
     position: absolute;

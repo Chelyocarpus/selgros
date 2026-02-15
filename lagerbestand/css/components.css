@@ -252,8 +252,13 @@ button:hover:not(:disabled) .fa-brands {
     font-weight: 600;
     letter-spacing: 0.02em;
     gap: 6px;
-}\n\n.btn-small:hover:not(:disabled) {
-    transform: translateY(-1px);\n}\n\n.btn-small .fa-solid,
+}
+
+.btn-small:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.btn-small .fa-solid,
 .btn-small .fa-regular {
     font-size: 0.95em;
 }
@@ -3487,5 +3492,357 @@ body.high-contrast .recently-added-item-detail strong {
     .recently-added-item-header {
         width: 100%;
     }
+}
+
+/* ===========================
+   STORAGE BACKEND SELECTION
+   =========================== */
+
+.storage-backend-option {
+    padding: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--card-bg);
+}
+
+.storage-backend-option:hover {
+    border-color: var(--primary-color);
+    background: var(--card-bg-secondary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.storage-backend-option.active {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.backend-status {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.backend-status.active {
+    color: var(--success-color);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.backend-status.available {
+    color: var(--info-color);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.backend-status.inactive {
+    color: var(--text-secondary);
+    background: var(--card-bg-secondary);
+}
+
+.github-config-status {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.github-config-status.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.github-config-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ===========================
+   CONFLICT RESOLUTION UI
+   =========================== */
+
+.conflict-resolution-modal {
+    max-width: 1000px;
+    width: 95%;
+    max-height: 90vh;
+}
+
+.conflict-resolution-modal .modal-body {
+    max-height: calc(90vh - 200px);
+    overflow-y: auto;
+}
+
+.conflict-intro {
+    padding: 15px;
+    background: var(--warning-bg, rgba(251, 191, 36, 0.1));
+    border-left: 4px solid var(--warning-color, #f59e0b);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+.conflicts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.conflict-item {
+    padding: 20px;
+    background: var(--card-bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.conflict-item h4 {
+    margin: 0 0 15px 0;
+    color: var(--text-color);
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.conflict-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.conflict-option {
+    padding: 15px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.conflict-option.local {
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.conflict-option.remote {
+    border-color: rgba(168, 85, 247, 0.4);
+}
+
+.conflict-option h5 {
+    margin: 0 0 10px 0;
+    color: var(--text-color);
+    font-size: 0.95em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.conflict-option p {
+    margin: 0 0 10px 0;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.conflict-option pre {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 0 0 12px 0;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.conflict-option button {
+    width: 100%;
+    font-size: 14px;
+    padding: 10px;
+}
+
+.conflict-actions {
+    display: flex;
+    justify-content: center;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.conflict-actions button {
+    min-width: 200px;
+}
+
+.success-message {
+    padding: 20px;
+    text-align: center;
+    color: var(--success-color);
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Responsive conflict resolution */
+@media (max-width: 768px) {
+    .conflict-comparison {
+        grid-template-columns: 1fr;
+    }
+    
+    .conflict-resolution-modal {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+}
+
+/* ===========================
+   COLLABORATION INDICATORS
+   =========================== */
+
+.collaboration-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--card-bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.collaboration-status.active {
+    border-color: var(--success-color);
+    background: rgba(34, 197, 94, 0.05);
+}
+
+.collaboration-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    animation: pulse 2s infinite;
+}
+
+.collaboration-indicator.active {
+    background: var(--success-color);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.sync-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--card-bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.sync-status-badge.syncing {
+    color: var(--info-color);
+    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.sync-status-badge.synced {
+    color: var(--success-color);
+    border-color: rgba(34, 197, 94, 0.3);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.sync-status-badge.error {
+    color: var(--danger-color);
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.sync-status-badge i {
+    font-size: 10px;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .conflict-option pre {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-mode .storage-backend-option.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.08) 100%);
+}
+
+/* ===========================
+   GITHUB SETUP GUIDE STYLING
+   =========================== */
+
+.step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.github-setup-guide {
+    animation: fadeIn 0.3s ease-in;
+}
+
+.github-setup-guide ol li {
+    margin-bottom: 8px;
+}
+
+.github-setup-guide ol li:last-child {
+    margin-bottom: 0;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Input field improvements for GitHub config */
+#githubConfigSection .input-field {
+    transition: all 0.3s ease;
+}
+
+#githubConfigSection .input-field:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+#githubConfigSection .input-field::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+/* Password visibility toggle button */
+#githubConfigSection button[onclick*="togglePasswordVisibility"] {
+    transition: color 0.2s ease;
+}
+
+#githubConfigSection button[onclick*="togglePasswordVisibility"]:hover {
+    color: var(--primary-color);
 }
 

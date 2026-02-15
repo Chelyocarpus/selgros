@@ -291,18 +291,8 @@ class UIManager {
         headerTitle.appendChild(document.createTextNode(' ' + this.t('appTitle')));
         document.getElementById('headerSubtitle').textContent = this.t('appSubtitle');
         
-        // Update skip links and loading text
-        const skipToMainContent = document.getElementById('skipToMainContent');
-        const skipToNavigation = document.getElementById('skipToNavigation');
+        // Update loading text
         const loadingText = document.getElementById('loadingText');
-        
-        if (skipToMainContent) {
-            skipToMainContent.textContent = this.t('skipToContent');
-        }
-        
-        if (skipToNavigation) {
-            skipToNavigation.textContent = this.t('skipToNavigation');
-        }
         
         if (loadingText) {
             loadingText.textContent = this.t('loading');
@@ -516,8 +506,26 @@ class UIManager {
         }, 600);
     }
 
+    ensureMaterialModalElements() {
+        const modal = document.getElementById('materialModal');
+        if (!modal) {
+            return false;
+        }
+
+        if (!document.getElementById('modalMaterialCode') && typeof renderMaterialModal === 'function') {
+            renderMaterialModal();
+        }
+
+        return !!document.getElementById('modalMaterialCode');
+    }
+
     // Open material modal for adding
     openAddMaterialModal() {
+        if (!this.ensureMaterialModalElements()) {
+            this.showToast(this.t('modalInitError') || 'Material dialog is not ready yet', 'error');
+            return;
+        }
+
         this.currentModalMode = 'add';
         this.currentEditingMaterial = null;
         this.quickAddContext = null;
@@ -539,6 +547,11 @@ class UIManager {
 
     // Quick add material from results list
     quickAddMaterial(code, name, currentQty) {
+        if (!this.ensureMaterialModalElements()) {
+            this.showToast(this.t('modalInitError') || 'Material dialog is not ready yet', 'error');
+            return;
+        }
+
         this.currentModalMode = 'quickadd';
         this.currentEditingMaterial = null;
         this.quickAddContext = { code, name, currentQty };
@@ -573,6 +586,11 @@ class UIManager {
 
     // Open edit modal
     openEditModal(code) {
+        if (!this.ensureMaterialModalElements()) {
+            this.showToast(this.t('modalInitError') || 'Material dialog is not ready yet', 'error');
+            return;
+        }
+
         const material = this.dataManager.getMaterial(code);
         if (!material) return;
 
@@ -607,6 +625,11 @@ class UIManager {
 
     // Open add material modal
     openAddModal() {
+        if (!this.ensureMaterialModalElements()) {
+            this.showToast(this.t('modalInitError') || 'Material dialog is not ready yet', 'error');
+            return;
+        }
+
         this.currentModalMode = 'add';
         this.currentEditingMaterial = null;
         this.quickAddContext = null;
@@ -640,6 +663,9 @@ class UIManager {
     // Close material modal
     closeMaterialModal() {
         const modal = document.getElementById('materialModal');
+        if (!modal) {
+            return;
+        }
         modal.classList.remove('active');
         modal.style.display = 'none';
         modal.onclick = null; // Remove any click handlers
@@ -1183,8 +1209,10 @@ class UIManager {
 
         // Clear all materials
         try {
-            localStorage.removeItem(this.dataManager.STORAGE_KEYS.MATERIALS);
+            // Clear materials using dataManager to properly sync with all backends
             this.dataManager.materials = {};
+            await this.dataManager.saveMaterials();
+            
             this.renderMaterialsList();
             
             // Refresh results if data is present
@@ -1763,8 +1791,11 @@ class UIManager {
             this.showLoading(this.t('cloudSyncInProgress'));
 
             const result = await this.cloudSyncManager.testConnection();
+            this.cloudSyncManager.settings.lastSyncStatus = 'success';
+            this.cloudSyncManager.saveSettings();
             
             this.hideLoading();
+            this.renderCloudSyncStatus();
             this.showToast(
                 `${this.t('cloudSyncConnectionSuccess')}: ${result.message}`,
                 'success',
@@ -1772,7 +1803,10 @@ class UIManager {
             );
 
         } catch (error) {
+            this.cloudSyncManager.settings.lastSyncStatus = 'error';
+            this.cloudSyncManager.saveSettings();
             this.hideLoading();
+            this.renderCloudSyncStatus();
             this.showToast(
                 `${this.t('cloudSyncConnectionError')}: ${error.message}`,
                 'error',
@@ -2186,14 +2220,18 @@ class UIManager {
      * Dismiss all unsynced changes
      */
     dismissAllUnsyncedChanges() {
-        if (confirm(this.t('confirmDismissAllChanges') || 'Möchten Sie wirklich alle nicht synchronisierten Änderungen verwerfen?')) {
-            if (this.cloudSyncManager) {
-                this.cloudSyncManager.dismissAllUnsyncedChanges();
-                this.closeUnsyncedChangesModal();
-                this.renderCloudSyncStatus();
-                this.showToast(this.t('allChangesDiscarded') || 'Alle Änderungen verworfen', 'info');
+        this.showConfirmDialog(
+            this.t('confirmDismissAllChanges') || 'Möchten Sie wirklich alle nicht synchronisierten Änderungen verwerfen?',
+            this.t('dismissAllWarning') || 'Diese Aktion kann nicht rückgängig gemacht werden.',
+            () => {
+                if (this.cloudSyncManager) {
+                    this.cloudSyncManager.dismissAllUnsyncedChanges();
+                    this.closeUnsyncedChangesModal();
+                    this.renderCloudSyncStatus();
+                    this.showToast(this.t('allChangesDiscarded') || 'Alle Änderungen verworfen', 'info');
+                }
             }
-        }
+        );
     }
 
     /**
@@ -2211,6 +2249,9 @@ class UIManager {
             this.renderMaterialsList();
             if (typeof this.renderArchiveList === 'function') {
                 this.renderArchiveList();
+            }
+            if (typeof this.renderGroupsList === 'function') {
+                this.renderGroupsList();
             }
 
             // Show notification
@@ -3016,6 +3057,692 @@ class UIManager {
         // Since we're using a custom button dropdown now (not a select element),
         // we need to update the visual indicator to revert to the previous state
         this.updateCategoryIndicator(materialCode, groupId);
+    }
+
+    // =================== GITHUB PROJECTS UI ===================
+
+    /**
+     * Select storage backend
+     * @param {string} backend - 'dexie' or 'github'
+     */
+    async selectStorageBackend(backend) {
+        try {
+            // Visual feedback
+            document.querySelectorAll('.storage-backend-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.getElementById(`${backend}BackendOption`)?.classList.add('active');
+
+            // Show/hide GitHub config section
+            const githubConfig = document.getElementById('githubConfigSection');
+            if (githubConfig) {
+                githubConfig.style.display = backend === 'github' ? 'block' : 'none';
+            }
+
+            // Don't switch backends immediately if GitHub is not configured
+            if (backend === 'github') {
+                const githubManager = this.dataManager.githubManager;
+                if (!githubManager.checkAvailability()) {
+                    this.showToast(this.t('configureGitHubFirst') || 'Please configure GitHub Projects first', 'info');
+                    return;
+                }
+            }
+
+            // Switch backend
+            this.showLoading(this.t('switchingBackend') || 'Switching storage backend...');
+            await this.dataManager.switchStorageBackend(backend);
+            this.hideLoading();
+
+            // Get backend display name
+            const backendName = backend === 'dexie' 
+                ? (this.t('localStorageTitle') || 'Local') 
+                : (this.t('cloudStorageTitle') || 'Cloud');
+
+            this.showToast(
+                (this.t('backendSwitched') || 'Switched to {0} storage').replace('{0}', backendName),
+                'success'
+            );
+
+            // Refresh current tab
+            this.refreshCurrentTab();
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error switching backend:', error);
+            this.showToast(
+                this.t('backendSwitchError') || 'Failed to switch storage backend',
+                'error'
+            );
+        }
+    }
+
+    /**
+     * Save GitHub Projects configuration
+     */
+    async saveGitHubConfig() {
+        try {
+            const token = document.getElementById('githubToken')?.value.trim();
+            const owner = document.getElementById('githubOwner')?.value.trim();
+            const projectNumber = parseInt(document.getElementById('githubProjectNumber')?.value, 10);
+
+            if (!token || !owner || !projectNumber) {
+                this.showToast(this.t('fillAllFields') || 'Please fill all required fields', 'warning');
+                return;
+            }
+
+            const autoSync = document.getElementById('githubAutoSync')?.checked ?? false;
+            const syncInterval = parseInt(document.getElementById('githubSyncInterval')?.value, 10) || 30;
+            const conflictResolution = document.getElementById('githubConflictResolution')?.value || 'manual';
+
+            const config = {
+                token,
+                owner,
+                projectNumber,
+                autoSync,
+                syncInterval,
+                conflictResolution
+            };
+
+            this.showLoading(this.t('savingConfig') || 'Saving configuration...');
+            
+            const githubManager = this.dataManager.githubManager;
+            githubManager.saveConfig(config);
+
+            // Test connection
+            const testResult = await githubManager.testConnection();
+            this.hideLoading();
+
+            if (testResult.success) {
+                this.showToast(
+                    this.t('githubConfigSaved') || 'GitHub Projects configured successfully!',
+                    'success'
+                );
+                this.updateGitHubConfigStatus('success', testResult.message);
+                
+                // Update backend status
+                this.updateStorageBackendStatus();
+            } else {
+                this.showToast(
+                    this.t('githubConfigError') || 'Configuration saved but connection failed',
+                    'warning'
+                );
+                this.updateGitHubConfigStatus('error', testResult.error);
+            }
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error saving GitHub config:', error);
+            this.showToast(
+                this.t('githubConfigError') || 'Failed to save configuration',
+                'error'
+            );
+            this.updateGitHubConfigStatus('error', error.message);
+        }
+    }
+
+    /**
+     * Test GitHub connection
+     */
+    async testGitHubConnection() {
+        try {
+            const githubManager = this.dataManager.githubManager;
+            
+            if (!githubManager.checkAvailability()) {
+                this.showToast(this.t('configureGitHubFirst') || 'Please configure GitHub Projects first', 'warning');
+                return;
+            }
+
+            this.showLoading(this.t('testingConnection') || 'Testing connection...');
+            const result = await githubManager.testConnection();
+            this.hideLoading();
+
+            if (result.success) {
+                this.showToast(this.t('connectionSuccess') || 'Connection successful!', 'success');
+                this.updateGitHubConfigStatus('success', result.message);
+            } else {
+                this.showToast(this.t('connectionFailed') || 'Connection failed', 'error');
+                this.updateGitHubConfigStatus('error', result.error);
+            }
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error testing connection:', error);
+            this.showToast(this.t('connectionError') || 'Connection test failed', 'error');
+            this.updateGitHubConfigStatus('error', error.message);
+        }
+    }
+
+    /**
+     * Clear GitHub configuration
+     */
+    clearGitHubConfig() {
+        this.showConfirmDialog(
+            this.t('confirmClearGitHubConfig') || 'Clear GitHub Projects configuration?',
+            this.t('clearConfigWarning') || 'This will remove your token and project settings. You can reconfigure anytime.',
+            () => {
+                const githubManager = this.dataManager.githubManager;
+                githubManager.clearConfig();
+
+                // Clear input fields
+                const tokenInput = document.getElementById('githubToken');
+                const ownerInput = document.getElementById('githubOwner');
+                const projectInput = document.getElementById('githubProjectNumber');
+                
+                if (tokenInput) tokenInput.value = '';
+                if (ownerInput) ownerInput.value = '';
+                if (projectInput) projectInput.value = '';
+
+                this.updateGitHubConfigStatus('', '');
+                this.updateStorageBackendStatus();
+                
+                this.showToast(this.t('githubConfigCleared') || 'Configuration cleared', 'success');
+            }
+        );
+    }
+
+    /**
+     * Update GitHub config status display
+     */
+    updateGitHubConfigStatus(type, message) {
+        const statusDiv = document.getElementById('githubConfigStatus');
+        if (!statusDiv) return;
+
+        if (!type || !message) {
+            statusDiv.style.display = 'none';
+            return;
+        }
+
+        statusDiv.style.display = 'block';
+        statusDiv.className = `github-config-status ${type}`;
+        statusDiv.innerHTML = SecurityUtils.escapeHTML(message);
+
+        const icon = type === 'success' ? '✓' : '✗';
+        statusDiv.innerHTML = `${icon} ${SecurityUtils.escapeHTML(message)}`;
+    }
+
+    /**
+     * Update storage backend status indicators
+     */
+    updateStorageBackendStatus() {
+        const backends = this.dataManager.getAvailableStorageBackends();
+
+        for (const [key, info] of Object.entries(backends)) {
+            const statusSpan = document.getElementById(`${key}Status`);
+            const optionDiv = document.getElementById(`${key}BackendOption`);
+
+            if (statusSpan) {
+                if (info.active) {
+                    statusSpan.textContent = '● ' + (this.t('active') || 'Active');
+                    statusSpan.className = 'backend-status active';
+                } else if (info.available) {
+                    statusSpan.textContent = this.t('available') || 'Available';
+                    statusSpan.className = 'backend-status available';
+                } else {
+                    statusSpan.textContent = this.t('notConfigured') || 'Not Configured';
+                    statusSpan.className = 'backend-status inactive';
+                }
+            }
+
+            if (optionDiv) {
+                if (info.active) {
+                    optionDiv.classList.add('active');
+                } else {
+                    optionDiv.classList.remove('active');
+                }
+            }
+        }
+    }
+
+    /**
+     * Show conflict resolution modal
+     */
+    showConflictResolutionModal() {
+        const githubManager = this.dataManager.githubManager;
+        const conflicts = githubManager.getConflicts();
+
+        if (conflicts.length === 0) {
+            this.showToast(this.t('noConflicts') || 'No conflicts to resolve', 'info');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.id = 'conflictResolutionModal';
+
+        const conflictsList = conflicts.map((conflict, index) => {
+            const localTime = conflict.localTime ? new Date(conflict.localTime).toLocaleString() : '-';
+            const remoteTime = conflict.remoteTime ? new Date(conflict.remoteTime).toLocaleString() : '-';
+            const conflictKey = SecurityUtils.escapeHTML(conflict.key || conflict.type || 'unknown');
+            
+            // Determine conflict type label and render appropriate UI
+            const typeLabels = {
+                modified: this.t('conflictTypeModified') || 'Modified',
+                deleted_remote: this.t('conflictTypeDeletedRemote') || 'Deleted remotely',
+                added_remote: this.t('conflictTypeAddedRemote') || 'Added remotely',
+                archive_diverged: this.t('conflictTypeArchiveDiverged') || 'Archive diverged'
+            };
+            const typeLabel = typeLabels[conflict.type] || conflict.type;
+            
+            // Render different layouts based on conflict type
+            if (conflict.type === 'deleted_remote') {
+                return `
+                    <div class="conflict-item" data-index="${index}">
+                        <h4>${this.t('conflict') || 'Conflict'} #${index + 1}: ${conflictKey}
+                            <span class="conflict-type-badge" style="background: var(--danger-color); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; margin-left: 8px;">${SecurityUtils.escapeHTML(typeLabel)}</span>
+                        </h4>
+                        <div class="conflict-comparison">
+                            <div class="conflict-option local">
+                                <h5><i class="fa-solid fa-laptop"></i> ${this.t('localVersion') || 'Local Version'}</h5>
+                                <pre>${SecurityUtils.escapeHTML(JSON.stringify(conflict.local, null, 2))}</pre>
+                                <button class="btn-primary" onclick="ui.resolveConflict(${index}, 'local-wins')">
+                                    <i class="fa-solid fa-check"></i> ${this.t('conflictKeepItem') || 'Keep'}
+                                </button>
+                            </div>
+                            <div class="conflict-option remote" style="opacity: 0.6;">
+                                <h5><i class="fa-solid fa-cloud"></i> ${this.t('remoteVersion') || 'Remote Version'}</h5>
+                                <p><i class="fa-solid fa-trash"></i> ${this.t('conflictTypeDeletedRemote') || 'Deleted remotely'}</p>
+                                <button class="btn-danger" onclick="ui.resolveConflict(${index}, 'remote-wins')">
+                                    <i class="fa-solid fa-trash"></i> ${this.t('conflictDeleteItem') || 'Delete'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (conflict.type === 'added_remote') {
+                return `
+                    <div class="conflict-item" data-index="${index}">
+                        <h4>${this.t('conflict') || 'Conflict'} #${index + 1}: ${conflictKey}
+                            <span class="conflict-type-badge" style="background: var(--success-color); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; margin-left: 8px;">${SecurityUtils.escapeHTML(typeLabel)}</span>
+                        </h4>
+                        <div class="conflict-comparison">
+                            <div class="conflict-option local" style="opacity: 0.6;">
+                                <h5><i class="fa-solid fa-laptop"></i> ${this.t('localVersion') || 'Local Version'}</h5>
+                                <p><i class="fa-solid fa-circle-question"></i> ${this.t('conflictTypeAddedRemote') || 'Does not exist locally'}</p>
+                                <button class="btn-secondary" onclick="ui.resolveConflict(${index}, 'local-wins')">
+                                    <i class="fa-solid fa-ban"></i> ${this.t('conflictRejectNew') || 'Reject'}
+                                </button>
+                            </div>
+                            <div class="conflict-option remote">
+                                <h5><i class="fa-solid fa-cloud"></i> ${this.t('remoteVersion') || 'Remote Version'}</h5>
+                                <pre>${SecurityUtils.escapeHTML(JSON.stringify(conflict.remote, null, 2))}</pre>
+                                <button class="btn-primary" onclick="ui.resolveConflict(${index}, 'remote-wins')">
+                                    <i class="fa-solid fa-check"></i> ${this.t('conflictAcceptNew') || 'Accept'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Default: modified or archive_diverged
+            return `
+                <div class="conflict-item" data-index="${index}">
+                    <h4>${this.t('conflict') || 'Conflict'} #${index + 1}: ${conflictKey}
+                        <span class="conflict-type-badge" style="background: var(--warning-color); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; margin-left: 8px;">${SecurityUtils.escapeHTML(typeLabel)}</span>
+                    </h4>
+                    <div class="conflict-comparison">
+                        <div class="conflict-option local">
+                            <h5><i class="fa-solid fa-laptop"></i> ${this.t('localVersion') || 'Local Version'}</h5>
+                            <p><strong>${this.t('lastModified') || 'Last Modified'}:</strong> ${SecurityUtils.escapeHTML(localTime)}</p>
+                            <pre>${SecurityUtils.escapeHTML(JSON.stringify(conflict.local, null, 2))}</pre>
+                            <button class="btn-primary" onclick="ui.resolveConflict(${index}, 'local-wins')">
+                                <i class="fa-solid fa-check"></i> ${this.t('useLocal') || 'Use Local'}
+                            </button>
+                        </div>
+                        <div class="conflict-option remote">
+                            <h5><i class="fa-solid fa-cloud"></i> ${this.t('remoteVersion') || 'Remote Version'}</h5>
+                            <p><strong>${this.t('lastModified') || 'Last Modified'}:</strong> ${SecurityUtils.escapeHTML(remoteTime)}</p>
+                            <pre>${SecurityUtils.escapeHTML(JSON.stringify(conflict.remote, null, 2))}</pre>
+                            <button class="btn-primary" onclick="ui.resolveConflict(${index}, 'remote-wins')">
+                                <i class="fa-solid fa-check"></i> ${this.t('useRemote') || 'Use Remote'}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="conflict-actions">
+                        <button class="btn-secondary" onclick="ui.resolveConflict(${index}, 'merge')">
+                            <i class="fa-solid fa-code-merge"></i> ${this.t('autoMerge') || 'Auto Merge (Newer Wins)'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        modal.innerHTML = `
+            <div class="modal-content conflict-resolution-modal">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-code-compare"></i> ${this.t('resolveConflicts') || 'Resolve Conflicts'}</h2>
+                    <button class="modal-close" onclick="ui.closeConflictResolutionModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="conflict-intro">
+                        ${this.t('conflictsDetected') || 'Conflicts detected between local and remote versions. Please choose which version to keep.'}
+                    </p>
+                    <div class="conflicts-list">
+                        ${conflictsList}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="ui.closeConflictResolutionModal()">
+                        ${this.t('cancel') || 'Cancel'}
+                    </button>
+                    <button class="btn-danger" onclick="ui.resolveAllConflicts('remote-wins')">
+                        ${this.t('useAllRemote') || 'Use All Remote'}
+                    </button>
+                    <button class="btn-primary" onclick="ui.resolveAllConflicts('local-wins')">
+                        ${this.t('useAllLocal') || 'Use All Local'}
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    /**
+     * Close conflict resolution modal
+     */
+    closeConflictResolutionModal() {
+        const modal = document.getElementById('conflictResolutionModal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    /**
+     * Resolve a single conflict
+     */
+    async resolveConflict(index, resolution) {
+        try {
+            const githubManager = this.dataManager.githubManager;
+            await githubManager.resolveConflictManually(index, resolution);
+
+            // Remove conflict from UI
+            const conflictItem = document.querySelector(`.conflict-item[data-index="${index}"]`);
+            if (conflictItem) {
+                conflictItem.style.opacity = '0.5';
+                conflictItem.innerHTML = `<p class="success-message"><i class="fa-solid fa-check"></i> ${this.t('conflictResolved') || 'Conflict resolved'}</p>`;
+                
+                setTimeout(() => {
+                    const conflicts = githubManager.getConflicts();
+                    if (conflicts.length === 0) {
+                        this.closeConflictResolutionModal();
+                        this.showToast(this.t('allConflictsResolved') || 'All conflicts resolved!', 'success');
+                    } else {
+                        conflictItem.remove();
+                    }
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error resolving conflict:', error);
+            this.showToast(this.t('conflictResolveError') || 'Failed to resolve conflict', 'error');
+        }
+    }
+
+    /**
+     * Resolve all conflicts with same strategy
+     */
+    async resolveAllConflicts(resolution) {
+        try {
+            const githubManager = this.dataManager.githubManager;
+            const conflicts = githubManager.getConflicts();
+
+            this.showLoading(this.t('resolvingConflicts') || 'Resolving conflicts...');
+
+            for (let i = conflicts.length - 1; i >= 0; i--) {
+                await githubManager.resolveConflictManually(i, resolution);
+            }
+
+            this.hideLoading();
+            this.closeConflictResolutionModal();
+            this.showToast(this.t('allConflictsResolved') || 'All conflicts resolved!', 'success');
+            
+            // Refresh current view
+            this.refreshCurrentTab();
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error resolving all conflicts:', error);
+            this.showToast(this.t('conflictResolveError') || 'Failed to resolve conflicts', 'error');
+        }
+    }
+
+    /**
+     * Refresh current active tab
+     */
+    refreshCurrentTab() {
+        const activeTab = document.querySelector('.tab-button.active');
+        if (activeTab) {
+            const tabName = activeTab.getAttribute('data-tab');
+            if (tabName === 'materials') {
+                this.renderMaterialsList();
+            } else if (tabName === 'archive') {
+                renderArchiveTab();
+            } else if (tabName === 'settings') {
+                renderSettingsTab();
+            }
+        }
+    }
+
+    /**
+     * Update GitHub collaboration status display
+     */
+    updateGitHubCollaborationStatus() {
+        const githubManager = this.dataManager.githubManager;
+        const collaborationCard = document.getElementById('collaborationCard');
+        const githubConfigSection = document.getElementById('githubConfigSection');
+        
+        if (!githubManager || !collaborationCard) return;
+
+        const isGitHubActive = this.dataManager.getCurrentStorageBackend() === 'github';
+        const isConfigured = githubManager.checkAvailability();
+
+        // Show collaboration card only when GitHub is active
+        collaborationCard.style.display = isGitHubActive && isConfigured ? 'block' : 'none';
+
+        // Show config section when GitHub backend is selected or partially configured
+        if (githubConfigSection) {
+            const shouldShowConfig = isGitHubActive || (githubManager.config.token || githubManager.config.owner);
+            githubConfigSection.style.display = shouldShowConfig ? 'block' : 'none';
+            
+            // Load existing config into inputs
+            if (shouldShowConfig) {
+                const tokenInput = document.getElementById('githubToken');
+                const ownerInput = document.getElementById('githubOwner');
+                const projectInput = document.getElementById('githubProjectNumber');
+                const autoSyncInput = document.getElementById('githubAutoSync');
+                const syncIntervalInput = document.getElementById('githubSyncInterval');
+                const conflictResolutionInput = document.getElementById('githubConflictResolution');
+                
+                if (tokenInput && githubManager.config.token) {
+                    tokenInput.value = githubManager.config.token;
+                }
+                if (ownerInput && githubManager.config.owner) {
+                    ownerInput.value = githubManager.config.owner;
+                }
+                if (projectInput && githubManager.config.projectNumber) {
+                    projectInput.value = githubManager.config.projectNumber;
+                }
+                if (autoSyncInput) {
+                    autoSyncInput.checked = githubManager.config.autoSync === true;
+                }
+                if (syncIntervalInput && githubManager.config.syncInterval) {
+                    syncIntervalInput.value = githubManager.config.syncInterval;
+                }
+                if (conflictResolutionInput && githubManager.config.conflictResolution) {
+                    conflictResolutionInput.value = githubManager.config.conflictResolution;
+                }
+            }
+        }
+
+        if (!isGitHubActive || !isConfigured) return;
+
+        // Update collaboration status
+        const syncStatus = githubManager.getSyncStatus();
+        const statusDiv = document.getElementById('collaborationStatus');
+        const indicator = document.getElementById('collaborationIndicator');
+        const statusText = document.getElementById('collaborationStatusText');
+        const statusDetails = document.getElementById('collaborationDetails');
+
+        if (statusDiv && indicator && statusText && statusDetails) {
+            if (syncStatus.enabled) {
+                statusDiv.classList.add('active');
+                indicator.classList.add('active');
+                statusText.textContent = this.t('collaborationActive') || 'Connected & Syncing';
+                
+                const lastSyncText = syncStatus.lastSync 
+                    ? new Date(syncStatus.lastSync).toLocaleString()
+                    : this.t('neverSynced') || 'Never';
+                
+                statusDetails.textContent = `${this.t('lastSync') || 'Last sync'}: ${lastSyncText}`;
+            } else {
+                statusDiv.classList.remove('active');
+                indicator.classList.remove('active');
+                statusText.textContent = this.t('collaborationInactive') || 'Not Syncing';
+                statusDetails.textContent = this.t('enableAutoSync') || 'Enable auto-sync in settings';
+            }
+        }
+
+        // Update sync stats
+        const statsGrid = document.getElementById('syncStatsGrid');
+        if (statsGrid) {
+            const cacheStatus = githubManager.getCacheStatus();
+            const rateLimitStatus = githubManager.getRateLimitStatus();
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card" style="padding: 15px; background: var(--card-bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 24px; font-weight: 700; color: var(--primary-color);">${syncStatus.pendingChanges}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${this.t('pendingChanges') || 'Pending'}</div>
+                </div>
+                <div class="stat-card" style="padding: 15px; background: var(--card-bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 24px; font-weight: 700; color: ${syncStatus.conflicts > 0 ? 'var(--danger-color)' : 'var(--success-color)'};">${syncStatus.conflicts}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${this.t('conflicts') || 'Conflicts'}</div>
+                </div>
+                <div class="stat-card" style="padding: 15px; background: var(--card-bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 24px; font-weight: 700; color: var(--info-color);">${rateLimitStatus.remaining}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${this.t('apiCallsLeft') || 'API Calls Left'}</div>
+                </div>
+                <div class="stat-card" style="padding: 15px; background: var(--card-bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 24px; font-weight: 700; color: var(--text-color);">${syncStatus.intervalMs / 1000}s</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${this.t('syncInterval') || 'Sync Interval'}</div>
+                </div>
+            `;
+        }
+
+        // Show/hide resolve conflicts button
+        const resolveBtn = document.getElementById('resolveConflictsBtn');
+        const conflictCountBadge = document.getElementById('conflictCount');
+        
+        if (resolveBtn && conflictCountBadge) {
+            if (syncStatus.conflicts > 0) {
+                resolveBtn.style.display = 'inline-flex';
+                conflictCountBadge.textContent = syncStatus.conflicts;
+            } else {
+                resolveBtn.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Force sync now
+     */
+    async forceSync() {
+        const githubManager = this.dataManager.githubManager;
+        
+        if (!githubManager.checkAvailability()) {
+            this.showToast(this.t('githubNotConfigured') || 'GitHub Projects not configured', 'warning');
+            return;
+        }
+
+        try {
+            this.showLoading(this.t('syncing') || 'Syncing...');
+            await githubManager.performBackgroundSync();
+            this.hideLoading();
+            
+            this.showToast(this.t('syncComplete') || 'Sync completed successfully!', 'success');
+            this.updateGitHubCollaborationStatus();
+            this.refreshCurrentTab();
+        } catch (error) {
+            this.hideLoading();
+            console.error('Force sync error:', error);
+            this.showToast(this.t('syncError') || 'Sync failed', 'error');
+        }
+    }
+
+    /**
+     * Show custom confirmation dialog
+     * @param {string} title - Dialog title
+     * @param {string} message - Dialog message
+     * @param {Function} onConfirm - Callback when confirmed
+     */
+    showConfirmDialog(title, message, onConfirm) {
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.id = 'customConfirmDialog';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-circle-question"></i> ${SecurityUtils.escapeHTML(title)}</h2>
+                    <button class="modal-close" onclick="ui.closeConfirmDialog()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin: 0; font-size: 16px;">${SecurityUtils.escapeHTML(message)}</p>
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn-secondary" onclick="ui.closeConfirmDialog()">
+                        <i class="fa-solid fa-xmark"></i> ${this.t('cancel') || 'Cancel'}
+                    </button>
+                    <button class="btn-primary" onclick="ui.confirmDialogAction()">
+                        <i class="fa-solid fa-check"></i> ${this.t('confirm') || 'Confirm'}
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Store callback
+        this._confirmCallback = onConfirm;
+        
+        document.body.appendChild(modal);
+    }
+
+    /**
+     * Close confirmation dialog
+     */
+    closeConfirmDialog() {
+        const modal = document.getElementById('customConfirmDialog');
+        if (modal) {
+            modal.remove();
+        }
+        this._confirmCallback = null;
+    }
+
+    /**
+     * Execute confirmation action
+     */
+    confirmDialogAction() {
+        if (this._confirmCallback) {
+            this._confirmCallback();
+        }
+        this.closeConfirmDialog();
+    }
+
+    /**
+     * Toggle password visibility for input fields
+     * @param {string} inputId - ID of the input field
+     */
+    togglePasswordVisibility(inputId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(`${inputId}Icon`);
+        
+        if (!input || !icon) return;
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     }
 
 

@@ -1938,7 +1938,7 @@ UIManager.prototype.selectGroupColor = function(color, isCustom = false) {
 };
 
 // Save group (create or edit)
-UIManager.prototype.saveGroup = function(groupId) {
+UIManager.prototype.saveGroup = async function(groupId) {
     const name = document.getElementById('groupName').value.trim();
     const description = document.getElementById('groupDescription').value.trim();
     const color = document.getElementById('groupColor').value;
@@ -1952,13 +1952,13 @@ UIManager.prototype.saveGroup = function(groupId) {
     
     if (groupId) {
         // Edit existing group
-        success = this.dataManager.updateGroup(groupId, { name, description, color });
+        success = await this.dataManager.updateGroup(groupId, { name, description, color });
         if (success) {
             this.showToast(`Group "${SecurityUtils.escapeHTML(name)}" updated successfully!`, 'success');
         }
     } else {
         // Create new group
-        const newGroupId = this.dataManager.createGroup(name, description, color);
+        const newGroupId = await this.dataManager.createGroup(name, description, color);
         if (newGroupId) {
             success = true;
             this.showToast(`Group "${SecurityUtils.escapeHTML(name)}" created successfully!`, 'success');
