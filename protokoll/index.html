@@ -9,718 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --primary-light: #818cf8;
-            --success: #10b981;
-            --success-hover: #059669;
-            --accent: #ec4899;
-            --bg: #f8fafc;
-            --bg-secondary: #f1f5f9;
-            --card-bg: #ffffff;
-            --border: #e2e8f0;
-            --text: #0f172a;
-            --text-secondary: #64748b;
-            --text-muted: #94a3b8;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            --radius-sm: 0.375rem;
-            --radius: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            min-height: 100vh;
-            color: var(--text);
-            line-height: 1.6;
-            font-size: 15px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
-        header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.75rem;
-            letter-spacing: -0.025em;
-        }
-        
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-        
-        .card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            overflow: hidden;
-        }
-        
-        .controls {
-            padding: 2rem;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 1.25rem;
-            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-            background: linear-gradient(to bottom, rgba(248, 250, 252, 0.5), transparent);
-        }
-        
-        .file-input-wrapper {
-            position: relative;
-        }
-        
-        .file-input-wrapper input[type="file"] {
-            position: absolute;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-        
-        .file-input-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.625rem;
-            padding: 0.75rem 1.25rem;
-            background: rgba(248, 250, 252, 0.8);
-            backdrop-filter: blur(10px);
-            border: 2px dashed var(--border);
-            border-radius: var(--radius-lg);
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            position: relative;
-            z-index: 0;
-            pointer-events: auto;
-        }
-        
-        .file-input-wrapper input[type="file"]:focus + .file-input-label,
-        .file-input-label.focused {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: rgba(99, 102, 241, 0.05);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow);
-            outline: 2px solid var(--primary);
-            outline-offset: 2px;
-        }
-        
-        .file-input-wrapper input[type="file"]:focus {
-            outline: none;
-        }
-        
-        select {
-            padding: 0.75rem 2.5rem 0.75rem 1rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            color: var(--text);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        
-        select:hover {
-            border-color: var(--primary-light);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 0.5rem;
-            margin-left: auto;
-        }
-        
-        button {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            border: none;
-            border-radius: var(--radius-lg);
-            cursor: pointer;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        button::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        
-        button:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-        
-        .btn-primary:hover:not(:disabled) {
-            background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-            transform: translateY(-2px);
-        }
-        
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
-        }
-        
-        .btn-secondary:hover:not(:disabled) {
-            background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
-            box-shadow: 0 6px 20px rgba(107, 114, 128, 0.4);
-            transform: translateY(-2px);
-        }
-        
-        .btn-print {
-            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(55, 65, 81, 0.3);
-        }
-        
-        .btn-print:hover:not(:disabled) {
-            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-            box-shadow: 0 6px 20px rgba(55, 65, 81, 0.4);
-            transform: translateY(-2px);
-        }
-        
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        #status:empty {
-            display: none;
-        }
-        
-        .status {
-            margin: 0;
-            padding: 1.25rem 1.5rem;
-            border-radius: var(--radius-lg);
-            font-size: 0.9375rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.875rem;
-            animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-        
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        .status.success {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(52, 211, 153, 0.05) 100%);
-            backdrop-filter: blur(10px);
-            color: var(--text);
-            border-left: 4px solid var(--success);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .status.info {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(34, 211, 238, 0.05) 100%);
-            backdrop-filter: blur(10px);
-            color: var(--text);
-            border-left: 4px solid #06b6d4;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .status.error {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(248, 113, 113, 0.05) 100%);
-            backdrop-filter: blur(10px);
-            color: var(--text);
-            border-left: 4px solid #dc2626;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .table-container {
-            max-height: 65vh;
-            overflow: auto;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8125rem;
-        }
-        
-        th, td {
-            padding: 0.5rem 0.625rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        /* Auto-width columns that fit content */
-        th.auto-width, td.auto-width {
-            width: 1%;
-            white-space: nowrap;
-        }
-        
-        /* Narrow column for specific headers */
-        th:contains("Maximale Füllmenge") {
-            max-width: 120px;
-            width: 120px;
-        }
-        
-        td[data-column="maximale-füllmenge"] {
-            max-width: 120px;
-            width: 120px;
-            word-wrap: break-word;
-            word-break: break-word;
-        }
-        
-        th {
-            background: rgba(248, 250, 252, 0.98);
-            backdrop-filter: blur(10px);
-            font-weight: 700;
-            color: var(--text);
-            text-transform: uppercase;
-            font-size: 0.6875rem;
-            letter-spacing: 0.025em;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        
-        tbody tr {
-            transition: var(--transition);
-        }
-        
-        tbody tr:hover {
-            background: rgba(99, 102, 241, 0.04);
-            transform: scale(1.002);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        tbody tr:nth-child(even) {
-            background: linear-gradient(to right, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.3));
-        }
-        
-        /* Thicker borders between different Lagerplätze */
-        tbody tr.group-start {
-            border-top: 2px solid var(--text);
-        }
-        
-        tbody tr.group-start td {
-            border-top: 2px solid var(--text);
-        }
-        
-        .highlight {
-            background: linear-gradient(135deg, rgba(254, 243, 199, 0.6) 0%, rgba(253, 230, 138, 0.4) 100%) !important;
-            font-weight: 600;
-        }
-        
-        .empty-state {
-            padding: 4rem 2rem;
-            text-align: center;
-            color: var(--text-secondary);
-            animation: fadeIn 0.5s ease;
-        }
-        
-        .empty-state svg {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 1rem;
-            opacity: 0.4;
-            transition: var(--transition);
-        }
-        
-        .empty-state:hover svg {
-            opacity: 0.6;
-            transform: scale(1.05);
-        }
-        
-        /* Loading Spinner */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            animation: fadeIn 0.2s ease;
-        }
-        
-        .loading-overlay.active {
-            display: flex;
-        }
-        
-        .loading-content {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            padding: 2.5rem 3rem;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-xl);
-            text-align: center;
-            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .spinner {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 1.5rem;
-            border: 4px solid rgba(99, 102, 241, 0.1);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .loading-text {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text);
-            margin: 0;
-        }
-        
-        .loading-subtext {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin: 0.5rem 0 0;
-        }
-        
-        .empty-state p {
-            font-size: 0.875rem;
-        }
-        
-        @media (max-width: 768px) {
-            .controls {
-                flex-direction: column;
-            }
-            
-            .btn-group {
-                margin-left: 0;
-            }
-        }
-        
-        /* Print Styles */
-        @media print {
-            body {
-                background: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            
-            body > .container {
-                max-width: 100%;
-                padding: 0;
-            }
-            
-            body > .container > header,
-            header,
-            .controls,
-            #status,
-            .stats,
-            .no-print,
-            .print-header {
-                display: none !important;
-            }
-
-            .page-number {
-                display: block;
-                position: fixed;
-                bottom: 0.5cm;
-                right: 1cm;
-                width: auto;
-                font-size: 10pt;
-                color: #888;
-                z-index: 9999;
-            }
-            .page-number:after {
-                content: "Seite " counter(page);
-            }
-            html, body {
-                counter-reset: page 1;
-            }
-            @page {
-                counter-increment: page;
-            }
-            
-            .card {
-                box-shadow: none;
-                border: none;
-            }
-            
-            .table-container {
-                max-height: none;
-                overflow: visible;
-            }
-            
-            table {
-                font-size: 9pt;
-                width: 100%;
-            }
-            
-            th, td {
-                padding: 4pt 6pt;
-                border: 1px solid #ccc;
-            }
-            
-            th {
-                background: #f0f0f0 !important;
-                color: #333 !important;
-                position: static;
-            }
-            
-            #tableHead {
-                display: none !important;
-            }
-            
-            th.highlight {
-                background: #ffe699 !important;
-            }
-            
-            .highlight {
-                background: #fff9e6 !important;
-            }
-            
-            tbody tr:nth-child(even) {
-                background: #f9f9f9 !important;
-            }
-            
-            tbody tr:hover {
-                background: inherit !important;
-            }
-            
-            @page {
-                margin: 0.5cm;
-            }
-        }
-        
-        .print-header {
-            display: none;
-        }
-        
-        /* Column Selector Modal */
-        .column-selector {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .column-selector-content {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-xl);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            max-width: 540px;
-            width: 90%;
-            max-height: 85vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        .column-selector-header {
-            padding: 1.75rem 2rem;
-            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: linear-gradient(to bottom, rgba(248, 250, 252, 0.4), transparent);
-        }
-        
-        .column-selector-header h3 {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--text);
-            letter-spacing: -0.025em;
-        }
-        
-        .column-selector-close {
-            background: none;
-            border: none;
-            font-size: 1.75rem;
-            cursor: pointer;
-            color: var(--text-muted);
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: var(--radius);
-            transition: var(--transition);
-        }
-        
-        .column-selector-close:hover {
-            color: var(--text);
-            background: rgba(99, 102, 241, 0.1);
-            transform: rotate(90deg);
-        }
-        
-        .column-selector-body {
-            padding: 2rem;
-            overflow-y: auto;
-            flex: 1;
-        }
-        
-        .column-checkbox-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-        }
-        
-        .column-checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 0.625rem;
-            min-width: 200px;
-            padding: 0.5rem 0.75rem;
-            border-radius: var(--radius);
-            transition: var(--transition);
-        }
-        
-        .column-checkbox-item:hover {
-            background: rgba(99, 102, 241, 0.05);
-        }
-        
-        .column-checkbox-item input[type="checkbox"] {
-            margin: 0;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: var(--primary);
-        }
-        
-        .column-checkbox-item label {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text);
-            cursor: pointer;
-            margin: 0;
-            transition: var(--transition);
-        }
-        
-        .column-checkbox-item:hover label {
-            color: var(--primary);
-        }
-        
-        .column-selector-footer {
-            padding: 1.75rem 2rem;
-            border-top: 1px solid rgba(226, 232, 240, 0.6);
-            display: flex;
-            gap: 0.75rem;
-            justify-content: flex-end;
-            background: linear-gradient(to top, rgba(248, 250, 252, 0.4), transparent);
-        }
-    </style>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
     <div class="container">
@@ -732,7 +22,7 @@
         <div class="card">
             <div class="controls">
                 <div class="file-input-wrapper">
-                    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" aria-label="XLSX-Datei auswählen" />
                     <div class="file-input-label">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -750,7 +40,8 @@
                         <option value="prozentual">Füllgrad %</option>
                         <option value="lagerplatz-asc">Lagerplatz (A-Z)</option>
                         <option value="lagerplatz-desc">Lagerplatz (Z-A)</option>
-                        <option value="wareneingangsdatum">Wareneingangsdatum</option>
+                        <option value="wareneingangsdatum-asc">Wareneingangsdatum (A-Z)</option>
+                        <option value="wareneingangsdatum-desc">Wareneingangsdatum (Z-A)</option>
                     </select>
                 </div>
                 
@@ -784,10 +75,13 @@
             </div>
             
             <!-- Column Selector Modal -->
-            <div id="columnSelector" class="column-selector" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="columnSelectorTitle">
+            <div id="columnSelector" class="column-selector column-selector--hidden" role="dialog" aria-modal="true" aria-labelledby="columnSelectorTitle">
                 <div class="column-selector-content">
                     <div class="column-selector-header">
-                        <h3 id="columnSelectorTitle">Sichtbare Spalten auswählen</h3>
+                        <div>
+                            <h3 id="columnSelectorTitle">Sichtbare Spalten auswählen</h3>
+                            <p id="columnSelectorSubtitle" class="column-selector-subtitle"></p>
+                        </div>
                         <button class="column-selector-close" aria-label="Modal schließen">&times;</button>
                     </div>
                     <div class="column-selector-body" id="columnCheckboxes">
@@ -805,7 +99,6 @@
             
             <div class="print-header">
                 <h1>XLSX Sortier-Tool - Lagerbestand</h1>
-                <p id="printDate"></p>
             </div>
             
             <div class="table-container">
@@ -813,7 +106,7 @@
                     <thead id="tableHead"></thead>
                     <tbody id="tableBody">
                         <tr>
-                            <td colspan="100" style="padding: 0;">
+                            <td colspan="100" class="td--empty-state">
                                 <div class="empty-state">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -1010,37 +303,49 @@
             }
         }
 
-        // Load column preferences from localStorage
+        const SORT_LABELS = {
+            'auffuellbedarf':       'Auffüllbedarf',
+            'prozentual':           'Füllgrad %',
+            'lagerplatz-asc':       'Lagerplatz (A-Z)',
+            'lagerplatz-desc':      'Lagerplatz (Z-A)',
+            'wareneingangsdatum-asc':  'Wareneingangsdatum (A-Z)',
+            'wareneingangsdatum-desc': 'Wareneingangsdatum (Z-A)',
+        };
+
+        function currentSortValue() {
+            return document.getElementById('sortColumn').value;
+        }
+
+        // Load column preferences for a given sort option
         function loadColumnPreferences() {
+            const key = 'visibleColumns_' + currentSortValue();
             try {
-                const saved = localStorage.getItem('visibleColumns');
+                const saved = localStorage.getItem(key);
                 if (saved) {
                     visibleColumns = JSON.parse(saved);
                 } else {
-                    // Default: show all columns
                     visibleColumns = [];
                 }
             } catch (error) {
-                console.warn('Unable to load column preferences from localStorage:', error);
-                // Fallback: show all columns
+                console.warn('Unable to load column preferences:', error);
                 visibleColumns = [];
             }
         }
 
-        // Save column preferences to localStorage
+        // Save column preferences for the current sort option
         function saveColumnPreferences() {
+            const key = 'visibleColumns_' + currentSortValue();
             try {
-                localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns));
+                localStorage.setItem(key, JSON.stringify(visibleColumns));
             } catch (error) {
-                console.warn('Unable to save column preferences to localStorage:', error);
-                // Silently fail - user preferences won't be persisted, but app continues to work
+                console.warn('Unable to save column preferences:', error);
             }
         }
 
         // Toggle column selector modal
         function toggleColumnSelector() {
             const selector = document.getElementById('columnSelector');
-            if (selector.style.display === 'none' || selector.style.display === '') {
+            if (selector.classList.contains('column-selector--hidden')) {
                 showColumnSelector();
             } else {
                 hideColumnSelector();
@@ -1050,7 +355,7 @@
         // Handle keyboard events for modal
         function handleModalKeydown(event) {
             const selector = document.getElementById('columnSelector');
-            if (selector.style.display !== 'none' && selector.style.display !== '') {
+            if (!selector.classList.contains('column-selector--hidden')) {
                 if (event.key === 'Escape') {
                     hideColumnSelector();
                 }
@@ -1068,7 +373,17 @@
         function showColumnSelector() {
             const selector = document.getElementById('columnSelector');
             const checkboxesContainer = document.getElementById('columnCheckboxes');
-            
+
+            // Update subtitle to show which sort preset is being edited
+            const subtitle = document.getElementById('columnSelectorSubtitle');
+            subtitle.textContent = 'Preset: ' + (SORT_LABELS[currentSortValue()] || currentSortValue());
+
+            // Reload per-sort preferences so checkboxes always reflect saved state
+            loadColumnPreferences();
+            if (visibleColumns.length === 0) {
+                visibleColumns = headers.map((_, i) => i);
+            }
+
             // Store the currently focused element
             lastFocusedElement = document.activeElement;
             
@@ -1085,7 +400,7 @@
                     `;
                 }).join('') + '</div>';
             
-            selector.style.display = 'flex';
+            selector.classList.remove('column-selector--hidden');
             
             // Focus the first checkbox or close button
             const firstCheckbox = checkboxesContainer.querySelector('input[type="checkbox"]');
@@ -1100,7 +415,7 @@
 
         // Hide column selector
         function hideColumnSelector() {
-            document.getElementById('columnSelector').style.display = 'none';
+            document.getElementById('columnSelector').classList.add('column-selector--hidden');
             
             // Restore focus to the previously focused element
             if (lastFocusedElement) {
@@ -1145,7 +460,7 @@
             saveColumnPreferences();
             displayTable(headers, sortedData.length > 0 ? sortedData : data);
             hideColumnSelector();
-            showStatus(`${visibleColumns.length} von ${headers.length} Spalten werden angezeigt`, 'success');
+            showStatus(`${visibleColumns.length} von ${headers.length} Spalten für „${SORT_LABELS[currentSortValue()] || currentSortValue()}" gespeichert`, 'success');
         }
 
         // Hide column selector when clicking outside
@@ -1180,7 +495,7 @@
                 currentSortColumn = PROZENTUAL_INDEX;
             } else if ((sortValue === 'lagerplatz-asc' || sortValue === 'lagerplatz-desc') && LAGERPLATZ_INDEX !== -1) {
                 currentSortColumn = LAGERPLATZ_INDEX;
-            } else if (sortValue === 'wareneingangsdatum' && WARENEINGANGSDATUM_INDEX !== -1) {
+            } else if ((sortValue === 'wareneingangsdatum-asc' || sortValue === 'wareneingangsdatum-desc') && WARENEINGANGSDATUM_INDEX !== -1) {
                 currentSortColumn = WARENEINGANGSDATUM_INDEX;
             } else if (AUFFUELLBEDARF_INDEX !== -1) {
                 currentSortColumn = AUFFUELLBEDARF_INDEX;
@@ -1199,6 +514,11 @@
                 }
             }
             if (data.length > 0) {
+                // Load per-sort column preset and re-render before sorting
+                loadColumnPreferences();
+                if (visibleColumns.length === 0) {
+                    visibleColumns = headers.map((_, i) => i);
+                }
                 sortData();
             }
         });
@@ -1423,7 +743,7 @@
                             return lagerplatzB.localeCompare(lagerplatzA);
                         }
                     });
-                } else if (sortValue === 'wareneingangsdatum') {
+                } else if (sortValue === 'wareneingangsdatum-asc' || sortValue === 'wareneingangsdatum-desc') {
                     // Sort by Wareneingangsdatum
                     if (WARENEINGANGSDATUM_INDEX === -1) {
                         loadingOverlay.classList.remove('active');
@@ -1432,7 +752,8 @@
                         return;
                     }
                     
-                    sortColumnName = 'Wareneingangsdatum';
+                    const isAscending = sortValue === 'wareneingangsdatum-asc';
+                    sortColumnName = isAscending ? 'Wareneingangsdatum (A-Z)' : 'Wareneingangsdatum (Z-A)';
                     
                     result = [...data].sort((a, b) => {
                         const dateA = a[WARENEINGANGSDATUM_INDEX];
@@ -1451,7 +772,9 @@
                             return isNaN(parsed) ? 0 : parsed.getTime();
                         };
                         
-                        return parseDateValue(dateB) - parseDateValue(dateA); // Descending (newest first)
+                        return isAscending
+                            ? parseDateValue(dateA) - parseDateValue(dateB)  // Ascending (oldest first)
+                            : parseDateValue(dateB) - parseDateValue(dateA); // Descending (newest first)
                     });
                 } else {
                     // Sort by priority (Auffüllbedarf or Prozentual)
@@ -1545,7 +868,6 @@
             // Header erstellen - add staggered QR columns after columns that need them
             thead.innerHTML = '<tr>' + visibleHeaders.map((h, visibleIndex) => {
                 const originalIndex = visibleIndices[visibleIndex];
-                const highlight = (originalIndex === currentSortColumn || originalIndex === LAGERPLATZ_INDEX) ? ' class="highlight"' : '';
                 
                 // Override header text for calculated percentage column
                 let headerText = h;
@@ -1558,27 +880,21 @@
                 // Check if this header should be auto-width
                 const headerLower = (h || '').toLowerCase();
                 let headerClass = '';
-                let headerStyle = '';
+                const isMaxFillHeader = headerLower.includes('maximale') && headerLower.includes('füllmenge');
                 
                 // Auto-width for specific columns
-                if (headerLower.includes('artikel') || 
-                    (headerLower.includes('maximale') && headerLower.includes('füllmenge')) ||
-                    headerLower.includes('res-bestand')) {
-                    headerClass = ' class="auto-width' + (highlight ? ' highlight' : '') + '"';
-                } else if (highlight) {
-                    headerClass = ' class="highlight"';
+                if (headerLower.includes('artikel') || isMaxFillHeader || headerLower.includes('res-bestand')) {
+                    const classes = ['auto-width'];
+                    if (isMaxFillHeader) classes.push('col--max-fill');
+                    headerClass = ` class="${classes.join(' ')}"`;
                 }
                 
-                if (headerLower.includes('maximale') && headerLower.includes('füllmenge')) {
-                    headerStyle = ' style="max-width: 100px;"';
-                }
-                
-                let headerHTML = `<th${headerClass}${headerStyle}>${safeHeader}</th>`;
+                let headerHTML = `<th${headerClass}>${safeHeader}</th>`;
                 
                 // Add staggered QR column headers if this column should have QR codes
                 if (qrCodeColumns.includes(originalIndex)) {
-                    headerHTML += '<th style="text-align: center; width: 50px; padding: 0.25rem;">QR</th>';
-                    headerHTML += '<th style="text-align: center; width: 50px; padding: 0.25rem;"></th>';
+                    headerHTML += '<th class="th--qr">QR</th>';
+                    headerHTML += '<th class="th--qr"></th>';
                 }
                 
                 return headerHTML;
@@ -1608,6 +924,9 @@
                 }
             }
             
+            // Track which Lagerplatz values have already had their QR rendered
+            const renderedLagerplaetze = new Set();
+
             tbody.innerHTML = rows.map((row, rowIndex) => {
                 const currentLagerplatz = LAGERPLATZ_INDEX !== -1 ? String(row[LAGERPLATZ_INDEX] || '') : '';
                 const nextLagerplatz = LAGERPLATZ_INDEX !== -1 && rowIndex < rows.length - 1 ? String(rows[rowIndex + 1][LAGERPLATZ_INDEX] || '') : null;
@@ -1619,7 +938,8 @@
                     lastLagerplatz = currentLagerplatz;
                 }
                 
-                const groupClass = isGroupStart ? ' group-start' : '';
+                const groupParity = groupIndex % 2 === 0 ? 'group--even' : 'group--odd';
+                const groupClass = isGroupStart ? `group-start ${groupParity}` : groupParity;
                 
                 return `<tr class="${groupClass}">` + visibleIndices.map((colIndex, visibleIndex) => {
                     let value = row[colIndex];
@@ -1678,7 +998,6 @@
                         }
                     }
                     
-                    const highlight = (colIndex === currentSortColumn || colIndex === LAGERPLATZ_INDEX) ? ' class="highlight"' : '';
                     let cellContent = value !== undefined && value !== null ? value : '';
                     const safeCellContent = escapeHtml(String(cellContent));
                     
@@ -1686,39 +1005,42 @@
                     const headerName = headers[colIndex] || '';
                     const headerNameLower = headerName.toLowerCase();
                     let cellClass = '';
-                    let cellStyle = '';
+                    const isMaxFillCell = headerNameLower.includes('maximale') && headerNameLower.includes('füllmenge');
                     
                     // Auto-width for specific columns
-                    if (headerNameLower.includes('artikel') || 
-                        (headerNameLower.includes('maximale') && headerNameLower.includes('füllmenge')) ||
-                        headerNameLower.includes('res-bestand')) {
-                        cellClass = ' class="auto-width' + (highlight ? ' highlight' : '') + '"';
-                    } else if (highlight) {
-                        cellClass = ' class="highlight"';
+                    if (headerNameLower.includes('artikel') || isMaxFillCell || headerNameLower.includes('res-bestand')) {
+                        const classes = ['auto-width'];
+                        if (isMaxFillCell) classes.push('td--max-fill');
+                        cellClass = ` class="${classes.join(' ')}"`;
                     }
                     
-                    if (headerNameLower.includes('maximale') && headerNameLower.includes('füllmenge')) {
-                        cellStyle = ' style="max-width: 100px; word-wrap: break-word; font-size: 0.75rem;"';
-                    }
-                    
-                    let cellHTML = `<td${cellClass}${cellStyle}>${safeCellContent}</td>`;
+                    let cellHTML = `<td${cellClass}>${safeCellContent}</td>`;
                     
                     // Add staggered QR code columns if this column should have QR codes
                     if (qrCodeColumns.includes(colIndex)) {
-                        const qrCodeUrl = cellContent ? qrCodeMap.get(String(cellContent)) : null;
+                        // For Lagerplatz column: only show QR on the first (topmost) row per unique value
+                        const isLagerplatzCol = colIndex === LAGERPLATZ_INDEX;
+                        const lagerplatzKey = isLagerplatzCol ? String(cellContent) : null;
+                        const alreadyRendered = isLagerplatzCol && (renderedLagerplaetze.has(lagerplatzKey) || !lagerplatzKey);
+
+                        if (isLagerplatzCol && lagerplatzKey && !alreadyRendered) {
+                            renderedLagerplaetze.add(lagerplatzKey);
+                        }
+
+                        const qrCodeUrl = (!alreadyRendered && cellContent) ? qrCodeMap.get(String(cellContent)) : null;
                         const columnName = headers[colIndex] || 'Column';
                         const isEvenIndex = rowIndex % 2 === 0; // Even index (0,2,4...) = odd row number (1,3,5...)
                         
                         if (qrCodeUrl) {
-                            const qrImg = `<img src="${qrCodeUrl}" alt="QR" style="width: ${QR_CODE_SIZE}px; height: ${QR_CODE_SIZE}px; display: block; margin: 0 auto; image-rendering: crisp-edges; image-rendering: pixelated;" title="${columnName}: ${safeCellContent}" />`;
+                            const qrImg = `<img src="${qrCodeUrl}" alt="QR" class="qr-img" title="${columnName}: ${safeCellContent}" />`;
                             
                             // Stagger: even indices (odd rows) in first column, odd indices (even rows) in second column
                             if (isEvenIndex) {
-                                cellHTML += `<td style="text-align: center; padding: 0.25rem;">${qrImg}</td>`;
+                                cellHTML += `<td class="td--qr">${qrImg}</td>`;
                                 cellHTML += '<td></td>';
                             } else {
                                 cellHTML += '<td></td>';
-                                cellHTML += `<td style="text-align: center; padding: 0.25rem;">${qrImg}</td>`;
+                                cellHTML += `<td class="td--qr">${qrImg}</td>`;
                             }
                         } else {
                             cellHTML += '<td></td><td></td>';
@@ -1774,7 +1096,6 @@
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            document.getElementById('printDate').textContent = `Gedruckt am: ${dateStr}`;
 
             // Advanced: Insert page number rows every N rows (estimate for A4 portrait, 10pt font, no header/footer)
             const ROWS_PER_PAGE = 13; // Adjust as needed for your layout

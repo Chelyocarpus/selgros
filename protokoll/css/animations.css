@@ -1,0 +1,357 @@
+/* ============================================================
+   Protokoll — Animation Layer  (2026 cutting-edge CSS)
+   All motion rules live here; remove this <link> to disable
+   every animation without touching main.css.
+   ============================================================ */
+
+/* ============================================================
+   @property — Typed, animatable CSS custom properties
+   ============================================================ */
+@property --gradient-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@property --shimmer-pos {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: -40%;
+}
+
+@property --glow-opacity {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+}
+
+/* ============================================================
+   :root — additional motion tokens & interpolate-size
+   ============================================================ */
+:root {
+    /* Allow smooth transitions to/from intrinsic sizes (height: auto, etc.) */
+    interpolate-size: allow-keywords;
+
+    /* Spring easing presets using linear() */
+    --ease-spring-2:
+        linear(
+            0, 0.007, 0.029 2.2%, 0.118 5%, 0.625 17.5%, 0.826 23.7%,
+            0.902 27.4%, 0.951 31.2%, 0.985 34.9%,
+            1.007 38.6%, 1.013 42.2%, 1.009 49.8%,
+            0.999 55.5%, 0.998 64.6%, 1
+        );
+    --ease-spring-3:
+        linear(
+            0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25%,
+            0.849 31.1%, 0.938 38.1%, 0.968 41.8%,
+            1.01 48%, 1.017 52.1%, 1.01 56.4%,
+            0.997 71.7%, 0.999 80.1%, 1
+        );
+}
+
+/* ============================================================
+   All animations gated on motion preference
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+
+    /* ----------------------------------------------------------
+       Header — @starting-style entry (slide down + fade)
+       ---------------------------------------------------------- */
+    header {
+        transition:
+            opacity var(--duration-slow) var(--ease-standard),
+            translate var(--duration-slow) var(--ease-spring-2);
+    }
+
+    @starting-style {
+        header {
+            opacity: 0;
+            translate: 0 -1.5rem;
+        }
+    }
+
+    /* ----------------------------------------------------------
+       Card — @starting-style entry (slide up + fade)
+       ---------------------------------------------------------- */
+    .card {
+        transition:
+            opacity var(--duration-slow) var(--ease-standard),
+            translate var(--duration-slow) var(--ease-spring-2);
+        transition-delay: 80ms;
+    }
+
+    @starting-style {
+        .card {
+            opacity: 0;
+            translate: 0 2rem;
+        }
+    }
+
+    /* ----------------------------------------------------------
+       Status banner — slide-in with @starting-style
+       (complements the existing slideInRight keyframe animation)
+       ---------------------------------------------------------- */
+    .status {
+        transition:
+            opacity var(--duration-slow) var(--ease-standard),
+            translate var(--duration-slow) var(--ease-spring-2),
+            display var(--duration-slow) allow-discrete;
+    }
+
+    @starting-style {
+        .status {
+            opacity: 0;
+            translate: 1rem 0;
+        }
+    }
+
+    /* ----------------------------------------------------------
+       Column selector backdrop — @starting-style
+       ---------------------------------------------------------- */
+    .column-selector:not(.column-selector--hidden) {
+        transition:
+            opacity var(--duration-base) var(--ease-standard),
+            display var(--duration-base) allow-discrete;
+        transition-behavior: allow-discrete;
+    }
+
+    @starting-style {
+        .column-selector:not(.column-selector--hidden) {
+            opacity: 0;
+        }
+    }
+
+    /* ----------------------------------------------------------
+       Column selector content — @starting-style (slide up)
+       ---------------------------------------------------------- */
+    .column-selector:not(.column-selector--hidden) .column-selector-content {
+        transition:
+            opacity var(--duration-slow) var(--ease-standard),
+            translate var(--duration-slow) var(--ease-spring-3),
+            scale var(--duration-slow) var(--ease-spring-3);
+        transition-delay: 40ms;
+    }
+
+    @starting-style {
+        .column-selector:not(.column-selector--hidden) .column-selector-content {
+            opacity: 0;
+            translate: 0 1.5rem;
+            scale: 0.96;
+        }
+    }
+
+    /* ----------------------------------------------------------
+       Scroll-driven animations — table rows fade up on scroll
+       ---------------------------------------------------------- */
+    @supports (animation-timeline: view()) {
+        tbody tr {
+            animation: fade-up linear both;
+            animation-timeline: view();
+            animation-range: entry 0% entry 20%;
+            /* Firefox requires an explicit duration for scroll timelines */
+            animation-duration: 1ms;
+        }
+
+        @keyframes fade-up {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    }
+
+    /* ----------------------------------------------------------
+       Button — shimmer sweep on .btn-primary hover
+       (uses @property --shimmer-pos to animate gradient)
+       ---------------------------------------------------------- */
+    .btn-primary {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+    }
+
+    .btn-primary::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            105deg,
+            transparent calc(var(--shimmer-pos) - 20%),
+            rgba(255, 255, 255, 0.18) var(--shimmer-pos),
+            transparent calc(var(--shimmer-pos) + 20%)
+        );
+        pointer-events: none;
+        border-radius: inherit;
+        --shimmer-pos: -40%;
+        transition: --shimmer-pos 0.55s var(--ease-standard);
+    }
+
+    .btn-primary:hover:not(:disabled)::after {
+        --shimmer-pos: 140%;
+    }
+
+    /* ----------------------------------------------------------
+       Button hover — spring lift for all interactive buttons
+       ---------------------------------------------------------- */
+    .btn-primary,
+    .btn-secondary,
+    .btn-success,
+    .btn-print {
+        transition:
+            background var(--duration-base) var(--ease-standard),
+            box-shadow var(--duration-base) var(--ease-standard),
+            transform var(--duration-base) var(--ease-spring-3),
+            border-color var(--duration-base) var(--ease-standard),
+            color var(--duration-base) var(--ease-standard);
+    }
+
+    .btn-primary:active:not(:disabled),
+    .btn-secondary:active:not(:disabled),
+    .btn-success:active:not(:disabled),
+    .btn-print:active:not(:disabled) {
+        transform: scale(0.97) translateY(0);
+        transition-duration: calc(var(--duration-fast) / 2);
+    }
+
+    /* ----------------------------------------------------------
+       File-input / drop-zone — pulse ring on drag-over
+       ---------------------------------------------------------- */
+    .file-input-label.drag-over,
+    .file-input-wrapper.drag-over .file-input-label {
+        animation: drop-zone-pulse 1.4s var(--ease-standard) infinite;
+    }
+
+    @keyframes drop-zone-pulse {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(24, 24, 27, 0.25);
+            border-color: var(--color-accent);
+        }
+        50% {
+            box-shadow: 0 0 0 8px rgba(24, 24, 27, 0);
+            border-color: var(--color-accent-dark);
+        }
+    }
+
+    /* ----------------------------------------------------------
+       Loading overlay — @starting-style entry
+       ---------------------------------------------------------- */
+    .loading-overlay.active {
+        transition:
+            opacity var(--duration-base) var(--ease-standard),
+            display var(--duration-base) allow-discrete;
+        transition-behavior: allow-discrete;
+    }
+
+    @starting-style {
+        .loading-overlay.active {
+            opacity: 0;
+        }
+    }
+
+    .loading-overlay.active .loading-content {
+        transition:
+            opacity var(--duration-slow) var(--ease-standard),
+            translate var(--duration-slow) var(--ease-spring-2),
+            scale var(--duration-slow) var(--ease-spring-2);
+        transition-delay: 60ms;
+    }
+
+    @starting-style {
+        .loading-overlay.active .loading-content {
+            opacity: 0;
+            translate: 0 1rem;
+            scale: 0.97;
+        }
+    }
+
+    /* ----------------------------------------------------------
+       View transitions — cross-state morphing
+       ---------------------------------------------------------- */
+    header          { view-transition-name: page-header; }
+    .card           { view-transition-name: main-card; }
+    #status         { view-transition-name: status-banner; }
+    .column-selector { view-transition-name: column-selector; }
+    .table-container { view-transition-name: table-wrapper; }
+
+    /* Outgoing element fades out */
+    ::view-transition-old(*) {
+        animation: vt-fade-out var(--duration-base) var(--ease-standard) both;
+    }
+
+    /* Incoming element fades up */
+    ::view-transition-new(*) {
+        animation: vt-fade-up var(--duration-slow) var(--ease-spring-2) both;
+    }
+
+    /* Header keeps cross-fade only (no vertical shift) */
+    ::view-transition-old(page-header),
+    ::view-transition-new(page-header) {
+        animation: vt-fade-out var(--duration-base) var(--ease-standard) both;
+    }
+    ::view-transition-new(page-header) {
+        animation: vt-fade-up var(--duration-slow) var(--ease-standard) both;
+    }
+
+    @keyframes vt-fade-out {
+        to { opacity: 0; }
+    }
+
+    @keyframes vt-fade-up {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ----------------------------------------------------------
+       Rotating conic gradient on header badge (if present)
+       ---------------------------------------------------------- */
+    .header-badge,
+    header .badge {
+        background: conic-gradient(
+            from var(--gradient-angle),
+            transparent 0%,
+            rgba(255, 255, 255, 0.12) 25%,
+            transparent 50%
+        );
+        animation: gradient-rotate 6s linear infinite;
+    }
+
+    @keyframes gradient-rotate {
+        to { --gradient-angle: 360deg; }
+    }
+
+    /* ----------------------------------------------------------
+       Empty state — gentle float
+       ---------------------------------------------------------- */
+    .empty-state svg {
+        animation: empty-float 3s var(--ease-standard) infinite alternate;
+    }
+
+    @keyframes empty-float {
+        from { transform: translateY(0); }
+        to   { transform: translateY(-6px); }
+    }
+
+} /* end @media (prefers-reduced-motion: no-preference) */
+
+/* ============================================================
+   Reduced-motion safety net — strip all motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Spinner must be explicitly disabled, not just sped up */
+    .spinner {
+        animation: none !important;
+    }
+}
