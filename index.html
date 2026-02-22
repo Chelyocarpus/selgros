@@ -1,267 +1,804 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Application Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        /* ── Design tokens ─────────────────────────────────────────── */
         :root {
-            --primary-color: #e30613;
-            --secondary-color: #333;
-            --accent-color: #f5f5f5;
-            --text-dark: #333;
-            --text-light: #666;
-            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --card-hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+            --brand:          #e30613;
+            --brand-light:    #ff4757;
+            --brand-glow:     rgba(227, 6, 19, 0.25);
+
+            /* Light theme */
+            --bg-base:        #f0f2f8;
+            --bg-card:        rgba(255, 255, 255, 0.72);
+            --bg-card-hover:  rgba(255, 255, 255, 0.92);
+            --bg-header:      rgba(255, 255, 255, 0.80);
+            --bg-search:      rgba(255, 255, 255, 0.85);
+            --bg-badge:       rgba(227, 6, 19, 0.08);
+            --bg-filter:      rgba(255, 255, 255, 0.65);
+            --bg-filter-act:  var(--brand);
+
+            --text-primary:   #1a1d2e;
+            --text-secondary: #5b607a;
+            --text-muted:     #8b90a8;
+            --text-badge:     var(--brand);
+            --text-filter:    var(--text-secondary);
+            --text-filter-act:#fff;
+
+            --border:         rgba(0, 0, 0, 0.07);
+            --border-focus:   var(--brand);
+
+            --shadow-sm:      0 2px 8px rgba(0,0,0,0.06);
+            --shadow-md:      0 8px 24px rgba(0,0,0,0.10);
+            --shadow-lg:      0 16px 40px rgba(0,0,0,0.14);
+            --shadow-glow:    0 8px 32px var(--brand-glow);
+
+            --radius-lg:      20px;
+            --radius-md:      14px;
+            --radius-sm:      10px;
+            --radius-pill:    100px;
+
+            --blur:           18px;
+            --transition:     0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+            --transition-fast:0.18s ease;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        [data-theme="dark"] {
+            --bg-base:        #0f1117;
+            --bg-card:        rgba(255, 255, 255, 0.05);
+            --bg-card-hover:  rgba(255, 255, 255, 0.09);
+            --bg-header:      rgba(255, 255, 255, 0.04);
+            --bg-search:      rgba(255, 255, 255, 0.06);
+            --bg-badge:       rgba(227, 6, 19, 0.18);
+            --bg-filter:      rgba(255, 255, 255, 0.06);
+            --bg-filter-act:  var(--brand);
+
+            --text-primary:   #e8eaf2;
+            --text-secondary: #9499b4;
+            --text-muted:     #60647a;
+            --text-badge:     #ff6b74;
+            --text-filter:    var(--text-secondary);
+            --text-filter-act:#fff;
+
+            --border:         rgba(255, 255, 255, 0.08);
+            --shadow-sm:      0 2px 8px rgba(0,0,0,0.30);
+            --shadow-md:      0 8px 24px rgba(0,0,0,0.40);
+            --shadow-lg:      0 16px 40px rgba(0,0,0,0.50);
         }
 
+        /* ── Reset ─────────────────────────────────────────────────── */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ── Base ──────────────────────────────────────────────────── */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-base);
             min-height: 100vh;
-            padding: 20px;
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
         }
 
+        /* ── Mesh / aurora background ──────────────────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 10% 10%,  rgba(227,6,19,0.12)   0%, transparent 60%),
+                radial-gradient(ellipse 70% 50% at 90% 80%,  rgba(100,120,255,0.10) 0%, transparent 55%),
+                radial-gradient(ellipse 60% 60% at 60% 20%,  rgba(255,180,0,0.07)  0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        [data-theme="dark"] body::before {
+            background:
+                radial-gradient(ellipse 80% 60% at 10% 10%,  rgba(227,6,19,0.18)   0%, transparent 60%),
+                radial-gradient(ellipse 70% 50% at 90% 80%,  rgba(100,120,255,0.14) 0%, transparent 55%),
+                radial-gradient(ellipse 60% 60% at 60% 20%,  rgba(255,180,0,0.08)  0%, transparent 50%);
+        }
+
+        /* ── Layout wrapper ────────────────────────────────────────── */
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 32px 24px;
+            position: relative;
+            z-index: 1;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: var(--card-shadow);
-        }
-
-        h1 {
-            color: var(--text-dark);
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            color: var(--text-light);
-            font-size: 1.1rem;
-        }
-
-        .apps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
+        /* ── Top bar ───────────────────────────────────────────────── */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
             margin-bottom: 40px;
         }
 
-        .app-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: var(--card-shadow);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-decoration: none;
-            color: inherit;
+        /* Dark-mode toggle */
+        .theme-toggle {
             display: flex;
-            flex-direction: column;
             align-items: center;
+            gap: 8px;
+            background: var(--bg-filter);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-pill);
+            padding: 8px 16px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 500;
+            font-family: inherit;
+            -webkit-backdrop-filter: blur(var(--blur));
+                        backdrop-filter: blur(var(--blur));
+            transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            border-color: var(--brand);
+        }
+
+        .theme-toggle:focus-visible {
+            outline: 2px solid var(--brand);
+            outline-offset: 3px;
+        }
+
+        .theme-toggle i { font-size: 0.9rem; }
+
+        /* ── Header ────────────────────────────────────────────────── */
+        header {
             text-align: center;
+            margin-bottom: 40px;
+            background: var(--bg-header);
+            -webkit-backdrop-filter: blur(var(--blur));
+                        backdrop-filter: blur(var(--blur));
+            padding: 48px 40px 40px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
         }
 
-        .app-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--card-hover-shadow);
+        /* Subtle accent line at top */
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--brand), var(--brand-light), transparent);
         }
 
-        .app-icon {
-            font-size: 4rem;
+        .header-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--brand), var(--brand-light));
             margin-bottom: 20px;
-            background: linear-gradient(135deg, var(--primary-color), #ff4757);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .header-logo i {
+            font-size: 1.8rem;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--text-primary) 40%, var(--brand));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            margin-top: 8px;
+            font-weight: 400;
+        }
+
+        /* ── Search bar ────────────────────────────────────────────── */
+        .search-wrap {
+            max-width: 480px;
+            margin: 28px auto 0;
+            position: relative;
+        }
+
+        .search-wrap i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        #search-input {
+            width: 100%;
+            padding: 13px 18px 13px 46px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--bg-search);
+            -webkit-backdrop-filter: blur(var(--blur));
+                        backdrop-filter: blur(var(--blur));
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.93rem;
+            outline: none;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        #search-input::placeholder { color: var(--text-muted); }
+
+        #search-input:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 4px var(--brand-glow);
+        }
+
+        /* ── Filter chips ──────────────────────────────────────────── */
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 32px;
+        }
+
+        .filter-chip {
+            padding: 7px 18px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: var(--bg-filter);
+            -webkit-backdrop-filter: blur(var(--blur));
+                        backdrop-filter: blur(var(--blur));
+            color: var(--text-filter);
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background var(--transition-fast), color var(--transition-fast),
+                        border-color var(--transition-fast), transform var(--transition-fast);
+        }
+
+        .filter-chip:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            transform: translateY(-1px);
+        }
+
+        .filter-chip.active,
+        .filter-chip[aria-pressed="true"] {
+            background: var(--bg-filter-act);
+            border-color: var(--bg-filter-act);
+            color: var(--text-filter-act);
+            box-shadow: 0 4px 12px var(--brand-glow);
+        }
+
+        .filter-chip:focus-visible {
+            outline: 2px solid var(--brand);
+            outline-offset: 3px;
+        }
+
+        /* ── App grid ──────────────────────────────────────────────── */
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        /* ── App card ──────────────────────────────────────────────── */
+        .app-card {
+            background: var(--bg-card);
+            -webkit-backdrop-filter: blur(var(--blur));
+                        backdrop-filter: blur(var(--blur));
+            border-radius: var(--radius-lg);
+            padding: 32px 28px 28px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+            /* Entry animation */
+            opacity: 0;
+            transform: translateY(24px);
+            transition:
+                opacity 0.4s ease,
+                transform 0.4s ease,
+                background var(--transition-fast),
+                box-shadow var(--transition-fast),
+                border-color var(--transition-fast);
+        }
+
+        .app-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Hover lift + glow */
+        .app-card:hover {
+            background: var(--bg-card-hover);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            border-color: rgba(227, 6, 19, 0.25);
+            transform: translateY(-5px) scale(1.01);
+        }
+
+        .app-card:focus-visible {
+            outline: 2px solid var(--brand);
+            outline-offset: 3px;
+        }
+
+        /* Sheen sweep on hover */
+        .app-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(130deg, transparent 40%, rgba(255,255,255,0.06) 60%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+
+        .app-card:hover::after {
+            transform: translateX(100%);
+        }
+
+        /* ── Card icon ─────────────────────────────────────────────── */
+        .app-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--brand), var(--brand-light));
+            box-shadow: 0 4px 14px var(--brand-glow);
+            flex-shrink: 0;
+            transition: transform var(--transition), box-shadow var(--transition);
+        }
+
+        .app-card:hover .app-icon {
+            transform: scale(1.1) rotate(-4deg);
+            box-shadow: 0 8px 24px var(--brand-glow);
+        }
+
+        .app-icon i {
+            font-size: 1.3rem;
+            color: #fff;
+        }
+
+        /* ── Card body ─────────────────────────────────────────────── */
+        .card-body { flex: 1; }
+
         .app-card h2 {
-            color: var(--text-dark);
-            font-size: 1.5rem;
-            margin-bottom: 10px;
+            font-size: 1.12rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--text-primary);
+            margin-bottom: 6px;
         }
 
         .app-card p {
-            color: var(--text-light);
+            color: var(--text-secondary);
             line-height: 1.6;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
+        }
+
+        /* ── Card footer row ───────────────────────────────────────── */
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 4px;
         }
 
         .app-badge {
-            display: inline-block;
-            padding: 5px 15px;
-            background: var(--accent-color);
-            border-radius: 20px;
-            font-size: 0.8rem;
-            color: var(--text-light);
-            margin-top: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            background: var(--bg-badge);
+            border-radius: var(--radius-pill);
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-badge);
         }
 
+        .card-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            transition: background var(--transition-fast), color var(--transition-fast),
+                        border-color var(--transition-fast), transform var(--transition);
+        }
+
+        .app-card:hover .card-arrow {
+            background: var(--brand);
+            border-color: var(--brand);
+            color: #fff;
+            transform: translate(2px, -2px);
+        }
+
+        /* Hidden cards (filtered out) */
+        .app-card[data-hidden="true"] {
+            display: none;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            display: none;
+            grid-column: 1 / -1;
+        }
+
+        .empty-state i { font-size: 3rem; margin-bottom: 16px; display: block; }
+        .empty-state p { font-size: 1rem; }
+
+        /* ── Footer ────────────────────────────────────────────────── */
         footer {
             text-align: center;
-            color: var(--text-light);
+            color: var(--text-muted);
             padding: 20px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: var(--card-shadow);
+            background: var(--bg-header);
+            -webkit-backdrop-filter: blur(var(--blur));
+                        backdrop-filter: blur(var(--blur));
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            font-size: 0.85rem;
         }
 
-        .footer-links {
-            margin-top: 10px;
+        /* ── Responsive ────────────────────────────────────────────── */
+        @media (max-width: 640px) {
+            .container { padding: 20px 16px; }
+            header { padding: 36px 24px 30px; }
+            .apps-grid { grid-template-columns: 1fr; gap: 14px; }
         }
 
-        .footer-links a {
-            color: var(--text-light);
-            text-decoration: none;
-            margin: 0 10px;
-            transition: color 0.3s ease;
-        }
-
-        .footer-links a:hover {
-            color: var(--primary-color);
-        }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .app-card {
-            animation: fadeIn 0.5s ease forwards;
+        /* ── Reduced motion ────────────────────────────────────────── */
+        @media (prefers-reduced-motion: reduce) {
+            .app-card { transition: background var(--transition-fast), box-shadow var(--transition-fast); }
+            .app-card:hover { transform: none; }
+            .app-card::after { display: none; }
+            .app-card.visible { opacity: 1; transform: none; }
         }
     </style>
 </head>
 <body>
     <div class="container">
+
+        <!-- Top bar: dark mode toggle -->
+        <div class="top-bar">
+            <button
+                class="theme-toggle"
+                id="theme-toggle"
+                aria-label="Design-Modus wechseln"
+                title="Hell / Dunkel (Alt+T)"
+                aria-pressed="false"
+            >
+                <i class="fas fa-moon" id="theme-icon" aria-hidden="true"></i>
+                <span id="theme-label">Dunkel</span>
+            </button>
+        </div>
+
+        <!-- Header -->
         <header>
+            <div class="header-logo" aria-hidden="true">
+                <i class="fas fa-th-large"></i>
+            </div>
             <h1>Application Portal</h1>
-            <p class="subtitle">Select an application</p>
+            <p class="subtitle">Wählen Sie eine Anwendung &mdash; Select an application</p>
+
+            <!-- Search -->
+            <div class="search-wrap">
+                <i class="fas fa-search" aria-hidden="true"></i>
+                <input
+                    type="search"
+                    id="search-input"
+                    placeholder="App suchen… / Search apps…"
+                    aria-label="Anwendung suchen"
+                    autocomplete="off"
+                >
+            </div>
         </header>
 
+        <!-- Filter chips -->
+        <div class="filter-bar" role="group" aria-label="Kategorie-Filter">
+            <button class="filter-chip active" data-filter="all" aria-pressed="true">Alle</button>
+            <button class="filter-chip" data-filter="Analytics" aria-pressed="false">Analytics</button>
+            <button class="filter-chip" data-filter="Warehouse Management" aria-pressed="false">Lager</button>
+            <button class="filter-chip" data-filter="Logistics" aria-pressed="false">Logistik</button>
+            <button class="filter-chip" data-filter="Tools" aria-pressed="false">Tools</button>
+            <button class="filter-chip" data-filter="Print" aria-pressed="false">Print</button>
+        </div>
+
+        <!-- App grid -->
         <main>
-            <div class="apps-grid">
-                <!-- Lagerbestand App -->
-                <a href="lagerbestand/index.html" class="app-card" style="animation-delay: 0.1s;">
-                    <div class="app-icon">
-                        <i class="fas fa-warehouse" aria-hidden="true"></i>
+            <div class="apps-grid" id="apps-grid">
+
+                <!-- Lagerbestand -->
+                <a href="lagerbestand/index.html" class="app-card" data-category="Warehouse Management">
+                    <div class="app-icon"><i class="fas fa-warehouse" aria-hidden="true"></i></div>
+                    <div class="card-body">
+                        <h2>Lagerbestand</h2>
+                        <p>Warehouse Warning System – Bestandsüberwachung, Materialverwaltung und Berichtsanalyse</p>
                     </div>
-                    <h2>Lagerbestand</h2>
-                    <p>Warehouse Warning System - Bestandsüberwachung, Materialverwaltung und Berichtsanalyse</p>
-                    <span class="app-badge">Warehouse Management</span>
+                    <div class="card-footer">
+                        <span class="app-badge"><i class="fas fa-warehouse" aria-hidden="true"></i> Warehouse Management</span>
+                        <span class="card-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </a>
 
-                <!-- Verkaufsanalyse App -->
-                <a href="verkaufsanalyse/index.html" class="app-card" style="animation-delay: 0.2s;">
-                    <div class="app-icon">
-                        <i class="fas fa-chart-line" aria-hidden="true"></i>
+                <!-- Verkaufsanalyse -->
+                <a href="verkaufsanalyse/index.html" class="app-card" data-category="Analytics">
+                    <div class="app-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></div>
+                    <div class="card-body">
+                        <h2>Verkaufsanalyse</h2>
+                        <p>Analyse und Visualisierung von Verkaufsdaten mit umfangreichen Statistiken</p>
                     </div>
-                    <h2>Verkaufsanalyse</h2>
-                    <p>Analyse und Visualisierung von Verkaufsdaten mit umfangreichen Statistiken</p>
-                    <span class="app-badge">Analytics</span>
+                    <div class="card-footer">
+                        <span class="app-badge"><i class="fas fa-chart-line" aria-hidden="true"></i> Analytics</span>
+                        <span class="card-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </a>
 
-                <!-- Wareneingang App -->
-                <a href="wareneingang/index.html" class="app-card" style="animation-delay: 0.3s;">
-                    <div class="app-icon">
-                        <i class="fas fa-truck-loading" aria-hidden="true"></i>
+                <!-- Wareneingang -->
+                <a href="wareneingang/index.html" class="app-card" data-category="Logistics">
+                    <div class="app-icon"><i class="fas fa-truck-loading" aria-hidden="true"></i></div>
+                    <div class="card-body">
+                        <h2>Wareneingang</h2>
+                        <p>Verwaltung und Dokumentation des Wareneingangs</p>
                     </div>
-                    <h2>Wareneingang</h2>
-                    <p>Verwaltung und Dokumentation des Wareneingangs</p>
-                    <span class="app-badge">Logistics</span>
+                    <div class="card-footer">
+                        <span class="app-badge"><i class="fas fa-truck-loading" aria-hidden="true"></i> Logistics</span>
+                        <span class="card-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </a>
 
-                <!-- Labels App -->
-                <a href="labels/index.html" class="app-card" style="animation-delay: 0.4s;">
-                    <div class="app-icon">
-                        <i class="fas fa-tags" aria-hidden="true"></i>
+                <!-- Etiketten -->
+                <a href="labels/index.html" class="app-card" data-category="Print">
+                    <div class="app-icon"><i class="fas fa-tags" aria-hidden="true"></i></div>
+                    <div class="card-body">
+                        <h2>Etiketten</h2>
+                        <p>Drucken Sie professionelle Etiketten mit Bildern</p>
                     </div>
-                    <h2>Etiketten</h2>
-                    <p>Drucken Sie professionelle Etiketten mit Bildern</p>
-                    <span class="app-badge">Print</span>
+                    <div class="card-footer">
+                        <span class="app-badge"><i class="fas fa-print" aria-hidden="true"></i> Print</span>
+                        <span class="card-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </a>
 
-                <!-- QR Code Generator -->
-                <a href="qrcode/index.html" class="app-card" style="animation-delay: 0.5s;">
-                    <div class="app-icon">
-                        <i class="fas fa-qrcode" aria-hidden="true"></i>
+                <!-- QR-Code Generator -->
+                <a href="qrcode/index.html" class="app-card" data-category="Tools">
+                    <div class="app-icon"><i class="fas fa-qrcode" aria-hidden="true"></i></div>
+                    <div class="card-body">
+                        <h2>QR-Code Generator</h2>
+                        <p>Erweiterter QR-Code-Generator mit Anpassungsoptionen</p>
                     </div>
-                    <h2>QR-Code Generator</h2>
-                    <p>Erweiterter QR-Code-Generator mit Anpassungsoptionen</p>
-                    <span class="app-badge">Tools</span>
+                    <div class="card-footer">
+                        <span class="app-badge"><i class="fas fa-tools" aria-hidden="true"></i> Tools</span>
+                        <span class="card-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </a>
 
-                <!-- Bestandsveränderung App -->
-                <a href="bestandsveraenderung/index.html" class="app-card" style="animation-delay: 0.6s;">
-                    <div class="app-icon">
-                        <i class="fas fa-chart-bar" aria-hidden="true"></i>
+                <!-- Bestandsveränderung -->
+                <a href="bestandsveraenderung/index.html" class="app-card" data-category="Analytics">
+                    <div class="app-icon"><i class="fas fa-chart-bar" aria-hidden="true"></i></div>
+                    <div class="card-body">
+                        <h2>Bestandsveränderung</h2>
+                        <p>Business Analyse Tool – Analyse von Bestandsbewegungen und finanziellen Auswirkungen</p>
                     </div>
-                    <h2>Bestandsveränderung</h2>
-                    <p>Business Analyse Tool - Analyse von Bestandsbewegungen und finanziellen Auswirkungen</p>
-                    <span class="app-badge">Analytics</span>
+                    <div class="card-footer">
+                        <span class="app-badge"><i class="fas fa-chart-bar" aria-hidden="true"></i> Analytics</span>
+                        <span class="card-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </a>
 
-                <!-- Protokoll App -->
-                <a href="protokoll/index.html" class="app-card" style="animation-delay: 0.7s;">
-                    <div class="app-icon">
-                        <i class="fas fa-sort" aria-hidden="true"></i>
+                <!-- Protokoll Sortierung -->
+                <a href="protokoll/index.html" class="app-card" data-category="Tools">
+                    <div class="app-icon"><i class="fas fa-sort-amount-down" aria-hidden="true"></i></div>
+                    <div class="card-body">
+                        <h2>Protokoll Sortierung</h2>
+                        <p>XLSX Sortier-Tool mit QR-Code-Generierung</p>
                     </div>
-                    <h2>Protokoll Sortierung</h2>
-                    <p>XLSX Sortier-Tool mit QR-Code-Generierung</p>
-                    <span class="app-badge">Tools</span>
+                    <div class="card-footer">
+                        <span class="app-badge"><i class="fas fa-tools" aria-hidden="true"></i> Tools</span>
+                        <span class="card-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </a>
 
-                <!-- Protokoll2QR App -->
-                <a href="protokoll2qr/index.html" class="app-card" style="animation-delay: 0.8s;">
-                    <div class="app-icon">
-                        <i class="fas fa-file-pdf" aria-hidden="true"></i>
+                <!-- Protokoll mit QR -->
+                <a href="protokoll2qr/index.html" class="app-card" data-category="Tools">
+                    <div class="app-icon"><i class="fas fa-file-pdf" aria-hidden="true"></i></div>
+                    <div class="card-body">
+                        <h2>Protokoll mit QR</h2>
+                        <p>Protokoll-Verarbeitung mit QR-Code-Generierung für PDF-Dateien</p>
                     </div>
-                    <h2>Protokoll mit QR</h2>
-                    <p>Protokoll-Verarbeitung mit QR-Code-Generierung für PDF-Dateien</p>
-                    <span class="app-badge">Tools</span>
+                    <div class="card-footer">
+                        <span class="app-badge"><i class="fas fa-tools" aria-hidden="true"></i> Tools</span>
+                        <span class="card-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </a>
+
+                <!-- Empty state (shown when no results) -->
+                <div class="empty-state" id="empty-state" aria-live="polite">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <p>Keine Anwendungen gefunden / No applications found</p>
+                </div>
+
             </div>
         </main>
 
         <footer>
-            <p>&copy; 2025 Application Portal.</p>
+            <p>&copy; 2026 Application Portal</p>
         </footer>
     </div>
 
     <script>
-        // Add keyboard navigation
-        document.addEventListener('DOMContentLoaded', function() {
-            const cards = document.querySelectorAll('.app-card');
+        (() => {
+            'use strict';
 
-            cards.forEach(card => {
-                // Make cards keyboard focusable (Enter works by default for <a> elements)
-                card.setAttribute('tabindex', '0');
+            // ── Theme ────────────────────────────────────────────────
+            const html        = document.documentElement;
+            const toggleBtn   = document.getElementById('theme-toggle');
+            const themeIcon   = document.getElementById('theme-icon');
+            const themeLabel  = document.getElementById('theme-label');
+
+            const THEME_KEY   = 'portal-theme';
+
+            const THEME_MAP = {
+                light: { icon: 'fa-moon',  label: 'Dunkel', next: 'dark'  },
+                dark:  { icon: 'fa-sun',   label: 'Hell',   next: 'light' }
+            };
+
+            const applyTheme = (theme) => {
+                const safeTheme = THEME_MAP[theme] ? theme : 'light';
+                html.setAttribute('data-theme', safeTheme);
+                const { icon, label } = THEME_MAP[safeTheme];
+                themeIcon.className  = `fas ${icon}`;
+                themeLabel.textContent = label;
+                toggleBtn.setAttribute('aria-pressed', safeTheme === 'dark' ? 'true' : 'false');
+                try {
+                    localStorage.setItem(THEME_KEY, safeTheme);
+                } catch (_) {
+                    // localStorage unavailable (e.g. strict privacy mode) — theme still applies for this session
+                }
+            };
+
+            // Respect OS preference on first visit
+            let savedTheme = 'light';
+            try {
+                savedTheme = localStorage.getItem(THEME_KEY)
+                    || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            } catch (_) {
+                savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            applyTheme(savedTheme);
+
+            toggleBtn.addEventListener('click', () => {
+                const current = html.getAttribute('data-theme');
+                applyTheme(THEME_MAP[current].next);
             });
 
-            // Log portal access (optional)
+            // Alt+T shortcut (skip when focus is inside an editable element)
+            document.addEventListener('keydown', (e) => {
+                const target = e.target;
+                if (target instanceof HTMLElement) {
+                    if (
+                        target.isContentEditable
+                        || target.tagName === 'INPUT'
+                        || target.tagName === 'TEXTAREA'
+                        || target.tagName === 'SELECT'
+                    ) {
+                        return;
+                    }
+                }
+                if (e.altKey && e.key.toLowerCase() === 't') {
+                    e.preventDefault();
+                    toggleBtn.click();
+                }
+            });
+
+            // ── Staggered card reveal ────────────────────────────────
+            const cards = Array.from(document.querySelectorAll('.app-card'));
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            const revealCards = (visibleCards) => {
+                visibleCards.forEach((card, i) => {
+                    if (reducedMotion) {
+                        card.classList.add('visible');
+                        return;
+                    }
+                    setTimeout(() => card.classList.add('visible'), 80 + i * 80);
+                });
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => revealCards(cards));
+            } else {
+                revealCards(cards);
+            }
+
+            // ── Search & filter ───────────────────────────────────────
+            const searchInput  = document.getElementById('search-input');
+            const filterChips  = document.querySelectorAll('.filter-chip');
+            const emptyState   = document.getElementById('empty-state');
+
+            let activeFilter = 'all';
+
+            const applyFilters = () => {
+                const query = searchInput.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                cards.forEach((card) => {
+                    const category    = card.dataset.category || '';
+                    // Derive searchable text from visible DOM content rather than a separate data attribute
+                    const heading     = card.querySelector('h2')?.textContent.toLowerCase() || '';
+                    const description = card.querySelector('p')?.textContent.toLowerCase()  || '';
+                    const searchable  = `${heading} ${description}`;
+
+                    const matchesSearch   = !query || searchable.includes(query);
+                    const matchesCategory = activeFilter === 'all' || category === activeFilter;
+                    const visible         = matchesSearch && matchesCategory;
+
+                    card.setAttribute('data-hidden', String(!visible));
+                    if (visible) visibleCount++;
+                });
+
+                emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+            };
+
+            searchInput.addEventListener('input', applyFilters);
+
+            filterChips.forEach((chip) => {
+                chip.addEventListener('click', () => {
+                    filterChips.forEach((c) => {
+                        c.classList.remove('active');
+                        c.setAttribute('aria-pressed', 'false');
+                    });
+                    chip.classList.add('active');
+                    chip.setAttribute('aria-pressed', 'true');
+                    activeFilter = chip.dataset.filter;
+                    applyFilters();
+                });
+            });
+
+            // ── Log access ───────────────────────────────────────────
             console.log('Application Portal loaded at:', new Date().toLocaleString('de-DE'));
-        });
+        })();
     </script>
 </body>
 </html>
