@@ -103,7 +103,24 @@
     --z-modal: 1050;
     --z-popover: 1060;
     --z-tooltip: 1070;
-    
+
+    /* ===== DESKTOP LAYOUT ===== */
+    --sidebar-width: 240px;
+    --content-max-width: 1600px;
+    --header-height: 72px;
+    --tab-bar-height: 60px;
+
+    /* Desktop spacing scale */
+    --desktop-page-padding: 32px;
+    --desktop-section-gap: 28px;
+    --desktop-card-padding: 28px;
+
+    /* Desktop typography */
+    --desktop-h1: 1.75rem;
+    --desktop-h2: 1.35rem;
+    --desktop-body: 0.9375rem;
+    --desktop-label: 0.8125rem;
+
     /* ===== COMPONENT-SPECIFIC ===== */
     /* Pagination */
     --pagination-button-padding: 8px 14px;

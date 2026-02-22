@@ -74,8 +74,9 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     line-height: 1.6;
-    padding: 20px;
+    padding: 24px 32px;
     transition: background-color 0.3s, color 0.3s;
+    font-size: var(--desktop-body, 0.9375rem);
 }
 
 /* Screen Reader Only */
@@ -142,28 +143,56 @@ body:not(.keyboard-navigation) *:focus {
 }
 
 .container {
-    max-width: 1400px;
+    max-width: var(--content-max-width, 1600px);
     margin: 0 auto;
+}
+
+/* Header inner layout — replaces inline styles */
+.header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.header-title {
+    flex: 1;
+    min-width: 0; /* allow text to shrink/truncate rather than overflow */
+}
+
+.header-title h1 {
+    font-size: var(--desktop-h1, 1.75rem);
+    margin-bottom: 3px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-title p {
+    opacity: 0.85;
+    font-size: 0.9375em;
+    line-height: 1.4;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
 /* Header */
 header {
     background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
     color: white;
-    padding: 30px;
+    padding: 20px 28px;
     border-radius: 12px;
-    margin-bottom: 30px;
+    margin-bottom: 24px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-header h1 {
-    font-size: 2em;
-    margin-bottom: 5px;
-}
-
-header p {
-    opacity: 0.9;
-    font-size: 1.1em;
 }
 
 /* Header Buttons */
@@ -233,16 +262,43 @@ body.reduced-motion .header-btn#reducedMotionBtn i::before {
     content: "\f28b"; /* fa-pause */
 }
 
-/* Tabs */
+/* ===========================
+   APP BODY LAYOUT
+   Desktop: sidebar left + content right
+   Tablet:  horizontal scrollable tab bar on top
+   Mobile:  bottom navigation bar
+   =========================== */
+
+.app-body {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+}
+
+.tab-pane-container {
+    flex: 1;
+    min-width: 0; /* prevent flex overflow */
+}
+
+/* ===========================
+   SIDEBAR (desktop ≥ 1025px)
+   =========================== */
 .tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 30px;
+    flex-direction: column;
+    gap: 4px;
+    width: var(--sidebar-width, 220px);
+    flex-shrink: 0;
     padding: 8px;
     background: var(--card-bg);
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    align-self: flex-start;
+    margin-right: 20px;
 }
 
 /* Dark mode tabs enhancement */
@@ -251,58 +307,58 @@ body.dark-mode .tabs {
 }
 
 .tab {
-    padding: 12px 28px;
+    padding: 10px 14px;
     background: transparent;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 1em;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-secondary);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
     position: relative;
-    overflow: hidden;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* left-aligned for sidebar */
+    gap: 10px;
+    width: 100%;
+    text-align: left;
 }
 
-.tab::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 3px;
-    background: var(--primary-color);
-    transform: translateX(-50%);
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.tab .tab-label {
+    flex: 1;
 }
 
 .tab:hover {
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(99, 102, 241, 0.05) 100%);
+    background: rgba(79, 70, 229, 0.07);
     color: var(--text-color);
-    transform: translateY(-1px);
-}
-
-.tab:hover::before {
-    width: 60%;
 }
 
 .tab:active {
-    transform: translateY(0);
+    transform: scale(0.98);
 }
 
 .tab.active {
-    background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
-    color: white;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    /* inset box-shadow is not clipped by border-radius/overflow:hidden */
+    box-shadow: inset 3px 0 0 var(--primary-color);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.10) 0%, rgba(99, 102, 241, 0.06) 100%);
+    color: var(--primary-color);
 }
 
+/* keep ::before empty on desktop — indicator is via box-shadow */
 .tab.active::before {
-    width: 0;
+    content: none;
 }
 
-.tab.active:hover {
-    background: linear-gradient(135deg, #1d4ed8, var(--primary-color));
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+body.dark-mode .tab.active {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    box-shadow: inset 3px 0 0 #818cf8;
+}
+
+body.dark-mode .tab.active::before {
+    content: none;
 }
 
 /* Ripple effect */
@@ -328,6 +384,13 @@ body.dark-mode .tabs {
 
 .tab-content.active {
     display: block;
+}
+
+/* Sidebar section divider */
+.tabs-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 6px;
 }
 
 /* Language Selector */
@@ -369,7 +432,10 @@ body.dark-mode .tabs {
    RESPONSIVE DESIGN
    =========================== */
 
-/* Tablet Breakpoint (768px - 1024px) */
+/* ===========================
+   TABLET (769px – 1024px)
+   Horizontal scrollable tab bar on top
+   =========================== */
 @media (max-width: 1024px) {
     body {
         padding: 15px;
@@ -396,38 +462,82 @@ body.dark-mode .tabs {
         gap: 12px;
     }
 
+    /* Switch from sidebar to horizontal tab bar */
+    .app-body {
+        flex-direction: column;
+    }
+
     .tabs {
+        flex-direction: row;
+        width: 100%;
+        position: static;
+        max-height: none;
+        margin-right: 0;
+        margin-bottom: 16px;
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
         padding: 6px;
+        gap: 4px;
+        border-radius: 10px;
     }
 
     .tabs::-webkit-scrollbar {
-        height: 6px;
+        height: 4px;
     }
 
     .tabs::-webkit-scrollbar-track {
-        background: var(--bg-color);
-        border-radius: 6px;
+        background: transparent;
     }
 
     .tabs::-webkit-scrollbar-thumb {
         background: var(--border-color);
-        border-radius: 6px;
+        border-radius: 4px;
     }
 
+    .tabs-divider {
+        display: none;
+    }
+
+    /* Tablet tabs: icon above label, centred */
     .tab {
-        white-space: nowrap;
-        padding: 10px 20px;
-        font-size: 0.95em;
+        flex-direction: column;
+        width: auto;
+        flex-shrink: 0;
+        padding: 8px 16px;
+        font-size: 0.8rem;
+        gap: 4px;
+        text-align: center;
+        justify-content: center;
+        min-width: 76px;
+    }
+
+    .tab .tab-label {
+        flex: none;
+    }
+
+    /* Tablet: revert to bottom-edge indicator line */
+    .tab.active {
+        box-shadow: inset 0 -3px 0 var(--primary-color);
+        color: var(--primary-color);
+        background: rgba(79, 70, 229, 0.06);
+    }
+
+    .tab.active::before {
+        content: none;
+    }
+
+    .tab i {
+        font-size: 1.1em;
     }
 }
 
-/* Mobile Breakpoint (max-width: 768px) */
+/* ===========================
+   MOBILE (≤ 768px)
+   Fixed bottom navigation bar
+   =========================== */
 @media (max-width: 768px) {
     body {
-        padding: 10px;
+        padding: 10px 10px 80px; /* bottom padding clears the nav bar */
         font-size: 14px;
     }
 
@@ -437,30 +547,31 @@ body.dark-mode .tabs {
 
     /* Header Mobile */
     header {
-        padding: 20px 15px;
-        margin-bottom: 20px;
+        padding: 16px 14px;
+        margin-bottom: 14px;
+        border-radius: 10px;
     }
 
     header h1 {
-        font-size: 1.5em;
-        margin-bottom: 8px;
+        font-size: 1.4em;
+        margin-bottom: 4px;
     }
-    
+
     header p {
-        font-size: 0.9em;
+        font-size: 0.875em;
         line-height: 1.4;
     }
 
     header > div {
         flex-direction: column;
-        gap: 15px;
+        gap: 12px;
     }
 
     header > div > div:last-child {
         width: 100%;
         justify-content: space-between;
     }
-    
+
     .header-btn {
         min-width: 44px;
         min-height: 44px;
@@ -480,67 +591,87 @@ body.dark-mode .tabs {
         font-size: 0.95em;
     }
 
-    /* Tabs Mobile */
-    .tabs {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        padding: 6px;
-        gap: 6px;
-        margin-bottom: 20px;
-        position: relative;
+    /* Bottom navigation bar */
+    .app-body {
+        flex-direction: column;
     }
 
-    .tabs::-webkit-scrollbar {
+    .tabs {
+        position: fixed;
+        top: auto;           /* unset sticky top so it doesn't stretch top→bottom */
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: var(--z-fixed);
+        flex-direction: row;
+        width: 100%;
+        max-height: none;
+        margin: 0;
+        padding: 6px 8px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+        border-radius: 0;
+        border: none;
+        border-top: 1px solid var(--border-color);
+        box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+        background: var(--card-bg);
+        justify-content: space-around;
+        gap: 0;
+    }
+
+    .tabs-divider {
         display: none;
     }
 
-    /* Scroll indicator shadow - right side fade */
-    .tabs::after {
-        content: '';
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        width: 50px;
-        background: linear-gradient(to right, transparent, var(--card-bg) 70%);
-        pointer-events: none;
-        opacity: 1;
-        transition: opacity 0.3s ease;
-        border-radius: 0 12px 12px 0;
-        z-index: 1;
-    }
-
-    /* Left side fade for scrolled state */
-    .tabs::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 50px;
-        background: linear-gradient(to left, transparent, var(--card-bg) 70%);
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        border-radius: 12px 0 0 12px;
-        z-index: 1;
-    }
-
-    .tabs.scrolled-start::before {
-        opacity: 1;
-    }
-
-    .tabs.scrolled-end::after {
-        opacity: 0;
-    }
-
+    /* Mobile tabs: icon above label, centred, full-width spread */
     .tab {
-        white-space: nowrap;
-        padding: 12px 20px;
-        font-size: 0.9em;
-        flex-shrink: 0;
-        min-width: auto;
+        flex: 1;
+        flex-direction: column;
+        width: auto;
+        padding: 6px 4px;
+        font-size: 0.68rem;
+        gap: 3px;
+        text-align: center;
+        justify-content: center;
+        border-radius: 8px;
+        min-height: 48px;
+    }
+
+    .tab .tab-label {
+        flex: none;
+        font-size: 0.68rem;
+        line-height: 1.2;
+    }
+
+    .tab i {
+        font-size: 1.25em;
+        margin: 0;
+    }
+
+    /* Active indicator — dot above label */
+    .tab.active::before {
+        content: '';
+        position: absolute;
+        top: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        box-shadow: none;
+    }
+
+    /* Mobile active: highlight colour only, dot indicator via ::before */
+    .tab.active {
+        color: var(--primary-color);
+        background: transparent;
+        box-shadow: none;
+    }
+
+    body.dark-mode .tab.active {
+        color: #818cf8;
+        background: transparent;
+        box-shadow: none;
     }
 
     /* Cards Mobile */
@@ -623,20 +754,20 @@ body.dark-mode .tabs {
 /* Small Mobile Breakpoint (max-width: 480px) */
 @media (max-width: 480px) {
     body {
-        padding: 8px;
+        padding: 8px 8px 72px;
         font-size: 13px;
     }
 
     header {
-        padding: 15px 12px;
+        padding: 13px 11px;
     }
 
     header h1 {
-        font-size: 1.3em;
+        font-size: 1.2em;
     }
 
     header p {
-        font-size: 0.85em;
+        font-size: 0.82em;
     }
 
     .header-btn {
@@ -651,9 +782,15 @@ body.dark-mode .tabs {
         padding: 8px 10px;
     }
 
+    /* Tighter bottom nav on very small screens */
     .tab {
-        padding: 10px 16px;
-        font-size: 0.85em;
+        font-size: 0.62rem;
+        padding: 5px 2px;
+        min-height: 46px;
+    }
+
+    .tab i {
+        font-size: 1.15em;
     }
 
     .card {
@@ -726,6 +863,70 @@ body.dark-mode .tabs {
 
     .stats-grid {
         grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ===========================
+   LARGE DESKTOP (1280px+)
+   Sidebar is already visible; optimise content area
+   =========================== */
+@media (min-width: 1280px) {
+    body {
+        padding: 24px 40px;
+    }
+
+    .container {
+        max-width: var(--content-max-width, 1600px);
+    }
+
+    header {
+        padding: 18px 32px;
+        margin-bottom: 20px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+    }
+
+    header h1 {
+        font-size: 1.6rem;
+    }
+
+    /* Wider sidebar */
+    .tabs {
+        width: 240px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px;
+    }
+
+    .card {
+        padding: 22px 26px;
+        margin-bottom: 16px;
+    }
+
+    /* Two-column layout utility */
+    .two-col-desktop {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    /* Wider modal on large screens */
+    .modal-content {
+        max-width: 720px;
+    }
+}
+
+/* Extra-wide screens (1600px+) */
+@media (min-width: 1600px) {
+    body {
+        padding: 28px 56px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     }
 }
 

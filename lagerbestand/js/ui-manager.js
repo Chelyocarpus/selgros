@@ -323,15 +323,19 @@ class UIManager {
         const tabConfigs = [
             { icon: 'fa-magnifying-glass', text: this.t('tabCheckStock') },
             { icon: 'fa-boxes-stacked', text: this.t('tabManageMaterials') },
-            { icon: 'fa-folder-open', text: this.t('tabArchive') }
+            { icon: 'fa-folder-open', text: this.t('tabArchive') },
+            { icon: 'fa-cloud-arrow-up', text: this.t('tabSync') }
         ];
         tabs.forEach((tab, index) => {
             if (tabConfigs[index]) {
                 tab.textContent = '';
                 const icon = document.createElement('i');
                 icon.className = `fa-solid ${tabConfigs[index].icon}`;
+                const label = document.createElement('span');
+                label.className = 'tab-label';
+                label.textContent = tabConfigs[index].text;
                 tab.appendChild(icon);
-                tab.appendChild(document.createTextNode(' ' + tabConfigs[index].text));
+                tab.appendChild(label);
             }
         });
         
@@ -457,14 +461,22 @@ class UIManager {
     }
 
     // Switch between tabs
-    switchTab(tabName) {
-        // Create ripple effect
-        const clickedTab = event.target;
-        this.createRipple(clickedTab, event);
+    switchTab(tabName, evt) {
+        // Find the tab button by its id
+        const clickedTab = document.getElementById(`tab-${tabName}`) || evt?.target;
+
+        // Create ripple effect only when a real pointer event is available
+        if (clickedTab && evt) this.createRipple(clickedTab, evt);
 
         // Update tab buttons
-        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-        clickedTab.classList.add('active');
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+            tab.setAttribute('aria-selected', 'false');
+        });
+        if (clickedTab) {
+            clickedTab.classList.add('active');
+            clickedTab.setAttribute('aria-selected', 'true');
+        }
 
         // Update tab content
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -473,6 +485,9 @@ class UIManager {
         // Invalidate cached DOM references when switching tabs
         // as tab content may be re-rendered
         this.invalidateCachedElements();
+
+        // Notify animation controller about tab switch
+        document.dispatchEvent(new CustomEvent('tabSwitched', { detail: { tab: tabName } }));
 
         // Refresh content based on tab
         if (tabName === 'materials') {
@@ -492,8 +507,11 @@ class UIManager {
         
         const rect = element.getBoundingClientRect();
         const size = Math.max(rect.width, rect.height);
-        const x = event.clientX - rect.left - size / 2;
-        const y = event.clientY - rect.top - size / 2;
+        // Fall back to element centre when no pointer coordinates (e.g. keyboard/programmatic)
+        const clientX = event?.clientX ?? (rect.left + rect.width / 2);
+        const clientY = event?.clientY ?? (rect.top  + rect.height / 2);
+        const x = clientX - rect.left - size / 2;
+        const y = clientY - rect.top  - size / 2;
         
         ripple.style.width = ripple.style.height = `${size}px`;
         ripple.style.left = `${x}px`;

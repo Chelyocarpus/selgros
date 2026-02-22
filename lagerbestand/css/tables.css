@@ -5,11 +5,12 @@
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
+    margin-top: 12px;
+    font-size: 0.9rem;
 }
 
 th, td {
-    padding: 12px;
+    padding: 10px 14px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
 }
@@ -17,9 +18,14 @@ th, td {
 th {
     background-color: var(--bg-color);
     font-weight: 600;
-    color: var(--text-color);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
     position: sticky;
     top: 0;
+    z-index: 10;
+    border-bottom: 2px solid var(--border-color);
 }
 
 tbody tr:hover {
@@ -136,7 +142,25 @@ tbody tr:not(.material-group-header):not(.material-group-row):not(.material-grou
 .dataTables_wrapper .dataTables_filter,
 .dataTables_wrapper .dataTables_info,
 .dataTables_wrapper .dataTables_paginate {
-    padding: var(--space-md) 0;
+    padding: var(--space-sm) 0;
+}
+
+/* Desktop: controls in one row */
+@media (min-width: 769px) {
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        display: inline-block;
+    }
+    .dataTables_wrapper .dataTables_filter {
+        float: right;
+    }
+    .dataTables_wrapper .dataTables_info {
+        display: inline-block;
+        padding-top: 2px;
+    }
+    .dataTables_wrapper .dataTables_paginate {
+        float: right;
+    }
 }
 
 .dataTables_wrapper .dataTables_filter input {
@@ -144,12 +168,16 @@ tbody tr:not(.material-group-header):not(.material-group-row):not(.material-grou
     border-radius: var(--radius-lg);
     padding: var(--space-sm) var(--space-md);
     margin-left: var(--space-sm);
-    font-size: 0.95em;
+    font-size: 0.9em;
+    background: var(--card-bg);
+    color: var(--text-color);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 
 .dataTables_wrapper .dataTables_filter input:focus {
     outline: none;
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .dataTables_wrapper .dataTables_length select {
@@ -167,15 +195,20 @@ table.dataTable {
 table.dataTable thead th {
     background-color: var(--bg-color);
     font-weight: var(--font-weight-semibold);
-    color: var(--text-color);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
     border-bottom: 2px solid var(--border-color);
-    padding: var(--space-md);
+    padding: 10px 14px;
     text-align: left;
+    white-space: nowrap;
 }
 
 table.dataTable tbody td {
-    padding: var(--space-md);
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
 }
 
 table.dataTable tbody tr:hover {

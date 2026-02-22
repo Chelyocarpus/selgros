@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.0] - 2026-02-21
+
+### Added
+
+#### Modern Animation System (`css/animations.css`, `js/animations.js`)
+- **Aurora header gradient**: The app header now cycles through an animated multi-stop gradient (indigo → blue → violet) using a 10 s `headerAurora` keyframe, replacing the static gradient
+- **Header particle overlay**: A CSS `::after` pseudo-element overlays subtle floating dot patterns on the header, animated with a gentle 8 s float cycle
+- **Page-load entrance**: The header slides in from above (`fadeInDown`) and the nav + main content area fade up (`fadeInUp`) with staggered delays on initial load
+- **Tab-content slide-in**: Each tab panel plays a `tabSlideIn` (fade + translateY) animation when it becomes active
+- **Card & widget hover lift**: `.card` and `.dashboard-widget` elements scale up slightly and cast a coloured drop shadow on hover using a spring-style cubic-bezier curve
+- **Scroll-reveal**: An `IntersectionObserver` watches cards and widgets; they start hidden and animate in with `revealCard` (fade + translateY + scale) as they enter the viewport
+- **Count-up counters**: Numeric stat values (`[data-count]`, `.stat-value`, `.stat-number`) animate from 0 to their target value using an ease-out cubic interpolation when scrolled into view
+- **Button ripple**: Click events on `.btn` and `.header-btn` spawn a circular ripple element (`anim-ripple`) that expands and fades out, providing tactile visual feedback
+- **Badge pulse/glow**: `.badge-danger` / `.status-danger` elements emit a red glow pulse; `.badge-warning` / `.status-warning` elements emit an amber glow pulse — repeated every 2.4 s to draw attention
+- **Skeleton shimmer**: A `.skeleton` utility class renders a moving highlight shimmer for loading placeholder elements, with a dark-mode variant
+- **Modal entrance**: Modal content boxes scale in with a spring-bounce (`scaleInBounce`) keyframe when a modal opens
+- **Toast slide animation**: Toast notifications slide in from the right on appear and slide out on dismiss
+- **Stagger children**: Key grid containers (`.dashboard-grid`, `.stats-grid`, `.cards-grid`) receive a `stagger-children` class that applies incremental `animation-delay` to each child for a cascading entrance effect
+- **DOM mutation observer**: A `MutationObserver` in `AnimationController` automatically wires ripple, scroll-reveal, counters, and stagger to any content injected dynamically (e.g., after tab lazy-load)
+- **`tabSwitched` custom event**: `UIManager.switchTab()` now dispatches a `CustomEvent('tabSwitched')` so `AnimationController` can re-scan newly rendered tab content
+
+### Changed
+- `UIManager.switchTab()` dispatches a `tabSwitched` event after updating the active panel, enabling the animation controller to pick up dynamically rendered tab content
+
+### Notes
+- All animations respect `prefers-reduced-motion: reduce` (OS-level) and the manual `body.reduced-motion` toggle — when either is active every keyframe and transition is bypassed
+
+---
+
+## [3.2.2] - 2026-02-21
+
+### Changed
+
+#### Navigation Layout Overhaul
+- **Desktop (≥ 1025px)**: Tab bar converted to a **left sidebar** — sticky, 220px wide (240px at 1280px+), with a vertical list of nav items. Each item shows the icon + label left-aligned with an active indicator bar on the left edge. This saves vertical space for content and follows established patterns (GitHub, Slack, VS Code)  
+- **Tablet (769px – 1024px)**: Sidebar collapses back to a **horizontal scrollable tab bar** on top, with icon-above-label compact tabs and an active indicator line on the bottom edge  
+- **Mobile (≤ 768px)**: Tab bar moves to a **fixed bottom navigation bar** — full width, icon above label, thumb-reachable, respects `safe-area-inset-bottom` for notched devices  
+- **Body padding**: Mobile body gets `padding-bottom: 80px` so content is never hidden behind the bottom bar  
+- **`app-body` wrapper**: New flex container wraps the `<nav>` and `.tab-pane-container` to implement the sidebar/content split  
+- **`<span class="tab-label">`**: Labels are now wrapped so they can be shown/hidden independently at each breakpoint  
+- **Active state styling**: All three breakpoints have distinct active indicators appropriate for their orientation (left bar → bottom bar → dot)  
+
+---
+
+## [3.2.1] - 2026-02-21
+
+### Changed
+
+#### Desktop & Responsive Design Improvements
+- **Wider container**: Max content width increased from 1400px to 1600px for better use of large monitors
+- **Improved body padding**: Desktop padding increased to `24px 32px` (and `28px 56px` at 1600px+) for better breathing room
+- **Compact header**: Reduced vertical padding from `30px` to `20px 28px`; heading font size tuned to `1.75rem` to avoid oversized typography on desktop
+- **Leaner tab bar**: Tab padding reduced from `12px 28px` to `9px 22px`; bar shadow softened; tabs now show icon + label inline with `gap`
+- **Tighter card padding**: Cards use `22px 24px` instead of `25px`; `margin-bottom` reduced from `20px` to `18px`
+- **Stat cards**: Added hover lift effect, uppercase label style with letter-spacing, and tighter stat value size (`1.875em`)
+- **Compact stats grid**: Min column width reduced from `200px` to `180px` for denser grids on desktop
+- **Table headers**: Switched to uppercase + letter-spaced secondary-colored headers, matching modern data-table conventions; cell padding reduced to `10px 14px`
+- **DataTables controls**: Length and filter controls now sit inline (left/right) on desktop instead of stacking
+- **Upload area**: `min-height` reduced from `280px` to `220px`; border from `3px dashed` to `2px dashed` for a less heavy feel
+- **Dashboard widgets**: Tighter header padding (`10px 14px`), smaller title font (`0.875rem`), content padding reduced to `14px`; widgets now animate a subtle shadow on hover
+- **Stat value in widgets**: Reduced from `3rem` to `2.5rem` to better fit widget cards
+
+#### New Breakpoints
+- **`min-width: 1280px`**: Large-desktop block across `main.css` and `dashboard.css` — wider modals, two-column card layout utility class (`.two-col-desktop`), larger widget content padding, bigger capacity ring
+- **`min-width: 1600px`**: Extra-wide screen block with increased body padding and wider stat-card columns
+
+#### Design Tokens
+- Added desktop-specific tokens: `--content-max-width`, `--desktop-page-padding`, `--desktop-card-padding`, `--desktop-h1`, `--desktop-h2`, `--desktop-body`, `--desktop-label`, `--sidebar-width`, `--header-height`, `--tab-bar-height`
+
+---
+
 ## [3.2.0] - 2026-02-15
 
 ### Added
