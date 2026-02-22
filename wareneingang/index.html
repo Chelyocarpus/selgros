@@ -1,237 +1,147 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wareneingang</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Add DOMPurify -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-  <style>
-    /* Custom focus ring for accessibility */
-    .focus-ring:focus {
-      outline: 2px solid #1f2937;
-      outline-offset: 2px;
-    }
-    /* Visually hidden for screen readers */
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0,0,0,0);
-      white-space: nowrap;
-      border: 0;
-    }
-    /* Professional styling overrides */
-    .professional-card {
-      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    .professional-header {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      border-bottom: 3px solid #0f172a;
-    }
-    .stat-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      transition: all 0.2s ease-in-out;
-    }
-    .stat-card:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
-    }
-    .professional-button {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      border: 1px solid #0f172a;
-      transition: all 0.2s ease-in-out;
-    }
-    .professional-button:hover {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-    .professional-table {
-      border: 1px solid #d1d5db;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    }
-    
-    /* Enhanced filter card styles */
-    .filter-card {
-      position: relative;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .filter-card:hover {
-      transform: translateY(-1px);
-    }
-    
-    .filter-checkbox:checked + .filter-card-content {
-      border-color: var(--border-checked);
-      background-color: var(--bg-checked);
-      box-shadow: 0 4px 12px -2px var(--shadow-checked);
-    }
-    
-    .filter-checkbox:checked + .filter-card-content .filter-checkmark {
-      background-color: var(--check-bg);
-      border-color: var(--check-bg);
-    }
-    
-    .filter-checkbox:checked + .filter-card-content .filter-checkmark svg {
-      opacity: 1;
-    }
-    
-    .filter-checkbox:focus + .filter-card-content {
-      box-shadow: 0 0 0 4px var(--ring-color);
-    }
-    
-    /* Color variables for different filter types */
-    .filter-emerald {
-      --border-checked: #10b981;
-      --bg-checked: #ecfdf5;
-      --shadow-checked: rgba(16, 185, 129, 0.25);
-      --check-bg: #10b981;
-      --ring-color: rgba(16, 185, 129, 0.3);
-    }
-    
-    .filter-red {
-      --border-checked: #ef4444;
-      --bg-checked: #fef2f2;
-      --shadow-checked: rgba(239, 68, 68, 0.25);
-      --check-bg: #ef4444;
-      --ring-color: rgba(239, 68, 68, 0.3);
-    }
-    
-    .filter-blue {
-      --border-checked: #3b82f6;
-      --bg-checked: #eff6ff;
-      --shadow-checked: rgba(59, 130, 246, 0.25);
-      --check-bg: #3b82f6;
-      --ring-color: rgba(59, 130, 246, 0.3);
-    }
-    
-    /* Table optimization */
-    .table-fixed {
-      table-layout: fixed;
-    }
-    
-    .truncate {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    
-    /* Better table spacing */
-    table {
-      table-layout: auto;
-      width: 100%;
-    }
-    
-    table th:first-child,
-    table td:first-child {
-      min-width: 120px;
-    }
-    
-    table th:last-child,
-    table td:last-child {
-      min-width: 80px;
-      max-width: 120px;
-    }
-  </style>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/animations.css">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-2 sm:p-6">
-  <a href="#mainContent" class="sr-only focus:not-sr-only focus:ring-2 focus:ring-slate-600 bg-white text-slate-700 px-3 py-2 rounded shadow z-50 absolute left-2 top-2">Skip to main content</a>
-  <main id="mainContent" class="container mx-auto max-w-4xl professional-card rounded-lg p-6 sm:p-8 mt-4 sm:mt-8">
-    <header class="professional-header text-white rounded-t-lg -mx-6 -mt-6 sm:-mx-8 sm:-mt-8 px-6 py-6 sm:px-8 sm:py-8 mb-8">
-      <div class="flex items-center">
-        <div class="bg-white bg-opacity-20 p-3 rounded-lg mr-4">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-        </div>
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-bold">Wareneingang</h1>
-          <p class="text-slate-200 mt-1">Anomaly Detection & Analysis</p>
-        </div>
-      </div>
-    </header>
+<body>
+  <!-- Skip link -->
+  <a href="#mainContent"
+     class="skip-link sr-only focus:not-sr-only fixed left-3 top-3 z-50 bg-white text-zinc-900 font-semibold px-4 py-2 rounded-lg">
+    Zum Hauptinhalt springen
+  </a>
 
-    <div id="browserWarning" class="hidden bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 rounded-r relative mb-6" role="alert" aria-live="assertive">
-      <div class="flex items-center">
-        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-        </svg>
-        <div>
-          <strong class="font-semibold">Unsupported Browser</strong>
-          <p class="mt-1">Please switch to Chrome, Edge, or Opera to use this application. Your current browser doesn't support the File System Access API required for file processing.</p>
-        </div>
-      </div>
-    </div>
+  <!-- Page wrapper -->
+  <div class="relative z-10 min-h-screen px-2 py-6 sm:px-3 sm:py-10">
 
-    <!-- Notification banner with improved structure -->
-    <div id="notificationBanner" class="hidden mb-6 rounded-lg relative" role="alert" aria-live="polite">
-        <div class="flex items-center p-4">
-            <span id="notificationIcon" class="mr-3 text-xl" aria-hidden="true"></span>
-            <div class="flex-1">
-                <span id="notificationMessage" class="text-sm font-medium"></span>
-            </div>
-            <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100 focus-ring rounded p-1" aria-label="Close notification" tabindex="0" type="button">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                </svg>
-                <span class="sr-only">Close notification</span>
-            </button>
-        </div>
-    </div>
+    <!-- Main upload card -->
+    <main id="mainContent"
+          class="card-glass mx-auto max-w-3xl">
 
-    <section class="mb-8">
-      <h2 class="text-xl font-semibold text-slate-800 mb-4">File Processing</h2>
-      <div class="flex flex-col sm:flex-row gap-4">
-        <div class="flex-1">
-          <label for="fileInput" class="block text-sm font-medium text-slate-700 mb-2">Select MHTML File</label>
-          <div class="relative">
-            <input type="file" id="fileInput" accept=".mhtml,.mht" class="hidden" />
-            <button id="selectFileButton" class="w-full bg-white border-2 border-dashed border-slate-300 rounded-lg px-6 py-8 text-center hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors" type="button">
-              <svg class="mx-auto h-12 w-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 48 48" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" />
-              </svg>
-              <span class="block text-sm font-medium text-slate-900">Click to select MHTML file</span>
-              <span class="block text-xs text-slate-500 mt-1">or drag and drop here</span>
-            </button>
-            <div id="selectedFileName" class="hidden mt-2 text-sm text-slate-600 bg-slate-50 px-3 py-2 rounded border">
-              <svg class="inline w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-              </svg>
-              <span id="fileName">No file selected</span>
-            </div>
-            <div class="text-center mt-4">
-              <button id="processFileButton" class="professional-button text-white px-8 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Process File" type="button" disabled>
-                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-                </svg>
-                Process File
-              </button>
+      <!-- App header -->
+      <header class="app-header px-6 py-7 sm:px-8 sm:py-9 mb-0">
+        <div class="relative z-10 flex items-center gap-4">
+          <!-- Icon badge -->
+          <div class="header-icon-badge">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Wareneingang</h1>
+            <p class="text-zinc-400 text-sm mt-0.5 font-medium">Anomalie-Erkennung &amp; Analyse</p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Card body -->
+      <div class="px-6 py-7 sm:px-8 sm:py-8">
+
+        <!-- Browser warning -->
+        <div id="browserWarning"
+             class="hidden notification-bar notification-bar--error mb-6 px-4 py-3"
+             role="alert" aria-live="assertive">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <div>
+              <p class="font-semibold text-sm">Nicht unterstützter Browser</p>
+              <p class="text-sm mt-0.5 opacity-85">Bitte wechseln Sie zu Chrome, Edge oder Opera. Ihr aktueller Browser unterstützt die File System Access API nicht, die für die Dateiverarbeitung benötigt wird.</p>
             </div>
           </div>
         </div>
-      </div>
-    </section>
-  </main>
 
-  <!-- Validation Summary wrapper - professional styling -->
-  <div id="validationWrapper" class="hidden w-full px-2 sm:px-4 lg:px-6 mx-auto mt-8 mb-6">
-    <div id="validationSummary" class="w-full professional-card rounded-lg p-6"></div>
-  </div>
+        <!-- Notification banner -->
+        <div id="notificationBanner"
+             class="hidden notification-bar mb-6"
+             role="alert" aria-live="polite">
+          <div class="flex items-center gap-3 px-4 py-3">
+            <span id="notificationIcon" aria-hidden="true" class="flex-shrink-0 w-5 h-5"></span>
+            <span id="notificationMessage" class="flex-1 text-sm font-medium"></span>
+            <button onclick="hideNotification()"
+                    class="notification-close flex-shrink-0 p-1 rounded opacity-60 hover:opacity-100"
+                    aria-label="Benachrichtigung schließen" type="button">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+              <span class="sr-only">Benachrichtigung schließen</span>
+            </button>
+          </div>
+        </div>
 
-  <!-- Table wrapper with professional styling -->
-  <div id="tableWrapper" class="hidden w-full px-2 sm:px-4 lg:px-6 mx-auto mt-6 mb-8">
-    <div class="w-full professional-table rounded-lg bg-white shadow-sm border border-gray-200">
-      <div id="output" class="w-full overflow-x-auto"></div>
+        <!-- File processing section -->
+        <section class="mb-2" aria-labelledby="fileProcessingHeading">
+          <h2 id="fileProcessingHeading" class="section-heading text-base font-semibold mb-4">Dateiverarbeitung</h2>
+
+          <input type="file" id="fileInput" accept=".mhtml,.mht" class="sr-only" aria-label="MHTML-Datei auswählen" />
+
+          <!-- Drop zone -->
+          <button id="selectFileButton"
+                  class="drop-zone w-full px-6 py-10 text-center"
+                  type="button"
+                  aria-label="MHTML-Datei auswählen oder hierher ziehen">
+            <div class="flex flex-col items-center gap-3">
+              <div class="drop-zone-icon">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+              </div>
+              <div>
+                <span class="drop-zone-label block text-sm font-semibold">MHTML-Datei auswählen</span>
+                <span class="drop-zone-hint block text-xs mt-0.5">oder hierher ziehen &mdash; .mhtml, .mht</span>
+              </div>
+            </div>
+          </button>
+
+          <!-- Selected file pill -->
+          <div id="selectedFileName"
+               class="file-selected hidden mt-3 flex items-center gap-2 px-4 py-2.5">
+            <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span id="fileName" class="file-selected-name text-sm font-medium truncate">Keine Datei ausgewählt</span>
+          </div>
+
+          <!-- Process button -->
+          <div class="mt-5 flex justify-center">
+            <button id="processFileButton"
+                    class="btn-primary"
+                    aria-label="Ausgewählte Datei verarbeiten"
+                    type="button"
+                    disabled>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+              </svg>
+              Datei verarbeiten
+            </button>
+          </div>
+        </section>
+
+      </div><!-- /card body -->
+    </main>
+
+    <!-- Validation Summary -->
+    <div id="validationWrapper" class="hidden mx-auto mt-6 mb-4">
+      <div id="validationSummary" class="card-glass px-6 py-6 sm:px-8 sm:py-7"></div>
     </div>
-  </div>
+
+    <!-- Table wrapper -->
+    <div id="tableWrapper" class="hidden mx-auto mt-4 mb-10">
+      <div class="card-glass overflow-hidden">
+        <div id="output" class="w-full overflow-x-auto"></div>
+      </div>
+    </div>
+
+  </div><!-- /page wrapper -->
 
   <script>
     // Configuration object for better maintainability
@@ -346,27 +256,20 @@
       PROCESSING: 'PROCESSING'
     };
 
+    const NOTIFICATION_ICONS = {
+      INFO: `<svg class="notification-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+      SUCCESS: `<svg class="notification-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+      WARNING: `<svg class="notification-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`,
+      ERROR: `<svg class="notification-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+      PROCESSING: `<svg class="notification-icon-svg animate-spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>`
+    };
+
     const NOTIFICATION_CONFIGS = {
-      [NOTIFICATION_TYPES.INFO]: {
-        icon: 'ℹ️',
-        classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
-      },
-      [NOTIFICATION_TYPES.SUCCESS]: {
-        icon: '✅',
-        classes: 'bg-green-100 border border-2 border-green-400 text-green-700'
-      },
-      [NOTIFICATION_TYPES.WARNING]: {
-        icon: '⚠️',
-        classes: 'bg-yellow-100 border border-2 border-yellow-400 text-yellow-700'
-      },
-      [NOTIFICATION_TYPES.ERROR]: {
-        icon: '⚠️',
-        classes: 'bg-red-100 border border-2 border-red-400 text-red-700'
-      },
-      [NOTIFICATION_TYPES.PROCESSING]: {
-        icon: '🔄',
-        classes: 'bg-blue-100 border border-2 border-blue-400 text-blue-700'
-      }
+      [NOTIFICATION_TYPES.INFO]:       { icon: NOTIFICATION_ICONS.INFO,       cssClass: 'notification-bar--info' },
+      [NOTIFICATION_TYPES.SUCCESS]:    { icon: NOTIFICATION_ICONS.SUCCESS,    cssClass: 'notification-bar--success' },
+      [NOTIFICATION_TYPES.WARNING]:    { icon: NOTIFICATION_ICONS.WARNING,    cssClass: 'notification-bar--warning' },
+      [NOTIFICATION_TYPES.ERROR]:      { icon: NOTIFICATION_ICONS.ERROR,      cssClass: 'notification-bar--error' },
+      [NOTIFICATION_TYPES.PROCESSING]: { icon: NOTIFICATION_ICONS.PROCESSING, cssClass: 'notification-bar--processing' }
     };
 
     // Notification system with improved UX
@@ -379,18 +282,14 @@
         // Hide any existing notifications first
         banner.classList.add('hidden');
         
-        // Clear previous classes and set new ones
-        banner.className = 'mb-4 rounded relative';
-        
         // Get config for notification type
         const config = NOTIFICATION_CONFIGS[type] || NOTIFICATION_CONFIGS[NOTIFICATION_TYPES.INFO];
         
-        // Apply styling from config
-        banner.classList.add(...config.classes.split(' '));
+        // Apply CSS class for notification type
+        banner.className = `notification-bar mb-6 ${config.cssClass}`;
         
-        // Set icon and message
-        icon.textContent = config.icon || 'ℹ️';
-        icon.className = 'mr-3 text-xl';
+        // Set SVG icon
+        icon.innerHTML = DOMPurify.sanitize(config.icon || NOTIFICATION_ICONS.INFO);
         messageElement.textContent = message;
         
         // Show the banner
@@ -574,6 +473,36 @@
       }
     };
 
+    // Filter state persistence using localStorage
+    const FilterPersistence = {
+      STORAGE_KEY: 'wareneingang_filters',
+
+      save({ showZero, showNegative, showPositive }) {
+        try {
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify({ showZero, showNegative, showPositive }));
+        } catch (e) {
+          Logger.warn('Could not save filter state', e);
+        }
+      },
+
+      load() {
+        try {
+          const saved = localStorage.getItem(this.STORAGE_KEY);
+          if (saved) {
+            const { showZero, showNegative, showPositive } = JSON.parse(saved);
+            return {
+              showZero: showZero ?? true,
+              showNegative: showNegative ?? true,
+              showPositive: showPositive ?? true
+            };
+          }
+        } catch (e) {
+          Logger.warn('Could not load filter state', e);
+        }
+        return { showZero: true, showNegative: true, showPositive: true };
+      }
+    };
+
     // Filtering system with improved performance
     const FilterManager = {
       toggleFilter(filterId) {
@@ -629,15 +558,30 @@
         const showZero = document.getElementById('showZero');
         const showNegative = document.getElementById('showNegative');
         const showPositive = document.getElementById('showPositive');
-        
+
+        // Restore saved filter state
+        const saved = FilterPersistence.load();
+
         if (showZero) {
-          showZero.addEventListener('change', () => this.applyFilters());
+          showZero.checked = saved.showZero;
+          showZero.addEventListener('change', () => {
+            FilterPersistence.save(this.getFilterStates());
+            this.applyFilters();
+          });
         }
         if (showNegative) {
-          showNegative.addEventListener('change', () => this.applyFilters());
+          showNegative.checked = saved.showNegative;
+          showNegative.addEventListener('change', () => {
+            FilterPersistence.save(this.getFilterStates());
+            this.applyFilters();
+          });
         }
         if (showPositive) {
-          showPositive.addEventListener('change', () => this.applyFilters());
+          showPositive.checked = saved.showPositive;
+          showPositive.addEventListener('change', () => {
+            FilterPersistence.save(this.getFilterStates());
+            this.applyFilters();
+          });
         }
       }
     };
@@ -650,8 +594,11 @@
         
         return `
           <div class="mb-6">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-              <h3 class="font-bold text-lg text-slate-800">Validation Summary</h3>
+            <div class="summary-header">
+              <div class="summary-icon-wrapper">
+                <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </div>
+              <h3 class="summary-title">Auswertung</h3>
             </div>
             ${this.generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, filteredOutKg })}
           </div>
@@ -660,113 +607,95 @@
       },
 
       generateStatsGrid({ totalRows, zeroRows, negativeRows, positiveRows, invalidValues, filteredOutKg }) {
-        return `
-          <div class="grid grid-cols-2 sm:grid-cols-6 gap-4 mb-4">
-            <div class="stat-card p-4 rounded-lg">
-              <div class="text-sm font-medium text-slate-600 uppercase tracking-wide">Total Rows</div>
-              <div class="text-2xl font-bold text-slate-900 mt-1">${totalRows}</div>
-            </div>
-            <div class="stat-card p-4 rounded-lg border-l-4 border-emerald-500">
-              <div class="text-sm font-medium text-emerald-600 uppercase tracking-wide">Normal</div>
-              <div class="text-2xl font-bold text-emerald-700 mt-1">${zeroRows}</div>
-            </div>
-            <div class="stat-card p-4 rounded-lg border-l-4 border-red-500">
-              <div class="text-sm font-medium text-red-600 uppercase tracking-wide">Falschbuchungen</div>
-              <div class="text-2xl font-bold text-red-700 mt-1">${negativeRows}</div>
-            </div>
-            <div class="stat-card p-4 rounded-lg border-l-4 border-blue-500">
-              <div class="text-sm font-medium text-blue-600 uppercase tracking-wide">Genullt</div>
-              <div class="text-2xl font-bold text-blue-700 mt-1">${positiveRows}</div>
-            </div>
-            <div class="stat-card p-4 rounded-lg border-l-4 border-amber-500">
-              <div class="text-sm font-medium text-amber-600 uppercase tracking-wide">Invalid Values</div>
-              <div class="text-2xl font-bold text-amber-700 mt-1">${invalidValues}</div>
-            </div>
-            <div class="stat-card p-4 rounded-lg border-l-4 border-purple-500">
-              <div class="text-sm font-medium text-purple-600 uppercase tracking-wide">Filtered KG</div>
-              <div class="text-2xl font-bold text-purple-700 mt-1">${filteredOutKg}</div>
-            </div>
+        const statCards = [
+          { label: 'Gesamt',          value: totalRows,     cardClass: 'stat-card--total' },
+          { label: 'Normal',          value: zeroRows,      cardClass: 'stat-card--normal' },
+          { label: 'Falschbuchungen', value: negativeRows,  cardClass: 'stat-card--falschbuchung' },
+          { label: 'Genullt',         value: positiveRows,  cardClass: 'stat-card--genullt' },
+          { label: 'Ungültige Werte', value: invalidValues, cardClass: 'stat-card--invalid' },
+          { label: 'KG gefiltert',    value: filteredOutKg, cardClass: 'stat-card--kg' }
+        ];
+        const cardHtml = statCards.map(({ label, value, cardClass }) => `
+          <div class="stat-card p-4 ${cardClass}">
+            <div class="stat-card-label">${label}</div>
+            <div class="stat-card-value">${value}</div>
           </div>
-          <div class="bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-lg p-6 shadow-sm">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        `).join('');
+
+        return `
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+            ${cardHtml}
+          </div>
+          <div class="stats-panel">
+            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
               <div class="flex-1">
-                <h4 class="text-sm font-semibold text-slate-700 mb-4 flex items-center">
-                  <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-                  </svg>
-                  Filter Options
-                </h4>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="filter-section-header">
+                  <svg class="filter-section-icon" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                  <span class="filter-section-label">Filteroptionen</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <label class="filter-card filter-emerald">
-                    <input type="checkbox" id="showZero" class="filter-checkbox sr-only" checked aria-label="Show zero values">
-                    <div class="filter-card-content bg-white border-2 border-emerald-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-emerald-300 hover:shadow-md">
+                    <input type="checkbox" id="showZero" class="filter-checkbox" checked aria-label="Normal-Einträge anzeigen">
+                    <div class="filter-card-content">
                       <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                          <div class="w-4 h-4 rounded-full bg-emerald-500 mr-3 shadow-sm"></div>
+                        <div class="filter-label-inner">
+                          <div class="filter-dot"></div>
                           <div>
-                            <div class="font-semibold text-slate-800">Normal</div>
-                            <div class="text-sm text-slate-500">${zeroRows} entries</div>
+                            <div class="filter-type-name">Normal</div>
+                            <div class="filter-type-count">${zeroRows} Einträge</div>
                           </div>
                         </div>
-                        <div class="filter-checkmark w-5 h-5 border-2 border-emerald-300 rounded flex items-center justify-center transition-all duration-200">
-                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                          </svg>
+                        <div class="filter-checkmark">
+                          <svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                         </div>
                       </div>
                     </div>
                   </label>
                   <label class="filter-card filter-red">
-                    <input type="checkbox" id="showNegative" class="filter-checkbox sr-only" checked aria-label="Show negative values">
-                    <div class="filter-card-content bg-white border-2 border-red-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-red-300 hover:shadow-md">
+                    <input type="checkbox" id="showNegative" class="filter-checkbox" checked aria-label="Falschbuchungen anzeigen">
+                    <div class="filter-card-content">
                       <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                          <div class="w-4 h-4 rounded-full bg-red-500 mr-3 shadow-sm"></div>
+                        <div class="filter-label-inner">
+                          <div class="filter-dot"></div>
                           <div>
-                            <div class="font-semibold text-slate-800">Falschbuchungen</div>
-                            <div class="text-sm text-slate-500">${negativeRows} entries</div>
+                            <div class="filter-type-name">Falschbuchungen</div>
+                            <div class="filter-type-count">${negativeRows} Einträge</div>
                           </div>
                         </div>
-                        <div class="filter-checkmark w-5 h-5 border-2 border-red-300 rounded flex items-center justify-center transition-all duration-200">
-                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                          </svg>
+                        <div class="filter-checkmark">
+                          <svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                         </div>
                       </div>
                     </div>
                   </label>
                   <label class="filter-card filter-blue">
-                    <input type="checkbox" id="showPositive" class="filter-checkbox sr-only" checked aria-label="Show positive values">
-                    <div class="filter-card-content bg-white border-2 border-blue-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-blue-300 hover:shadow-md">
+                    <input type="checkbox" id="showPositive" class="filter-checkbox" checked aria-label="Genullt-Einträge anzeigen">
+                    <div class="filter-card-content">
                       <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                          <div class="w-4 h-4 rounded-full bg-blue-500 mr-3 shadow-sm"></div>
+                        <div class="filter-label-inner">
+                          <div class="filter-dot"></div>
                           <div>
-                            <div class="font-semibold text-slate-800">Genullt</div>
-                            <div class="text-sm text-slate-500">${positiveRows} entries</div>
+                            <div class="filter-type-name">Genullt</div>
+                            <div class="filter-type-count">${positiveRows} Einträge</div>
                           </div>
                         </div>
-                        <div class="filter-checkmark w-5 h-5 border-2 border-blue-300 rounded flex items-center justify-center transition-all duration-200">
-                          <svg class="w-3 h-3 text-white opacity-0 transition-opacity duration-200" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                          </svg>
+                        <div class="filter-checkmark">
+                          <svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                         </div>
                       </div>
                     </div>
                   </label>
                 </div>
               </div>
-              <div class="lg:ml-6 flex-shrink-0">
-                <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 shadow-sm">
-                  <div class="text-center">
-                    <div class="text-sm font-medium text-slate-600 mb-1">Results</div>
-                    <div class="text-lg font-bold text-slate-900">
-                      <span id="visibleCount">${zeroRows + negativeRows + positiveRows}</span>
-                      <span class="text-sm font-normal text-slate-500">of</span>
-                      <span id="totalCount">${zeroRows + negativeRows + positiveRows}</span>
-                    </div>
-                    <div class="text-xs text-slate-500">records shown</div>
+              <div class="flex-shrink-0">
+                <div class="results-chip text-center">
+                  <div class="results-chip-label">Ergebnisse</div>
+                  <div class="results-chip-count">
+                    <span id="visibleCount">${zeroRows + negativeRows + positiveRows}</span>
+                    <span class="results-separator"> / </span>
+                    <span id="totalCount" class="results-total">${zeroRows + negativeRows + positiveRows}</span>
                   </div>
+                  <div class="results-footer">Datensätze</div>
                 </div>
               </div>
             </div>
@@ -777,47 +706,128 @@
       generateWarningsAndMessages({ invalidValues, filteredOutKg, hasAnomalies, columnName }) {
         let html = '';
         
-        if (filteredOutKg > 0) {
-          html += `
-            <div class="bg-purple-50 border-l-4 border-purple-500 p-4 text-purple-800 mt-4 rounded-r-lg">
-              <div class="flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                </svg>
-                <p class="font-medium">Information: ${filteredOutKg} rows with KG units were automatically filtered out (KG measurements typically have natural variations)</p>
-              </div>
+        const infoBlock = (typeClass, iconPath, text) => `
+          <div class="notification-bar mt-3 ${typeClass}">
+            <div class="info-block-content">
+              <svg class="info-block-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="${iconPath}"/></svg>
+              <p class="info-block-text">${text}</p>
             </div>
-          `;
+          </div>
+        `;
+
+        if (filteredOutKg > 0) {
+          html += infoBlock(
+            'notification-bar--purple',
+            'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+            `Information: ${filteredOutKg} Zeilen mit KG-Einheiten wurden automatisch ausgefiltert (KG-Messungen haben typischerweise natürliche Schwankungen)`
+          );
         }
         
         if (invalidValues > 0) {
-          html += `
-            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 text-amber-800 mt-4 rounded-r-lg">
-              <div class="flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>
-                <p class="font-medium">Warning: ${invalidValues} invalid numeric values found in '${columnName}' column</p>
-              </div>
-            </div>
-          `;
+          html += infoBlock(
+            'notification-bar--warning',
+            'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+            `Warnung: ${invalidValues} ungültige numerische Werte in Spalte &#39;${columnName}&#39; gefunden`
+          );
         }
         
         if (!hasAnomalies) {
-          html += `
-            <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 text-emerald-800 mt-4 rounded-r-lg">
-              <div class="flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                </svg>
-                <p class="font-medium">Success: No Falschbuchungen or Genullt found in '${columnName}' column. All values are normal.</p>
-              </div>
-            </div>
-          `;
+          html += infoBlock(
+            'notification-bar--success',
+            'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+            `Alles in Ordnung: Keine Falschbuchungen oder Genullt in Spalte &#39;${columnName}&#39; gefunden. Alle Werte sind normal.`
+          );
         }
         
         return html;
       }
+    };
+
+    // Shared DOM-building and styling helpers used by both renderers
+    const TableDOMHelper = {
+      /** Returns the CSS row class for a given row type. */
+      rowClass(type) {
+        const map = {
+          zero:     'table-row table-row--zero',
+          negative: 'table-row table-row--negative',
+          positive: 'table-row table-row--positive',
+        };
+        return map[type] ?? 'table-row';
+      },
+
+      /** Returns the CSS highlight class for the target column cell. */
+      highlightClass(type) {
+        const map = {
+          zero:     'table-td--highlight-zero',
+          negative: 'table-td--highlight-negative',
+          positive: 'table-td--highlight-positive',
+        };
+        return map[type] ?? '';
+      },
+
+      /** Creates a fully-styled <table> element. */
+      createTable() {
+        const table = document.createElement('table');
+        table.className = 'w-full text-xs sm:text-sm';
+        table.setAttribute('role', 'table');
+        table.setAttribute('aria-label', 'Anomaliedaten-Tabelle');
+        return table;
+      },
+
+      /** Creates a <thead> from an array of header strings. */
+      createHeader(headers) {
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.setAttribute('role', 'row');
+        headerRow.className = 'table-header-row';
+
+        headers.forEach((header) => {
+          const th = document.createElement('th');
+          th.className = 'table-th';
+          th.textContent = header;
+          th.setAttribute('scope', 'col');
+          headerRow.appendChild(th);
+        });
+
+        thead.appendChild(headerRow);
+        return thead;
+      },
+
+      /** Creates a fully-styled <tr> for a single data row. */
+      createRow(rowData, headers, targetColumnIndex) {
+        const tr = document.createElement('tr');
+        tr.setAttribute('role', 'row');
+        tr.className = this.rowClass(rowData.type);
+
+        rowData.cells.forEach((cell, index) => {
+          const td = document.createElement('td');
+          const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+          td.className = 'table-td' + (isNumber ? ' table-td--number' : '');
+
+          if (index === targetColumnIndex) {
+            const hl = this.highlightClass(rowData.type);
+            if (hl) td.classList.add(hl);
+            td.setAttribute('aria-label', `${headers[index]}: ${cell}`);
+          }
+
+          td.textContent = cell;
+          td.setAttribute('role', 'cell');
+          td.setAttribute('title', cell);
+          tr.appendChild(td);
+        });
+
+        return tr;
+      },
+
+      /** Shows the table wrapper and clears/shows or hides with an empty-state message. */
+      renderEmptyOrShow(output, tableWrapper, isEmpty) {
+        if (isEmpty) {
+          output.innerHTML = '<p class="table-empty-message">Keine Anomalien entsprechen den aktuellen Filtereinstellungen.</p>';
+        }
+        if (tableWrapper) {
+          tableWrapper.classList.remove('hidden');
+        }
+      },
     };
 
     // Table rendering with improved performance and accessibility
@@ -825,121 +835,34 @@
       render(filteredData, headers, targetColumnIndex) {
         const output = document.getElementById('output');
         const tableWrapper = document.getElementById('tableWrapper');
-        if (!output) {
-          return;
-        }
+        if (!output) return;
 
         output.innerHTML = '';
 
         if (filteredData.length === 0) {
-          output.innerHTML = '<p class="text-gray-500 p-4 text-center">No anomalies match the current filter settings.</p>';
-          if (tableWrapper) {
-            tableWrapper.classList.remove('hidden');
-          }
+          TableDOMHelper.renderEmptyOrShow(output, tableWrapper, true);
           return;
         }
 
-        const table = document.createElement('table');
-        table.className = 'w-full border-collapse text-xs sm:text-sm bg-white';
-        table.setAttribute('role', 'table');
-        table.setAttribute('aria-label', 'Anomaly data table');
-        
-        table.appendChild(this.createHeader(headers));
+        const table = TableDOMHelper.createTable();
+        table.appendChild(TableDOMHelper.createHeader(headers));
         table.appendChild(this.createBody(filteredData, headers, targetColumnIndex));
-        
-        output.appendChild(table);
-        
-        // Show the table wrapper when content is added
-        if (tableWrapper) {
-          tableWrapper.classList.remove('hidden');
-        }
-      },
 
-      createHeader(headers) {
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        headerRow.className = 'bg-slate-100 border-b-2 border-slate-300';
-        headerRow.setAttribute('role', 'row');
-        
-        // Add regular headers (no dot column)
-        headers.forEach((header, index) => {
-          const th = document.createElement('th');
-          th.className = 'border border-slate-300 px-1 py-1 text-left font-semibold text-slate-700 text-xs sm:text-sm';
-          th.textContent = header;
-          th.setAttribute('scope', 'col');
-          
-          headerRow.appendChild(th);
-        });
-        
-        thead.appendChild(headerRow);
-        return thead;
+        output.appendChild(table);
+        TableDOMHelper.renderEmptyOrShow(output, tableWrapper, false);
       },
 
       createBody(filteredData, headers, targetColumnIndex) {
         const tbody = document.createElement('tbody');
-        
-        filteredData.forEach((rowData, rowIndex) => {
-          const tr = document.createElement('tr');
-          tr.setAttribute('role', 'row');
-          
-          // Apply row styling with border
-          const { className } = this.getRowStyle(rowData.type);
-          tr.className = className;
-          
-          rowData.cells.forEach((cell, index) => {
-            const td = document.createElement('td');
-            const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
-            let cellClass = `border border-slate-200 px-3 py-2 text-xs sm:text-sm ${isNumber ? 'text-right' : 'text-left'} text-slate-700 truncate`;
-            
-            // Highlight the quantity column
-            if (index === targetColumnIndex) {
-              cellClass += this.getHighlightClass(rowData.type);
-            }
-            
-            td.className = cellClass;
-            td.textContent = cell;
-            td.setAttribute('role', 'cell');
-            td.setAttribute('title', cell); // Add tooltip for truncated text
-            if (index === targetColumnIndex) {
-              td.setAttribute('aria-label', `${headers[index]}: ${cell}`);
-            }
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
+        filteredData.forEach((rowData) => {
+          tbody.appendChild(TableDOMHelper.createRow(rowData, headers, targetColumnIndex));
         });
-        
         return tbody;
       },
 
-      getRowStyle(type) {
-        switch (type) {
-          case 'zero':
-            return {
-              className: 'bg-emerald-50 hover:bg-emerald-100 transition-colors border-l-4 border-emerald-400'
-            };
-          case 'negative':
-            return {
-              className: 'bg-red-50 hover:bg-red-100 transition-colors border-l-4 border-red-400'
-            };
-          case 'positive':
-            return {
-              className: 'bg-blue-50 hover:bg-blue-100 transition-colors border-l-4 border-blue-400'
-            };
-          default:
-            return {
-              className: 'hover:bg-slate-50 transition-colors'
-            };
-        }
-      },
-
-      getHighlightClass(type) {
-        switch (type) {
-          case 'zero': return ' font-bold text-emerald-800 bg-emerald-100';
-          case 'negative': return ' font-bold text-red-800 bg-red-100';
-          case 'positive': return ' font-bold text-blue-800 bg-blue-100';
-          default: return '';
-        }
-      }
+      // Expose style helpers so external callers (LazyTableRenderer) can reference them
+      getRowStyle(type)      { return { rowClass: TableDOMHelper.rowClass(type) }; },
+      getHighlightStyle(type) { return TableDOMHelper.highlightClass(type); },
     };
 
     // Lazy Table Renderer for improved performance with large datasets
@@ -955,132 +878,73 @@
       renderInitial(filteredData, headers, targetColumnIndex) {
         this.headers = headers;
         this.targetColumnIndex = targetColumnIndex;
-        
-        // Reset lazy loading state for new data/filters
+
         this.resetLazyLoader();
-        
+
         const output = document.getElementById('output');
         const tableWrapper = document.getElementById('tableWrapper');
-        if (!output) {
-          return;
-        }
+        if (!output) return;
 
         output.innerHTML = '';
 
         if (filteredData.length === 0) {
-          output.innerHTML = '<p class="text-gray-500 p-4 text-center">No anomalies match the current filter settings.</p>';
-          if (tableWrapper) {
-            tableWrapper.classList.remove('hidden');
-          }
+          TableDOMHelper.renderEmptyOrShow(output, tableWrapper, true);
           return;
         }
 
-        // Create table structure
-        this.table = document.createElement('table');
-        this.table.className = 'w-full border-collapse text-xs sm:text-sm bg-white';
-        this.table.setAttribute('role', 'table');
-        this.table.setAttribute('aria-label', 'Anomaly data table');
-        
-        this.table.appendChild(this.createHeader());
-        this.tbody = this.createBody();
+        this.table = TableDOMHelper.createTable();
+        this.table.appendChild(TableDOMHelper.createHeader(headers));
+        this.tbody = document.createElement('tbody');
+        this.tbody.id = 'lazyTableBody';
         this.table.appendChild(this.tbody);
-        
-        // Create loading indicator
+
         this.createLoadingIndicator();
-        
+
         output.appendChild(this.table);
         output.appendChild(this.loadingIndicator);
+        TableDOMHelper.renderEmptyOrShow(output, tableWrapper, false);
 
-        // Show the table wrapper when content is added
-        if (tableWrapper) {
-          tableWrapper.classList.remove('hidden');
-        }
-
-        // Load initial rows
         this.loadMoreRows(Math.min(CONFIG.INITIAL_LOAD, filteredData.length));
-
-        // Setup intersection observer for infinite scroll
         this.setupIntersectionObserver();
       },
 
       resetLazyLoader() {
-        // Disconnect existing observer to prevent memory leaks
         if (this.intersectionObserver) {
           this.intersectionObserver.disconnect();
           this.intersectionObserver = null;
         }
-        
-        // Remove existing sentinel
         if (this.sentinel && this.sentinel.parentNode) {
           this.sentinel.parentNode.removeChild(this.sentinel);
           this.sentinel = null;
         }
-        
-        // Reset scroll position to top to prevent missing/duplicate rows
-        window.scrollTo(0, 0);
-        
-        // Reset loading state
         AppState.displayedRows = 0;
         AppState.isLoading = false;
-        
-        // Clear any existing table body content
         if (this.tbody) {
           this.tbody.innerHTML = '';
         }
       },
 
-      createHeader() {
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        headerRow.className = 'bg-slate-100 border-b-2 border-slate-300 sticky top-0 z-10';
-        headerRow.setAttribute('role', 'row');
-        
-        // Add regular headers (no dot column)
-        this.headers.forEach((header, index) => {
-          const th = document.createElement('th');
-          th.className = 'border border-slate-300 px-1 py-1 text-left font-semibold text-slate-700 text-xs sm:text-sm';
-          th.textContent = header;
-          th.setAttribute('scope', 'col');
-          
-          headerRow.appendChild(th);
-        });
-        
-        thead.appendChild(headerRow);
-        return thead;
-      },
-
-      createBody() {
-        const tbody = document.createElement('tbody');
-        tbody.id = 'lazyTableBody';
-        return tbody;
-      },
-
       createLoadingIndicator() {
         this.loadingIndicator = document.createElement('div');
         this.loadingIndicator.id = 'loadingIndicator';
-        this.loadingIndicator.className = 'hidden text-center py-4';
+        this.loadingIndicator.className = 'loading-indicator hidden';
         this.loadingIndicator.innerHTML = `
-          <div class="flex items-center justify-center">
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <div class="loading-indicator-inner">
+            <svg class="animate-spin loading-indicator-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
-            Loading more rows...
+            Weitere Zeilen werden geladen…
           </div>
         `;
       },
 
       loadMoreRows(count) {
-        if (AppState.isLoading || AppState.displayedRows >= AppState.totalFilteredRows) {
-          return;
-        }
+        if (AppState.isLoading || AppState.displayedRows >= AppState.totalFilteredRows) return;
 
         AppState.isLoading = true;
         this.showLoadingIndicator();
 
-        // Use configurable delay - removed artificial delay for better performance
         const loadDelay = CONFIG.LAZY_LOAD_DELAY;
-        
         if (loadDelay > 0) {
           setTimeout(() => this.performRowLoading(count), loadDelay);
         } else {
@@ -1093,70 +957,34 @@
         const end = Math.min(start + count, AppState.totalFilteredRows);
         const rowsToAdd = AppState.currentlyDisplayedData.slice(start, end);
 
-        rowsToAdd.forEach((rowData, index) => {
-          const tr = this.createRow(rowData, start + index);
-          this.tbody.appendChild(tr);
+        rowsToAdd.forEach((rowData) => {
+          this.tbody.appendChild(
+            TableDOMHelper.createRow(rowData, this.headers, this.targetColumnIndex)
+          );
         });
 
         AppState.displayedRows = end;
         AppState.isLoading = false;
         this.hideLoadingIndicator();
-
-        // Update progress indicator
         this.updateProgressIndicator();
 
         Logger.debug(`Loaded rows ${start + 1}-${end} of ${AppState.totalFilteredRows}`);
       },
 
-      createRow(rowData, rowIndex) {
-        const tr = document.createElement('tr');
-        tr.setAttribute('role', 'row');
-        
-        // Apply row styling with border
-        const { className } = TableRenderer.getRowStyle(rowData.type);
-        tr.className = className;
-        
-        rowData.cells.forEach((cell, index) => {
-          const td = document.createElement('td');
-          const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
-          let cellClass = `border border-slate-200 px-3 py-2 text-xs sm:text-sm ${isNumber ? 'text-right' : 'text-left'} text-slate-700 truncate`;
-          
-          // Highlight the quantity column
-          if (index === this.targetColumnIndex) {
-            cellClass += TableRenderer.getHighlightClass(rowData.type);
-          }
-          
-          td.className = cellClass;
-          td.textContent = cell;
-          td.setAttribute('role', 'cell');
-          td.setAttribute('title', cell); // Add tooltip for truncated text
-          if (index === this.targetColumnIndex) {
-            td.setAttribute('aria-label', `${this.headers[index]}: ${cell}`);
-          }
-          tr.appendChild(td);
-        });
-        
-        return tr;
-      },
-
       setupIntersectionObserver() {
-        // Disconnect existing observer to prevent memory leaks
         if (this.intersectionObserver) {
           this.intersectionObserver.disconnect();
           this.intersectionObserver = null;
         }
-        
-        // Remove existing sentinel
         if (this.sentinel && this.sentinel.parentNode) {
           this.sentinel.parentNode.removeChild(this.sentinel);
           this.sentinel = null;
         }
-        
-        // Create a new sentinel element to trigger loading
+
         this.sentinel = document.createElement('div');
         this.sentinel.id = 'loadSentinel';
         this.sentinel.className = 'h-1';
-        
+
         this.intersectionObserver = new IntersectionObserver((entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting && !AppState.isLoading && AppState.displayedRows < AppState.totalFilteredRows) {
@@ -1164,40 +992,33 @@
             }
           });
         }, {
-          rootMargin: CONFIG.getIntersectionMargin() // Responsive margin based on viewport
+          rootMargin: CONFIG.getIntersectionMargin(),
         });
 
-        // Insert sentinel before loading indicator
         this.loadingIndicator.parentNode.insertBefore(this.sentinel, this.loadingIndicator);
         this.intersectionObserver.observe(this.sentinel);
       },
 
       showLoadingIndicator() {
-        if (this.loadingIndicator) {
-          this.loadingIndicator.classList.remove('hidden');
-        }
+        if (this.loadingIndicator) this.loadingIndicator.classList.remove('hidden');
       },
 
       hideLoadingIndicator() {
-        if (this.loadingIndicator) {
-          this.loadingIndicator.classList.add('hidden');
-        }
+        if (this.loadingIndicator) this.loadingIndicator.classList.add('hidden');
       },
 
       updateProgressIndicator() {
         const visibleCountElement = document.getElementById('visibleCount');
         if (visibleCountElement) {
-          visibleCountElement.textContent = `${AppState.displayedRows} of ${AppState.totalFilteredRows}`;
+          visibleCountElement.textContent = `${AppState.displayedRows} von ${AppState.totalFilteredRows}`;
         }
       },
 
       cleanup() {
-        // Clean up observers and DOM elements when component is destroyed
         if (this.intersectionObserver) {
           this.intersectionObserver.disconnect();
           this.intersectionObserver = null;
         }
-        
         if (this.sentinel && this.sentinel.parentNode) {
           this.sentinel.parentNode.removeChild(this.sentinel);
           this.sentinel = null;
@@ -1209,7 +1030,7 @@
     // File processor with improved error handling and performance
     const FileProcessor = {
       async processFile(rawData) {
-        NotificationManager.show('Processing file...', NOTIFICATION_TYPES.PROCESSING, 0);
+        NotificationManager.show('Datei wird verarbeitet…', NOTIFICATION_TYPES.PROCESSING, 0);
         
         try {
           // Clear previous results
@@ -1228,7 +1049,7 @@
           this.updateValidationSummary(stats);
           
           if (stats.negativeRows === 0 && stats.positiveRows === 0) {
-            NotificationManager.show('No Falschbuchungen or Genullt found (all values are normal)', NOTIFICATION_TYPES.INFO);
+            NotificationManager.show('Keine Falschbuchungen oder Genullt gefunden – alle Werte sind normal.', NOTIFICATION_TYPES.INFO);
             return;
           }
           
@@ -1236,7 +1057,7 @@
           FilterManager.applyFilters();
           
           NotificationManager.show(
-            `Found ${stats.negativeRows} Falschbuchungen and ${stats.positiveRows} Genullt (${stats.zeroRows} normal values)`,
+            `${stats.negativeRows} Falschbuchungen und ${stats.positiveRows} Genullt gefunden (${stats.zeroRows} normale Werte).`,
             NOTIFICATION_TYPES.SUCCESS
           );
           
@@ -1252,6 +1073,9 @@
         const validationWrapper = document.getElementById('validationWrapper');
         const tableWrapper = document.getElementById('tableWrapper');
         
+        // Scroll to top only on new file load, not on filter changes
+        window.scrollTo(0, 0);
+
         // Clean up lazy table renderer
         LazyTableRenderer.cleanup();
         
@@ -1274,7 +1098,7 @@
         const htmlStart = rawData.indexOf('<html');
         
         if (htmlStart === -1) {
-          throw new Error('No HTML content found in file. Please ensure this is a valid MHTML file.');
+          throw new Error('Kein HTML-Inhalt in der Datei gefunden. Bitte stellen Sie sicher, dass es sich um eine gültige MHTML-Datei handelt.');
         }
         
         const htmlContent = rawData.substring(htmlStart);
@@ -1290,7 +1114,7 @@
         const doc = parser.parseFromString(sanitizedHtml, 'text/html');
         
         if (!doc.querySelector('table') && !doc.querySelector('tr')) {
-          throw new Error('Invalid file format: No table data found after sanitization');
+          throw new Error('Ungültiges Dateiformat: Nach der Bereinigung wurden keine Tabellendaten gefunden.');
         }
 
         return doc;
@@ -1299,7 +1123,7 @@
       processTableData(doc) {
         const rows = doc.querySelectorAll('tr');
         if (!rows.length) {
-          throw new Error('No table data found');
+          throw new Error('Keine Tabellendaten gefunden.');
         }
 
         // Extract headers and remove the last column
@@ -1309,7 +1133,7 @@
         // Find required columns
         const targetColumnIndex = headers.indexOf(CONFIG.DELIVERED_QUANTITY_COLUMN);
         if (targetColumnIndex === -1) {
-          throw new Error(`Required column '${CONFIG.DELIVERED_QUANTITY_COLUMN}' not found in file`);
+          throw new Error(`Erforderliche Spalte '${CONFIG.DELIVERED_QUANTITY_COLUMN}' wurde nicht in der Datei gefunden.`);
         }
 
         // Find unit column for KG filtering
@@ -1424,13 +1248,13 @@
         if (validationSummary) {
           validationSummary.innerHTML = DOMPurify.sanitize(`
             <div class="bg-red-50 border-l-4 border-red-400 p-4 text-red-700">
-              <p class="font-bold">Error Processing File</p>
+              <p class="font-bold">Fehler beim Verarbeiten der Datei</p>
               <p>${error.message}</p>
             </div>
           `);
         }
         
-        NotificationManager.show(`Error processing file: ${error.message}`, NOTIFICATION_TYPES.ERROR);
+        NotificationManager.show(`Fehler beim Verarbeiten der Datei: ${error.message}`, NOTIFICATION_TYPES.ERROR);
       }
     };
     // Event listeners setup with improved organization
@@ -1473,17 +1297,17 @@
         if (selectFileButton) {
           selectFileButton.addEventListener('dragover', (e) => {
             e.preventDefault();
-            selectFileButton.classList.add('border-slate-500', 'bg-slate-50');
+            selectFileButton.classList.add('drag-over');
           });
           
           selectFileButton.addEventListener('dragleave', (e) => {
             e.preventDefault();
-            selectFileButton.classList.remove('border-slate-500', 'bg-slate-50');
+            selectFileButton.classList.remove('drag-over');
           });
           
           selectFileButton.addEventListener('drop', (e) => {
             e.preventDefault();
-            selectFileButton.classList.remove('border-slate-500', 'bg-slate-50');
+            selectFileButton.classList.remove('drag-over');
             
             const files = e.dataTransfer.files;
             if (files.length > 0 && (files[0].name.endsWith('.mhtml') || files[0].name.endsWith('.mht'))) {
