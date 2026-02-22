@@ -94,25 +94,25 @@
 
             <!-- Navigation -->
             <nav class="tabs" id="navigation" role="tablist" aria-label="Main navigation">
-                <button class="tab active" onclick="switchTab('check')"
+                <button class="tab active" onclick="switchTab('check', event)"
                         aria-label="Check Stock Tab" aria-controls="checkTab"
                         role="tab" aria-selected="true" id="tab-check">
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <span class="tab-label">Check Stock</span>
                 </button>
-                <button class="tab" onclick="switchTab('materials')"
+                <button class="tab" onclick="switchTab('materials', event)"
                         aria-label="Manage Materials Tab" aria-controls="materialsTab"
                         role="tab" aria-selected="false" id="tab-materials">
                     <i class="fa-solid fa-boxes-stacked"></i>
                     <span class="tab-label">Manage Materials</span>
                 </button>
-                <button class="tab" onclick="switchTab('archive')"
+                <button class="tab" onclick="switchTab('archive', event)"
                         aria-label="Report Archive Tab" aria-controls="archiveTab"
                         role="tab" aria-selected="false" id="tab-archive">
                     <i class="fa-solid fa-folder-open"></i>
                     <span class="tab-label">Report Archive</span>
                 </button>
-                <button class="tab" onclick="switchTab('settings')"
+                <button class="tab" onclick="switchTab('settings', event)"
                         aria-label="Settings &amp; Sync Tab" aria-controls="settingsTab"
                         role="tab" aria-selected="false" id="tab-settings">
                     <i class="fa-solid fa-cloud-arrow-up"></i>

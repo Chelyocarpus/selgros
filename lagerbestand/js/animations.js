@@ -243,8 +243,10 @@ const AnimationController = (() => {
        INIT
     ───────────────────────────────────────── */
     function init() {
-        if (isReducedMotion()) return;
-
+        // Always build observers/listeners regardless of current reduced-motion state
+        // so that disabling reduced-motion at runtime (e.g. toggling body.reduced-motion
+        // or changing the OS preference) takes effect immediately without a page reload.
+        // Every individual callback already calls isReducedMotion() before acting.
         revealObserver = buildRevealObserver();
         counterObserver = buildCounterObserver();
 
@@ -262,6 +264,18 @@ const AnimationController = (() => {
                 attachRippleListeners();
                 applyStagger();
             }, 100);
+        });
+
+        // React to OS-level preference changes at runtime
+        const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        motionQuery.addEventListener('change', () => {
+            // Re-scan so newly eligible elements are observed when motion is re-enabled
+            if (!isReducedMotion()) {
+                observeRevealTargets();
+                observeCounters();
+                attachRippleListeners();
+                applyStagger();
+            }
         });
     }
 

@@ -17,14 +17,18 @@ const tabsInitialized = {
 };
 
 // Global functions for onclick handlers
-function switchTab(tabName) {
+/**
+ * @param {string} tabName
+ * @param {MouseEvent|undefined} [evt] - Pass from onclick as switchTab('name', event)
+ */
+function switchTab(tabName, evt) {
     // Lazy load tab content if not already initialized
     if (!tabsInitialized[tabName]) {
         initializeTab(tabName);
         tabsInitialized[tabName] = true;
     }
     
-    ui.switchTab(tabName);
+    ui.switchTab(tabName, evt);
 }
 
 /**

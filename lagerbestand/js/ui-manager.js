@@ -461,12 +461,12 @@ class UIManager {
     }
 
     // Switch between tabs
-    switchTab(tabName) {
+    switchTab(tabName, evt) {
         // Find the tab button by its id
-        const clickedTab = document.getElementById(`tab-${tabName}`) || event?.target;
+        const clickedTab = document.getElementById(`tab-${tabName}`) || evt?.target;
 
-        // Create ripple effect
-        if (clickedTab) this.createRipple(clickedTab, event);
+        // Create ripple effect only when a real pointer event is available
+        if (clickedTab && evt) this.createRipple(clickedTab, evt);
 
         // Update tab buttons
         document.querySelectorAll('.tab').forEach(tab => {
@@ -507,8 +507,11 @@ class UIManager {
         
         const rect = element.getBoundingClientRect();
         const size = Math.max(rect.width, rect.height);
-        const x = event.clientX - rect.left - size / 2;
-        const y = event.clientY - rect.top - size / 2;
+        // Fall back to element centre when no pointer coordinates (e.g. keyboard/programmatic)
+        const clientX = event?.clientX ?? (rect.left + rect.width / 2);
+        const clientY = event?.clientY ?? (rect.top  + rect.height / 2);
+        const x = clientX - rect.left - size / 2;
+        const y = clientY - rect.top  - size / 2;
         
         ripple.style.width = ripple.style.height = `${size}px`;
         ripple.style.left = `${x}px`;
