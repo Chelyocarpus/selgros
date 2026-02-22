@@ -36,6 +36,7 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/modals.css">
     <link rel="stylesheet" href="css/tables.css">
+    <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
     <!-- Toast Container -->
@@ -52,12 +53,12 @@
     <div class="container" id="main-content" role="main">
         <!-- Header -->
         <header>
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                <div style="flex: 1; min-width: 300px;">
+            <div class="header-inner">
+                <div class="header-title">
                     <h1 id="headerTitle"><i class="fa-solid fa-boxes-stacked"></i> Lagerbestandswarnsystem</h1>
                     <p id="headerSubtitle">Überwachen Sie Lagerbestände und erhalten Sie Warnungen bei Kapazitätsproblemen</p>
                 </div>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <div class="header-actions">
                     <!-- Theme Toggle Buttons -->
                     <button onclick="toggleDarkMode()" class="header-btn" id="darkModeBtn" 
                             title="Toggle Dark Mode (Ctrl+Shift+D)" aria-label="Toggle dark mode">
@@ -88,35 +89,46 @@
             </div>
         </header>
 
-        <!-- Tabs -->
-        <nav class="tabs" id="navigation" role="navigation" aria-label="Main navigation">
-            <button class="tab active" onclick="switchTab('check')" 
-                    aria-label="Check Stock Tab" aria-controls="checkTab"
-                    role="tab" aria-selected="true" id="tab-check">
-                <i class="fa-solid fa-magnifying-glass"></i> Check Stock
-            </button>
-            <button class="tab" onclick="switchTab('materials')" 
-                    aria-label="Manage Materials Tab" aria-controls="materialsTab"
-                    role="tab" aria-selected="false" id="tab-materials">
-                <i class="fa-solid fa-boxes-stacked"></i> Manage Materials
-            </button>
-            <button class="tab" onclick="switchTab('archive')" 
-                    aria-label="Report Archive Tab" aria-controls="archiveTab"
-                    role="tab" aria-selected="false" id="tab-archive">
-                <i class="fa-solid fa-folder-open"></i> Report Archive
-            </button>
-            <button class="tab" onclick="switchTab('settings')" 
-                    aria-label="Settings & Sync Tab" aria-controls="settingsTab"
-                    role="tab" aria-selected="false" id="tab-settings">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Sync
-            </button>
-        </nav>
+        <!-- App Body: sidebar on desktop, bottom-nav on mobile -->
+        <div class="app-body">
 
-        <!-- Tab Contents -->
-        <div id="checkTab" class="tab-content active" role="tabpanel" aria-labelledby="tab-check"></div>
-        <div id="materialsTab" class="tab-content" role="tabpanel" aria-labelledby="tab-materials"></div>
-        <div id="archiveTab" class="tab-content" role="tabpanel" aria-labelledby="tab-archive"></div>
-        <div id="settingsTab" class="tab-content" role="tabpanel" aria-labelledby="tab-settings"></div>
+            <!-- Navigation -->
+            <nav class="tabs" id="navigation" role="tablist" aria-label="Main navigation">
+                <button class="tab active" onclick="switchTab('check')"
+                        aria-label="Check Stock Tab" aria-controls="checkTab"
+                        role="tab" aria-selected="true" id="tab-check">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span class="tab-label">Check Stock</span>
+                </button>
+                <button class="tab" onclick="switchTab('materials')"
+                        aria-label="Manage Materials Tab" aria-controls="materialsTab"
+                        role="tab" aria-selected="false" id="tab-materials">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <span class="tab-label">Manage Materials</span>
+                </button>
+                <button class="tab" onclick="switchTab('archive')"
+                        aria-label="Report Archive Tab" aria-controls="archiveTab"
+                        role="tab" aria-selected="false" id="tab-archive">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span class="tab-label">Report Archive</span>
+                </button>
+                <button class="tab" onclick="switchTab('settings')"
+                        aria-label="Settings &amp; Sync Tab" aria-controls="settingsTab"
+                        role="tab" aria-selected="false" id="tab-settings">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span class="tab-label">Sync</span>
+                </button>
+            </nav>
+
+            <!-- Tab Contents -->
+            <div class="tab-pane-container">
+                <div id="checkTab" class="tab-content active" role="tabpanel" aria-labelledby="tab-check"></div>
+                <div id="materialsTab" class="tab-content" role="tabpanel" aria-labelledby="tab-materials"></div>
+                <div id="archiveTab" class="tab-content" role="tabpanel" aria-labelledby="tab-archive"></div>
+                <div id="settingsTab" class="tab-content" role="tabpanel" aria-labelledby="tab-settings"></div>
+            </div>
+
+        </div><!-- /.app-body -->
     </div>
 
     <!-- Screen Reader Announcements -->
@@ -209,5 +221,6 @@
     <script src="js/touch-gestures.js"></script>
     <script src="js/mobile-enhancements.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/animations.js"></script>
 </body>
 </html>

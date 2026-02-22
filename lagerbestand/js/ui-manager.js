@@ -323,15 +323,19 @@ class UIManager {
         const tabConfigs = [
             { icon: 'fa-magnifying-glass', text: this.t('tabCheckStock') },
             { icon: 'fa-boxes-stacked', text: this.t('tabManageMaterials') },
-            { icon: 'fa-folder-open', text: this.t('tabArchive') }
+            { icon: 'fa-folder-open', text: this.t('tabArchive') },
+            { icon: 'fa-cloud-arrow-up', text: this.t('tabSync') }
         ];
         tabs.forEach((tab, index) => {
             if (tabConfigs[index]) {
                 tab.textContent = '';
                 const icon = document.createElement('i');
                 icon.className = `fa-solid ${tabConfigs[index].icon}`;
+                const label = document.createElement('span');
+                label.className = 'tab-label';
+                label.textContent = tabConfigs[index].text;
                 tab.appendChild(icon);
-                tab.appendChild(document.createTextNode(' ' + tabConfigs[index].text));
+                tab.appendChild(label);
             }
         });
         
@@ -458,13 +462,21 @@ class UIManager {
 
     // Switch between tabs
     switchTab(tabName) {
+        // Find the tab button by its id
+        const clickedTab = document.getElementById(`tab-${tabName}`) || event?.target;
+
         // Create ripple effect
-        const clickedTab = event.target;
-        this.createRipple(clickedTab, event);
+        if (clickedTab) this.createRipple(clickedTab, event);
 
         // Update tab buttons
-        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-        clickedTab.classList.add('active');
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+            tab.setAttribute('aria-selected', 'false');
+        });
+        if (clickedTab) {
+            clickedTab.classList.add('active');
+            clickedTab.setAttribute('aria-selected', 'true');
+        }
 
         // Update tab content
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -473,6 +485,9 @@ class UIManager {
         // Invalidate cached DOM references when switching tabs
         // as tab content may be re-rendered
         this.invalidateCachedElements();
+
+        // Notify animation controller about tab switch
+        document.dispatchEvent(new CustomEvent('tabSwitched', { detail: { tab: tabName } }));
 
         // Refresh content based on tab
         if (tabName === 'materials') {
