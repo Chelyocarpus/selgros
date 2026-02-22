@@ -743,47 +743,44 @@
       }
     };
 
-    // Table rendering with improved performance and accessibility
-    const TableRenderer = {
-      render(filteredData, headers, targetColumnIndex) {
-        const output = document.getElementById('output');
-        const tableWrapper = document.getElementById('tableWrapper');
-        if (!output) {
-          return;
-        }
+    // Shared DOM-building and styling helpers used by both renderers
+    const TableDOMHelper = {
+      /** Returns the CSS row class for a given row type. */
+      rowClass(type) {
+        const map = {
+          zero:     'table-row table-row--zero',
+          negative: 'table-row table-row--negative',
+          positive: 'table-row table-row--positive',
+        };
+        return map[type] ?? 'table-row';
+      },
 
-        output.innerHTML = '';
+      /** Returns the CSS highlight class for the target column cell. */
+      highlightClass(type) {
+        const map = {
+          zero:     'table-td--highlight-zero',
+          negative: 'table-td--highlight-negative',
+          positive: 'table-td--highlight-positive',
+        };
+        return map[type] ?? '';
+      },
 
-        if (filteredData.length === 0) {
-          output.innerHTML = '<p class="table-empty-message">Keine Anomalien entsprechen den aktuellen Filtereinstellungen.</p>';
-          if (tableWrapper) {
-            tableWrapper.classList.remove('hidden');
-          }
-          return;
-        }
-
+      /** Creates a fully-styled <table> element. */
+      createTable() {
         const table = document.createElement('table');
         table.className = 'w-full text-xs sm:text-sm';
         table.setAttribute('role', 'table');
         table.setAttribute('aria-label', 'Anomaliedaten-Tabelle');
-        
-        table.appendChild(this.createHeader(headers));
-        table.appendChild(this.createBody(filteredData, headers, targetColumnIndex));
-        
-        output.appendChild(table);
-        
-        // Show the table wrapper when content is added
-        if (tableWrapper) {
-          tableWrapper.classList.remove('hidden');
-        }
+        return table;
       },
 
+      /** Creates a <thead> from an array of header strings. */
       createHeader(headers) {
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
         headerRow.setAttribute('role', 'row');
         headerRow.className = 'table-header-row';
-        
+
         headers.forEach((header) => {
           const th = document.createElement('th');
           th.className = 'table-th';
@@ -791,64 +788,81 @@
           th.setAttribute('scope', 'col');
           headerRow.appendChild(th);
         });
-        
+
         thead.appendChild(headerRow);
         return thead;
       },
 
+      /** Creates a fully-styled <tr> for a single data row. */
+      createRow(rowData, headers, targetColumnIndex) {
+        const tr = document.createElement('tr');
+        tr.setAttribute('role', 'row');
+        tr.className = this.rowClass(rowData.type);
+
+        rowData.cells.forEach((cell, index) => {
+          const td = document.createElement('td');
+          const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
+          td.className = 'table-td' + (isNumber ? ' table-td--number' : '');
+
+          if (index === targetColumnIndex) {
+            const hl = this.highlightClass(rowData.type);
+            if (hl) td.classList.add(hl);
+            td.setAttribute('aria-label', `${headers[index]}: ${cell}`);
+          }
+
+          td.textContent = cell;
+          td.setAttribute('role', 'cell');
+          td.setAttribute('title', cell);
+          tr.appendChild(td);
+        });
+
+        return tr;
+      },
+
+      /** Shows the table wrapper and clears/shows or hides with an empty-state message. */
+      renderEmptyOrShow(output, tableWrapper, isEmpty) {
+        if (isEmpty) {
+          output.innerHTML = '<p class="table-empty-message">Keine Anomalien entsprechen den aktuellen Filtereinstellungen.</p>';
+        }
+        if (tableWrapper) {
+          tableWrapper.classList.remove('hidden');
+        }
+      },
+    };
+
+    // Table rendering with improved performance and accessibility
+    const TableRenderer = {
+      render(filteredData, headers, targetColumnIndex) {
+        const output = document.getElementById('output');
+        const tableWrapper = document.getElementById('tableWrapper');
+        if (!output) return;
+
+        output.innerHTML = '';
+
+        if (filteredData.length === 0) {
+          TableDOMHelper.renderEmptyOrShow(output, tableWrapper, true);
+          return;
+        }
+
+        const table = TableDOMHelper.createTable();
+        table.appendChild(TableDOMHelper.createHeader(headers));
+        table.appendChild(this.createBody(filteredData, headers, targetColumnIndex));
+
+        output.appendChild(table);
+        TableDOMHelper.renderEmptyOrShow(output, tableWrapper, false);
+      },
+
       createBody(filteredData, headers, targetColumnIndex) {
         const tbody = document.createElement('tbody');
-        
-        filteredData.forEach((rowData, rowIndex) => {
-          const tr = document.createElement('tr');
-          tr.setAttribute('role', 'row');
-          const { rowClass } = this.getRowStyle(rowData.type);
-          tr.className = rowClass;
-          
-          rowData.cells.forEach((cell, index) => {
-            const td = document.createElement('td');
-            const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
-            td.className = 'table-td' + (isNumber ? ' table-td--number' : '');
-            
-            if (index === targetColumnIndex) {
-              const highlightClass = this.getHighlightStyle(rowData.type);
-              if (highlightClass) td.classList.add(highlightClass);
-            }
-            
-            td.textContent = cell;
-            td.setAttribute('role', 'cell');
-            td.setAttribute('title', cell);
-            if (index === targetColumnIndex) {
-              td.setAttribute('aria-label', `${headers[index]}: ${cell}`);
-            }
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
+        filteredData.forEach((rowData) => {
+          tbody.appendChild(TableDOMHelper.createRow(rowData, headers, targetColumnIndex));
         });
-        
         return tbody;
       },
 
-      getRowStyle(type) {
-        switch (type) {
-          case 'zero':     return { rowClass: 'table-row table-row--zero' };
-          case 'negative': return { rowClass: 'table-row table-row--negative' };
-          case 'positive': return { rowClass: 'table-row table-row--positive' };
-          default:         return { rowClass: 'table-row' };
-        }
-      },
-
-      getHighlightStyle(type) {
-        switch (type) {
-          case 'zero':     return 'table-td--highlight-zero';
-          case 'negative': return 'table-td--highlight-negative';
-          case 'positive': return 'table-td--highlight-positive';
-          default: return '';
-        }
-      },
-
-      // Legacy shims for LazyTableRenderer references
-      getHighlightClass(type) { return ''; }
+      // Expose style helpers so external callers (LazyTableRenderer) can reference them
+      getRowStyle(type)      { return { rowClass: TableDOMHelper.rowClass(type) }; },
+      getHighlightStyle(type) { return TableDOMHelper.highlightClass(type); },
     };
 
     // Lazy Table Renderer for improved performance with large datasets
@@ -864,99 +878,50 @@
       renderInitial(filteredData, headers, targetColumnIndex) {
         this.headers = headers;
         this.targetColumnIndex = targetColumnIndex;
-        
-        // Reset lazy loading state for new data/filters
+
         this.resetLazyLoader();
-        
+
         const output = document.getElementById('output');
         const tableWrapper = document.getElementById('tableWrapper');
-        if (!output) {
-          return;
-        }
+        if (!output) return;
 
         output.innerHTML = '';
 
         if (filteredData.length === 0) {
-          output.innerHTML = '<p class="table-empty-message">Keine Anomalien entsprechen den aktuellen Filtereinstellungen.</p>';
-          if (tableWrapper) {
-            tableWrapper.classList.remove('hidden');
-          }
+          TableDOMHelper.renderEmptyOrShow(output, tableWrapper, true);
           return;
         }
 
-        // Create table structure
-        this.table = document.createElement('table');
-        this.table.className = 'w-full text-xs sm:text-sm';
-        this.table.setAttribute('role', 'table');
-        this.table.setAttribute('aria-label', 'Anomaliedaten-Tabelle');
-        
-        this.table.appendChild(this.createHeader());
-        this.tbody = this.createBody();
+        this.table = TableDOMHelper.createTable();
+        this.table.appendChild(TableDOMHelper.createHeader(headers));
+        this.tbody = document.createElement('tbody');
+        this.tbody.id = 'lazyTableBody';
         this.table.appendChild(this.tbody);
-        
-        // Create loading indicator
+
         this.createLoadingIndicator();
-        
+
         output.appendChild(this.table);
         output.appendChild(this.loadingIndicator);
+        TableDOMHelper.renderEmptyOrShow(output, tableWrapper, false);
 
-        // Show the table wrapper when content is added
-        if (tableWrapper) {
-          tableWrapper.classList.remove('hidden');
-        }
-
-        // Load initial rows
         this.loadMoreRows(Math.min(CONFIG.INITIAL_LOAD, filteredData.length));
-
-        // Setup intersection observer for infinite scroll
         this.setupIntersectionObserver();
       },
 
       resetLazyLoader() {
-        // Disconnect existing observer to prevent memory leaks
         if (this.intersectionObserver) {
           this.intersectionObserver.disconnect();
           this.intersectionObserver = null;
         }
-        
-        // Remove existing sentinel
         if (this.sentinel && this.sentinel.parentNode) {
           this.sentinel.parentNode.removeChild(this.sentinel);
           this.sentinel = null;
         }
-        
-        // Reset loading state
         AppState.displayedRows = 0;
         AppState.isLoading = false;
-        
-        // Clear any existing table body content
         if (this.tbody) {
           this.tbody.innerHTML = '';
         }
-      },
-
-      createHeader() {
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        headerRow.setAttribute('role', 'row');
-        headerRow.className = 'table-header-row';
-        
-        this.headers.forEach((header) => {
-          const th = document.createElement('th');
-          th.className = 'table-th';
-          th.textContent = header;
-          th.setAttribute('scope', 'col');
-          headerRow.appendChild(th);
-        });
-        
-        thead.appendChild(headerRow);
-        return thead;
-      },
-
-      createBody() {
-        const tbody = document.createElement('tbody');
-        tbody.id = 'lazyTableBody';
-        return tbody;
       },
 
       createLoadingIndicator() {
@@ -974,16 +939,12 @@
       },
 
       loadMoreRows(count) {
-        if (AppState.isLoading || AppState.displayedRows >= AppState.totalFilteredRows) {
-          return;
-        }
+        if (AppState.isLoading || AppState.displayedRows >= AppState.totalFilteredRows) return;
 
         AppState.isLoading = true;
         this.showLoadingIndicator();
 
-        // Use configurable delay - removed artificial delay for better performance
         const loadDelay = CONFIG.LAZY_LOAD_DELAY;
-        
         if (loadDelay > 0) {
           setTimeout(() => this.performRowLoading(count), loadDelay);
         } else {
@@ -996,68 +957,34 @@
         const end = Math.min(start + count, AppState.totalFilteredRows);
         const rowsToAdd = AppState.currentlyDisplayedData.slice(start, end);
 
-        rowsToAdd.forEach((rowData, index) => {
-          const tr = this.createRow(rowData, start + index);
-          this.tbody.appendChild(tr);
+        rowsToAdd.forEach((rowData) => {
+          this.tbody.appendChild(
+            TableDOMHelper.createRow(rowData, this.headers, this.targetColumnIndex)
+          );
         });
 
         AppState.displayedRows = end;
         AppState.isLoading = false;
         this.hideLoadingIndicator();
-
-        // Update progress indicator
         this.updateProgressIndicator();
 
         Logger.debug(`Loaded rows ${start + 1}-${end} of ${AppState.totalFilteredRows}`);
       },
 
-      createRow(rowData, rowIndex) {
-        const tr = document.createElement('tr');
-        tr.setAttribute('role', 'row');
-        
-        const { rowClass } = TableRenderer.getRowStyle(rowData.type);
-        tr.className = rowClass;
-        
-        rowData.cells.forEach((cell, index) => {
-          const td = document.createElement('td');
-          const isNumber = !isNaN(parseFloat(cell.replace(',', '.')));
-          td.className = 'table-td' + (isNumber ? ' table-td--number' : '');
-          
-          if (index === this.targetColumnIndex) {
-            const highlightClass = TableRenderer.getHighlightStyle(rowData.type);
-            if (highlightClass) td.classList.add(highlightClass);
-          }
-          
-          td.textContent = cell;
-          td.setAttribute('role', 'cell');
-          td.setAttribute('title', cell);
-          if (index === this.targetColumnIndex) {
-            td.setAttribute('aria-label', `${this.headers[index]}: ${cell}`);
-          }
-          tr.appendChild(td);
-        });
-        
-        return tr;
-      },
-
       setupIntersectionObserver() {
-        // Disconnect existing observer to prevent memory leaks
         if (this.intersectionObserver) {
           this.intersectionObserver.disconnect();
           this.intersectionObserver = null;
         }
-        
-        // Remove existing sentinel
         if (this.sentinel && this.sentinel.parentNode) {
           this.sentinel.parentNode.removeChild(this.sentinel);
           this.sentinel = null;
         }
-        
-        // Create a new sentinel element to trigger loading
+
         this.sentinel = document.createElement('div');
         this.sentinel.id = 'loadSentinel';
         this.sentinel.className = 'h-1';
-        
+
         this.intersectionObserver = new IntersectionObserver((entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting && !AppState.isLoading && AppState.displayedRows < AppState.totalFilteredRows) {
@@ -1065,24 +992,19 @@
             }
           });
         }, {
-          rootMargin: CONFIG.getIntersectionMargin() // Responsive margin based on viewport
+          rootMargin: CONFIG.getIntersectionMargin(),
         });
 
-        // Insert sentinel before loading indicator
         this.loadingIndicator.parentNode.insertBefore(this.sentinel, this.loadingIndicator);
         this.intersectionObserver.observe(this.sentinel);
       },
 
       showLoadingIndicator() {
-        if (this.loadingIndicator) {
-          this.loadingIndicator.classList.remove('hidden');
-        }
+        if (this.loadingIndicator) this.loadingIndicator.classList.remove('hidden');
       },
 
       hideLoadingIndicator() {
-        if (this.loadingIndicator) {
-          this.loadingIndicator.classList.add('hidden');
-        }
+        if (this.loadingIndicator) this.loadingIndicator.classList.add('hidden');
       },
 
       updateProgressIndicator() {
@@ -1093,12 +1015,10 @@
       },
 
       cleanup() {
-        // Clean up observers and DOM elements when component is destroyed
         if (this.intersectionObserver) {
           this.intersectionObserver.disconnect();
           this.intersectionObserver = null;
         }
-        
         if (this.sentinel && this.sentinel.parentNode) {
           this.sentinel.parentNode.removeChild(this.sentinel);
           this.sentinel = null;

@@ -5,6 +5,15 @@ All notable changes to Wareneingang are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-02-22
+
+### Changed
+- Extracted shared DOM-building and styling logic from `TableRenderer` and `LazyTableRenderer` into a new `TableDOMHelper` object, eliminating the duplicated implementations of `createHeader`, `createRow`/cell-building, `rowClass`, and `highlightClass`.
+- `TableRenderer.createBody` and `LazyTableRenderer.performRowLoading` now both delegate row creation to `TableDOMHelper.createRow`.
+- `TableDOMHelper.renderEmptyOrShow` unifies the repeated empty-state message and wrapper visibility logic that was previously in both renderers.
+- Removed the legacy `getHighlightClass` shim that was only present to paper over cross-renderer calls.
+- `TableRenderer.getRowStyle` and `getHighlightStyle` are kept as thin wrappers over `TableDOMHelper` for backward compatibility with any external callers.
+
 ## [1.5.0] - 2026-02-22
 
 ### Added
