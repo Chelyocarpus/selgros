@@ -502,7 +502,13 @@
 
         <!-- Top bar: dark mode toggle -->
         <div class="top-bar">
-            <button class="theme-toggle" id="theme-toggle" aria-label="Design-Modus wechseln" title="Hell / Dunkel (Alt+T)">
+            <button
+                class="theme-toggle"
+                id="theme-toggle"
+                aria-label="Design-Modus wechseln"
+                title="Hell / Dunkel (Alt+T)"
+                aria-pressed="false"
+            >
                 <i class="fas fa-moon" id="theme-icon" aria-hidden="true"></i>
                 <span id="theme-label">Dunkel</span>
             </button>
@@ -544,7 +550,7 @@
             <div class="apps-grid" id="apps-grid">
 
                 <!-- Lagerbestand -->
-                <a href="lagerbestand/index.html" class="app-card" data-category="Warehouse Management" data-name="lagerbestand warehouse warning system bestandsüberwachung materialverwaltung">
+                <a href="lagerbestand/index.html" class="app-card" data-category="Warehouse Management">
                     <div class="app-icon"><i class="fas fa-warehouse" aria-hidden="true"></i></div>
                     <div class="card-body">
                         <h2>Lagerbestand</h2>
@@ -557,7 +563,7 @@
                 </a>
 
                 <!-- Verkaufsanalyse -->
-                <a href="verkaufsanalyse/index.html" class="app-card" data-category="Analytics" data-name="verkaufsanalyse analyse visualisierung verkaufsdaten statistiken">
+                <a href="verkaufsanalyse/index.html" class="app-card" data-category="Analytics">
                     <div class="app-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></div>
                     <div class="card-body">
                         <h2>Verkaufsanalyse</h2>
@@ -570,7 +576,7 @@
                 </a>
 
                 <!-- Wareneingang -->
-                <a href="wareneingang/index.html" class="app-card" data-category="Logistics" data-name="wareneingang verwaltung dokumentation">
+                <a href="wareneingang/index.html" class="app-card" data-category="Logistics">
                     <div class="app-icon"><i class="fas fa-truck-loading" aria-hidden="true"></i></div>
                     <div class="card-body">
                         <h2>Wareneingang</h2>
@@ -583,7 +589,7 @@
                 </a>
 
                 <!-- Etiketten -->
-                <a href="labels/index.html" class="app-card" data-category="Print" data-name="etiketten labels drucken professionelle bilder">
+                <a href="labels/index.html" class="app-card" data-category="Print">
                     <div class="app-icon"><i class="fas fa-tags" aria-hidden="true"></i></div>
                     <div class="card-body">
                         <h2>Etiketten</h2>
@@ -596,7 +602,7 @@
                 </a>
 
                 <!-- QR-Code Generator -->
-                <a href="qrcode/index.html" class="app-card" data-category="Tools" data-name="qr code generator erweitert anpassungsoptionen">
+                <a href="qrcode/index.html" class="app-card" data-category="Tools">
                     <div class="app-icon"><i class="fas fa-qrcode" aria-hidden="true"></i></div>
                     <div class="card-body">
                         <h2>QR-Code Generator</h2>
@@ -609,7 +615,7 @@
                 </a>
 
                 <!-- Bestandsveränderung -->
-                <a href="bestandsveraenderung/index.html" class="app-card" data-category="Analytics" data-name="bestandsveränderung business analyse bestandsbewegungen finanzielle auswirkungen">
+                <a href="bestandsveraenderung/index.html" class="app-card" data-category="Analytics">
                     <div class="app-icon"><i class="fas fa-chart-bar" aria-hidden="true"></i></div>
                     <div class="card-body">
                         <h2>Bestandsveränderung</h2>
@@ -622,7 +628,7 @@
                 </a>
 
                 <!-- Protokoll Sortierung -->
-                <a href="protokoll/index.html" class="app-card" data-category="Tools" data-name="protokoll sortierung xlsx qr code generierung">
+                <a href="protokoll/index.html" class="app-card" data-category="Tools">
                     <div class="app-icon"><i class="fas fa-sort-amount-down" aria-hidden="true"></i></div>
                     <div class="card-body">
                         <h2>Protokoll Sortierung</h2>
@@ -635,7 +641,7 @@
                 </a>
 
                 <!-- Protokoll mit QR -->
-                <a href="protokoll2qr/index.html" class="app-card" data-category="Tools" data-name="protokoll qr pdf verarbeitung qr code generierung">
+                <a href="protokoll2qr/index.html" class="app-card" data-category="Tools">
                     <div class="app-icon"><i class="fas fa-file-pdf" aria-hidden="true"></i></div>
                     <div class="card-body">
                         <h2>Protokoll mit QR</h2>
@@ -679,16 +685,27 @@
             };
 
             const applyTheme = (theme) => {
-                html.setAttribute('data-theme', theme);
-                const { icon, label } = THEME_MAP[theme];
+                const safeTheme = THEME_MAP[theme] ? theme : 'light';
+                html.setAttribute('data-theme', safeTheme);
+                const { icon, label } = THEME_MAP[safeTheme];
                 themeIcon.className  = `fas ${icon}`;
                 themeLabel.textContent = label;
-                localStorage.setItem(THEME_KEY, theme);
+                toggleBtn.setAttribute('aria-pressed', safeTheme === 'dark' ? 'true' : 'false');
+                try {
+                    localStorage.setItem(THEME_KEY, safeTheme);
+                } catch (_) {
+                    // localStorage unavailable (e.g. strict privacy mode) — theme still applies for this session
+                }
             };
 
             // Respect OS preference on first visit
-            const savedTheme = localStorage.getItem(THEME_KEY)
-                || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            let savedTheme = 'light';
+            try {
+                savedTheme = localStorage.getItem(THEME_KEY)
+                    || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            } catch (_) {
+                savedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
             applyTheme(savedTheme);
 
             toggleBtn.addEventListener('click', () => {
@@ -696,8 +713,19 @@
                 applyTheme(THEME_MAP[current].next);
             });
 
-            // Alt+T shortcut
+            // Alt+T shortcut (skip when focus is inside an editable element)
             document.addEventListener('keydown', (e) => {
+                const target = e.target;
+                if (target instanceof HTMLElement) {
+                    if (
+                        target.isContentEditable
+                        || target.tagName === 'INPUT'
+                        || target.tagName === 'TEXTAREA'
+                        || target.tagName === 'SELECT'
+                    ) {
+                        return;
+                    }
+                }
                 if (e.altKey && e.key.toLowerCase() === 't') {
                     e.preventDefault();
                     toggleBtn.click();
@@ -736,11 +764,13 @@
                 let visibleCount = 0;
 
                 cards.forEach((card) => {
-                    const name     = card.dataset.name     || '';
-                    const category = card.dataset.category || '';
-                    const heading  = card.querySelector('h2')?.textContent.toLowerCase() || '';
+                    const category    = card.dataset.category || '';
+                    // Derive searchable text from visible DOM content rather than a separate data attribute
+                    const heading     = card.querySelector('h2')?.textContent.toLowerCase() || '';
+                    const description = card.querySelector('p')?.textContent.toLowerCase()  || '';
+                    const searchable  = `${heading} ${description}`;
 
-                    const matchesSearch   = !query || name.includes(query) || heading.includes(query);
+                    const matchesSearch   = !query || searchable.includes(query);
                     const matchesCategory = activeFilter === 'all' || category === activeFilter;
                     const visible         = matchesSearch && matchesCategory;
 
