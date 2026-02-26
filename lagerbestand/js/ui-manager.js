@@ -83,7 +83,7 @@ class UIManager {
             } else {
                 text.textContent = this.t('loading');
             }
-            overlay.style.display = 'flex';
+            overlay.classList.add('is-visible');
             accessibilityManager?.setBusy(document.body, true);
         }
     }
@@ -94,7 +94,7 @@ class UIManager {
     hideLoading() {
         const overlay = document.getElementById('loadingOverlay');
         if (overlay) {
-            overlay.style.display = 'none';
+            overlay.classList.remove('is-visible');
             accessibilityManager?.setBusy(document.body, false);
         }
     }

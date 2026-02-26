@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.1] - 2026-02-26
+
+### Fixed
+
+- **Loading overlay**: Removed inline `style="display: none;"` from HTML; CSS now sets `display: none` as the default state. A new `.is-visible` modifier class is applied via JavaScript (`showLoading`/`hideLoading` in `ui-manager.js`) to show the overlay.
+- **Modal buttons**: Added `title` attributes to the Cancel and Confirm buttons in the Delete and Clear-All confirmation modals to satisfy accessibility requirements.
+- **Clear-all input**: Added `title` and `placeholder` attributes to `#clearAllConfirmInput` to meet form-element label requirements.
+- **Vendor prefixes (`components.css`)**: Added `-webkit-user-select` alongside `user-select` on `.settings-section label`, and `-webkit-backdrop-filter` alongside `backdrop-filter` on `.bulk-actions-toolbar` for Safari compatibility.
+- **Scrollbar compatibility (`main.css`)**: Removed unsupported `scrollbar-width: thin` from the mobile `.tabs` rule; the existing `::-webkit-scrollbar` rules already handle Chrome/Safari.
+
+---
+
 ## [3.3.0] - 2026-02-21
 
 ### Added

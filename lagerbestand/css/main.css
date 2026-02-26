@@ -110,10 +110,14 @@ body:not(.keyboard-navigation) *:focus {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.7);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     z-index: 9999;
+}
+
+.loading-overlay.is-visible {
+    display: flex;
 }
 
 .loading-spinner {
@@ -475,7 +479,6 @@ body.dark-mode .tab.active::before {
         margin-right: 0;
         margin-bottom: 16px;
         overflow-x: auto;
-        scrollbar-width: thin;
         padding: 6px;
         gap: 4px;
         border-radius: 10px;
