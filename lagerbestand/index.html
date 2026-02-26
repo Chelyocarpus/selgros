@@ -153,11 +153,11 @@
                 <p class="delete-warning" id="deleteModalWarning"></p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="ui.closeDeleteModal()" id="deleteModalCancelBtn" title="Cancel">
+                <button class="btn btn-secondary" onclick="ui.closeDeleteModal()" id="deleteModalCancelBtn" aria-labelledby="deleteModalCancelText">
                     <i class="fa-solid fa-xmark"></i>
                     <span id="deleteModalCancelText"></span>
                 </button>
-                <button class="btn btn-danger" onclick="ui.confirmDelete()" id="deleteModalConfirmBtn" title="Confirm delete">
+                <button class="btn btn-danger" onclick="ui.confirmDelete()" id="deleteModalConfirmBtn" aria-labelledby="deleteModalConfirmText">
                     <i class="fa-solid fa-trash-can"></i>
                     <span id="deleteModalConfirmText"></span>
                 </button>
@@ -186,18 +186,17 @@
                         class="clear-all-input"
                         autocomplete="off"
                         spellcheck="false"
-                        placeholder=""
-                        title="Confirmation input"
+                        aria-labelledby="clearAllModalInstruction"
                     />
                     <p class="input-error" id="clearAllInputError"></p>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="ui.closeClearAllModal()" id="clearAllModalCancelBtn" title="Cancel">
+                <button class="btn btn-secondary" onclick="ui.closeClearAllModal()" id="clearAllModalCancelBtn" aria-labelledby="clearAllModalCancelText">
                     <i class="fa-solid fa-xmark"></i>
                     <span id="clearAllModalCancelText"></span>
                 </button>
-                <button class="btn btn-danger" onclick="ui.confirmClearAll()" id="clearAllModalConfirmBtn" title="Confirm clear all">
+                <button class="btn btn-danger" onclick="ui.confirmClearAll()" id="clearAllModalConfirmBtn" aria-labelledby="clearAllModalConfirmText">
                     <i class="fa-solid fa-trash-can"></i>
                     <span id="clearAllModalConfirmText"></span>
                 </button>

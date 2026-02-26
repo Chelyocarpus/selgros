@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.2] - 2026-02-26
+
+### Changed
+
+- **Modal button accessible names** (`index.html`, `js/ui-manager.js`): Replaced hard-coded English `title` attributes on the Delete and Clear-All modal Cancel/Confirm buttons with `aria-labelledby` (referencing the in-button text spans) in HTML. `showDeleteModal` and `showClearAllModal` now additionally call `setAttribute('aria-label', this.t(...))` on each button so the translated text is the primary accessible name exposed to screen readers, not a static tooltip.
+- **Clear-all input label** (`index.html`, `js/ui-manager.js`): Removed static `title`/`placeholder` attributes from `#clearAllConfirmInput`. The explicit `<label for="clearAllConfirmInput">` association is now also declared via `aria-labelledby="clearAllModalInstruction"` on the input itself, and `showClearAllModal` additionally calls `setAttribute('aria-label', this.t('clearAllInstruction'))` as a belt-and-suspenders fallback — both routed through the same i18n mechanism as the rest of the UI.
+
+---
+
 ## [3.3.1] - 2026-02-26
 
 ### Fixed

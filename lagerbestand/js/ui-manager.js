@@ -719,6 +719,10 @@ class UIManager {
             document.getElementById('deleteModalWarning').textContent = this.t('deleteWarning');
             document.getElementById('deleteModalCancelText').textContent = this.t('deleteModalCancel');
             document.getElementById('deleteModalConfirmText').textContent = this.t('deleteModalConfirm');
+
+            // Set aria-label via i18n so screen readers use the translated text directly
+            document.getElementById('deleteModalCancelBtn').setAttribute('aria-label', this.t('deleteModalCancel'));
+            document.getElementById('deleteModalConfirmBtn').setAttribute('aria-label', this.t('deleteModalConfirm'));
             
             // Show modal
             document.getElementById('deleteModal').classList.add('active');
@@ -780,6 +784,11 @@ class UIManager {
             document.getElementById('clearAllModalInstruction').textContent = this.t('clearAllInstruction');
             document.getElementById('clearAllModalCancelText').textContent = this.t('deleteModalCancel');
             document.getElementById('clearAllModalConfirmText').textContent = this.t('deleteModalConfirm');
+
+            // Set aria-label via i18n so screen readers use the translated text directly
+            document.getElementById('clearAllModalCancelBtn').setAttribute('aria-label', this.t('deleteModalCancel'));
+            document.getElementById('clearAllModalConfirmBtn').setAttribute('aria-label', this.t('deleteModalConfirm'));
+            document.getElementById('clearAllConfirmInput').setAttribute('aria-label', this.t('clearAllInstruction'));
             
             // Clear input field and error
             const input = document.getElementById('clearAllConfirmInput');
