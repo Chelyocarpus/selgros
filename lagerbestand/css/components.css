@@ -2313,6 +2313,7 @@ body.high-contrast .fab:hover {
 .settings-section label {
     font-weight: 500;
     cursor: pointer;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -2812,6 +2813,7 @@ body.high-contrast .quick-add-btn:hover {
     justify-content: space-between;
     align-items: center;
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(59, 130, 246, 0.95) 100%);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     color: white;
     padding: 16px 24px;
