@@ -1043,7 +1043,7 @@ class UIManager {
     }
 
     // Save material from modal
-    saveMaterialModal() {
+    async saveMaterialModal() {
         const code = document.getElementById('modalMaterialCode').value.trim();
         const name = document.getElementById('modalMaterialName').value.trim();
         const capacity = document.getElementById('modalMaterialCapacity').value;
@@ -1078,7 +1078,7 @@ class UIManager {
             // Get old material data for comparison (if editing)
             const oldMaterial = mode === 'edit' ? this.dataManager.getMaterial(code) : null;
             
-            this.dataManager.addMaterial(
+            await this.dataManager.addMaterial(
                 code,
                 capacity,
                 name,
@@ -1184,7 +1184,7 @@ class UIManager {
             return;
         }
 
-        if (this.dataManager.deleteMaterial(code)) {
+        if (await this.dataManager.deleteMaterial(code)) {
             // Remove from selected items if it was selected
             if (this.selectedItems && this.selectedItems.has(code)) {
                 this.selectedItems.delete(code);

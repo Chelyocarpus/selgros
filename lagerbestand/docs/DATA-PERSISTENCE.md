@@ -125,12 +125,6 @@ IndexedDB (background sync)
 
 ### Files Added/Modified
 
-#### New Files
-- **`js/db-manager.js`** - IndexedDB wrapper class
-  - `DBManager` class with async methods
-  - Object stores management
-  - Sync metadata tracking
-
 #### Modified Files
 - **`js/data-manager.js`** - Enhanced with dual persistence
   - Added `dbManager` instance
@@ -153,8 +147,7 @@ IndexedDB (background sync)
   - IndexedDB sync status translations
   - Both German and English
 
-- **`index.html`** - Script loading order
-  - Added `db-manager.js` before `data-manager.js`
+- **`index.html`** - Script loading order updated
 
 ### Browser Compatibility
 

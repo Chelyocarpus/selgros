@@ -203,11 +203,7 @@ Dexie: Loaded Y archive entries
 
 ## Rollback Plan (If Needed)
 
-If issues arise:
-1. Replace `js/dixie-db-manager.js` with `js/db-manager.js`
-2. Update `index.html` to load `db-manager.js` instead
-3. Remove Dexie CDN from `index.html`
-4. Data remains in localStorage (no data loss)
+If issues arise, data remains in localStorage (no data loss). To restore from localStorage, use the existing import/backup functionality in the Settings tab.
 
 ## Cross-Tab Synchronization ✨
 

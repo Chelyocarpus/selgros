@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAL l&ouml;schen &ndash; SAP Mock</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "72", Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 30px;
+    }
+    .shell-bar {
+      background: #354a5e;
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      margin: -30px -30px 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      display: inline-block;
+      background: #e8f3fc;
+      color: #0070f3;
+      border-radius: 10px;
+      font-size: 11px;
+      padding: 2px 8px;
+      font-weight: normal;
+    }
+    .card {
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.15);
+      padding: 24px;
+      max-width: 480px;
+    }
+    .card h3 {
+      margin: 0 0 20px;
+      font-size: 15px;
+      color: #32363a;
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 10px;
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    label {
+      font-size: 13px;
+      color: #6a6d70;
+      white-space: nowrap;
+      min-width: 120px;
+    }
+    .sapMInputBase {
+      border: 1px solid #89919a;
+      border-radius: 4px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      background: #fff;
+      flex: 1;
+    }
+    .sapMInputBase:focus-within { border-color: #0070f3; }
+    input.sapMInputBaseInner {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
+      background: transparent;
+    }
+    .sapMBtn { background: none; border: none; padding: 0; cursor: pointer; }
+    .sapMBtnInner {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      border: 1px solid;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .sapMBtnEmphasis  { background: #0a6ed1; color: #fff; border-color: #0a6ed1; }
+    .sapMBtnEmphasis:hover { background: #0854a0; }
+    .sapMBtnDefault  { background: #fff; color: #32363a; border-color: #89919a; }
+    .sapMBtnDefault:hover { background: #f5f5f5; }
+    .sapMBtnReject   { background: #bb0000; color: #fff; border-color: #bb0000; }
+    .sapMBtnReject:hover { background: #990000; }
+
+    /* SAP MessageBox dialog */
+    #__mbox-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 9998;
+      align-items: center;
+      justify-content: center;
+    }
+    #__mbox-overlay.visible { display: flex; }
+    #__mbox-dialog {
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.3);
+      width: 380px;
+      max-width: 94vw;
+      overflow: hidden;
+    }
+    .mbox-header {
+      background: #354a5e;
+      color: #fff;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mbox-header-icon { font-size: 18px; }
+    .mbox-body {
+      padding: 20px 20px 8px;
+      font-size: 13px;
+      color: #32363a;
+      line-height: 1.5;
+    }
+    .mbox-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid #e5e5e5;
+    }
+
+    /* Busy indicator */
+    #sapUiBusyIndicator {
+      display: none;
+      visibility: hidden;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,.6);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 14px;
+      color: #32363a;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #e5e5e5;
+      border-top-color: #bb0000;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Status indicator */
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #89919a;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .status-dot.ready  { background: #107e3e; }
+    .status-dot.busy   { background: #e67e22; }
+    .status-dot.dialog { background: #0a6ed1; }
+    #status-text { font-size: 12px; color: #6a6d70; }
+
+    /* Log */
+    #log {
+      margin-top: 24px;
+      max-width: 480px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-radius: 4px;
+      padding: 14px 16px;
+      font-family: monospace;
+      font-size: 13px;
+      min-height: 80px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    #log .ts   { color: #6a9955; }
+    #log .ok   { color: #4ec9b0; }
+    #log .err  { color: #f44747; }
+    #log .info { color: #9cdcfe; }
+    #log .warn { color: #dcdcaa; }
+
+    /* Test helper */
+    .test-helper {
+      max-width: 480px;
+      margin-top: 16px;
+      background: #fff8e1;
+      border: 1px dashed #f9a825;
+      border-radius: 4px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #6a6d70;
+    }
+    .test-helper strong { color: #32363a; display: block; margin-bottom: 8px; }
+    .test-helper .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .pill {
+      padding: 4px 12px;
+      border-radius: 10px;
+      border: 1px solid #89919a;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      color: #32363a;
+      transition: background .15s, border-color .15s;
+    }
+    .pill:hover { background: #f0f0f0; }
+    .pill.active { background: #bb0000; color: #fff; border-color: #bb0000; }
+    .test-helper label { font-size: 12px; color: #32363a; margin-right: 4px; }
+    .test-helper select {
+      border: 1px solid #89919a;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SAP Busy Indicator -->
+  <div id="sapUiBusyIndicator">
+    <div class="spinner"></div>
+    <span>Bitte warten&hellip;</span>
+  </div>
+
+  <!-- SAP MessageBox (confirmation dialog) -->
+  <div id="__mbox-overlay">
+    <div id="__mbox-dialog">
+      <div class="mbox-header">
+        <span class="mbox-header-icon">&#9888;</span>
+        <span>Best&auml;tigung</span>
+      </div>
+      <div class="mbox-body" id="__mbox-body">
+        Soll die Palette gel&ouml;scht werden?
+      </div>
+      <div class="mbox-footer">
+        <button class="sapMBtn" id="__mbox-btn-5">
+          <span class="sapMBtnInner sapMBtnDefault" id="__mbox-btn-5-inner">Abbrechen</span>
+        </button>
+        <button class="sapMBtn" id="__mbox-btn-4">
+          <span class="sapMBtnInner sapMBtnReject" id="__mbox-btn-4-inner">L&ouml;schen</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell-bar">
+    SAP Fiori &ndash; Instorelogistik
+    <span class="badge">TEST &ndash; PAL l&ouml;schen</span>
+  </div>
+
+  <div class="card">
+    <h3>Paletten l&ouml;schen &ndash; Seite 4</h3>
+
+    <div class="form-row">
+      <label for="__jsview2--oInputPalPage4-inner">Palettennummer:</label>
+      <div class="sapMInputBase">
+        <input id="__jsview2--oInputPalPage4-inner"
+               class="sapMInputBaseInner"
+               type="text"
+               maxlength="10"
+               placeholder="z. B. 123456"
+               autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <button class="sapMBtn" id="__jsview2--oButtonSubmitPage4">
+        <span class="sapMBtnInner sapMBtnEmphasis"
+              id="__jsview2--oButtonSubmitPage4-content">
+          Weiter
+        </span>
+      </button>
+    </div>
+
+    <div style="font-size:12px;color:#6a6d70;margin-top:8px;">
+      <span class="status-dot ready" id="status-dot"></span>
+      <span id="status-text">Bereit</span>
+    </div>
+  </div>
+
+  <div class="test-helper">
+    <strong>&#x1F9EA; Test-Helfer</strong>
+    <div class="pill-row" id="pal-pills">
+      <button class="pill" data-pal="100001">100001</button>
+      <button class="pill" data-pal="100002">100002</button>
+      <button class="pill" data-pal="100003">100003</button>
+      <button class="pill" data-pal="999999">999999</button>
+      <button class="pill" data-pal="001191001">001191001 (skip)</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <label for="sim-mode">Dialog-Simulation:</label>
+      <select id="sim-mode">
+        <option value="confirm">Dialog erscheint &rarr; Best&auml;tigen</option>
+        <option value="timeout">Dialog erscheint nicht (Timeout-Test)</option>
+        <option value="reject">Dialog erscheint &rarr; Abbrechen geklickt</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="log">
+    <div><span class="ts">[init]</span> <span class="info">Mock-SAP bereit &mdash; PAL l&ouml;schen Bookmarklet ausf&uuml;hren.</span></div>
+  </div>
+
+  <script>
+    'use strict';
+
+    const BUSY_DURATION = 900;
+
+    // ── Logger ──────────────────────────────────────────────────────────────
+    const logEl = document.getElementById('log');
+    function log(type, msg) {
+      const now  = new Date().toLocaleTimeString('de-DE');
+      const line = document.createElement('div');
+      const ts   = document.createElement('span');
+      ts.className   = 'ts';
+      ts.textContent = '[' + now + ']';
+      const text = document.createElement('span');
+      text.className   = type;
+      text.textContent = ' ' + msg;
+      line.appendChild(ts);
+      line.appendChild(text);
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // ── Status bar ──────────────────────────────────────────────────────────
+    const statusDot  = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    function setStatus(state, text) {
+      statusDot.className = 'status-dot ' + state;
+      statusText.textContent = text;
+    }
+
+    // ── Busy indicator ──────────────────────────────────────────────────────
+    const busyEl = document.getElementById('sapUiBusyIndicator');
+    function showBusy(ms, cb) {
+      busyEl.style.display    = 'flex';
+      busyEl.style.visibility = 'visible';
+      setStatus('busy', 'Verarbeitung…');
+      log('info', '[busy] SAP-Verarbeitung (' + ms + ' ms)…');
+      setTimeout(function () {
+        busyEl.style.visibility = 'hidden';
+        busyEl.style.display    = 'none';
+        setStatus('ready', 'Bereit');
+        log('info', '[busy] Fertig.');
+        if (cb) cb();
+      }, ms);
+    }
+
+    // ── MessageBox mock ─────────────────────────────────────────────────────
+    const mboxOverlay = document.getElementById('__mbox-overlay');
+    const mboxBody    = document.getElementById('__mbox-body');
+    let   mboxOnConfirm = null;
+    let   mboxOnCancel  = null;
+
+    function showMbox(palNr, onConfirm, onCancel) {
+      mboxBody.textContent = 'Palette ' + palNr + ' wirklich löschen?';
+      mboxOnConfirm = onConfirm;
+      mboxOnCancel  = onCancel;
+      mboxOverlay.classList.add('visible');
+      setStatus('dialog', 'Dialog offen');
+      log('info', '[mbox] Bestätigungsdialog für Palette ' + palNr + ' angezeigt.');
+    }
+
+    function hideMbox() {
+      mboxOverlay.classList.remove('visible');
+    }
+
+    document.getElementById('__mbox-btn-4').addEventListener('click', function () {
+      log('ok', '[mbox] Löschen bestätigt (btn-4).');
+      hideMbox();
+      if (mboxOnConfirm) mboxOnConfirm();
+    });
+
+    document.getElementById('__mbox-btn-5').addEventListener('click', function () {
+      log('warn', '[mbox] Abbrechen gedrückt (btn-5).');
+      hideMbox();
+      setStatus('ready', 'Bereit');
+      if (mboxOnCancel) mboxOnCancel();
+    });
+
+    // ── SAP control registry mock ───────────────────────────────────────────
+    const _registry = {};
+
+    function registerInput(fullId, domId, onFirePress) {
+      const el = document.getElementById(domId);
+      if (!el) return;
+      const suffix = fullId.includes('--') ? fullId.split('--').pop() : fullId;
+      const ctrl = {
+        _el: el,
+        getValue: function () { return el.value; },
+        setValue: function (v) {
+          log('info', 'setValue(' + suffix + ', "' + v + '")');
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          setter.call(el, v);
+          el.dispatchEvent(new Event('input',  { bubbles: true }));
+        },
+        fireChange: function (params) {
+          const val = params.newValue !== undefined ? params.newValue : params.value;
+          log('info', 'fireChange(' + suffix + ', "' + val + '")');
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        firePress: function () {
+          log('info', 'firePress(' + suffix + ')');
+          if (onFirePress) onFirePress();
+        }
+      };
+      _registry[fullId] = ctrl;
+      _registry[suffix] = ctrl;
+    }
+
+    window.sap = {
+      ui: {
+        getCore: function () {
+          return { byId: function (id) { return _registry[id] || null; } };
+        }
+      },
+      core: {
+        Element: {
+          registry: {
+            forEach: function (cb) {
+              Object.keys(_registry).forEach(function (id) { cb(_registry[id], id); });
+            },
+            get: function (id) { return _registry[id] || null; }
+          }
+        }
+      }
+    };
+
+    // ── Submit handler ──────────────────────────────────────────────────────
+    const palInput  = document.getElementById('__jsview2--oInputPalPage4-inner');
+    const simSelect = document.getElementById('sim-mode');
+
+    function handleSubmit() {
+      const pal  = palInput.value.trim();
+      const mode = simSelect.value;
+
+      if (!pal) {
+        log('err', 'Submit: Palettennummer ist leer.');
+        return;
+      }
+
+      log('info', 'Submit: Palette "' + pal + '" eingereicht (Modus: ' + mode + ').');
+      setStatus('busy', 'Warte auf Dialog…');
+
+      if (mode === 'timeout') {
+        // Dialog never appears — bookmarklet will hit its 8 s timeout
+        log('warn', '[sim] Dialog wird NICHT angezeigt (Timeout-Test).');
+        return;
+      }
+
+      // Simulate a short network delay before the dialog appears
+      setTimeout(function () {
+        showMbox(pal,
+          /* onConfirm */ function () {
+            log('info', '[sim] SAP verarbeitet Löschung…');
+            showBusy(BUSY_DURATION, function () {
+              log('ok', 'Palette ' + pal + ' gelöscht.');
+            });
+          },
+          /* onCancel */ function () {
+            log('warn', '[sim] Löschung abgebrochen.');
+          }
+        );
+      }, mode === 'reject' ? 300 : 400);
+    }
+
+    registerInput(
+      '__jsview2--oButtonSubmitPage4',
+      '__jsview2--oButtonSubmitPage4-content',
+      handleSubmit
+    );
+    registerInput(
+      '__jsview2--oInputPalPage4',
+      '__jsview2--oInputPalPage4-inner',
+      null
+    );
+
+    // DOM click fallback (needed when bookmarklet uses .click() instead of firePress)
+    document.getElementById('__jsview2--oButtonSubmitPage4').addEventListener('click', handleSubmit);
+    document.getElementById('__jsview2--oButtonSubmitPage4-content').addEventListener('click', handleSubmit);
+
+    // ── Test-helper pills ───────────────────────────────────────────────────
+    document.getElementById('pal-pills').addEventListener('click', function (e) {
+      const pill = e.target.closest('.pill');
+      if (!pill) return;
+      palInput.value = pill.dataset.pal;
+      document.getElementById('pal-pills').querySelectorAll('.pill').forEach(function (p) {
+        p.classList.remove('active');
+      });
+      pill.classList.add('active');
+      log('info', '[test] Palettennummer auf "' + pill.dataset.pal + '" gesetzt.');
+    });
+  </script>
+</body>
+</html>

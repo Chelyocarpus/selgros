@@ -1,0 +1,488 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BV Test &ndash; SAP Mock</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "72", Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 30px;
+    }
+    .shell-bar {
+      background: #354a5e;
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      margin: -30px -30px 30px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.15);
+      padding: 24px;
+      max-width: 480px;
+    }
+    .card h3 {
+      margin: 0 0 20px;
+      font-size: 15px;
+      color: #32363a;
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 10px;
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    label {
+      font-size: 13px;
+      color: #6a6d70;
+      white-space: nowrap;
+      min-width: 80px;
+    }
+    .sapMInputBase {
+      border: 1px solid #89919a;
+      border-radius: 4px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      background: #fff;
+      flex: 1;
+    }
+    .sapMInputBase:focus-within { border-color: #0070f3; }
+    input.sapMInputBaseInner {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
+      background: transparent;
+    }
+    .sapMSwt {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #32363a;
+    }
+    .sapMSwtCont {
+      width: 48px;
+      height: 24px;
+      border-radius: 12px;
+      background: #89919a;
+      position: relative;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .sapMSwtCont.sapMSwtOn { background: #0070f3; }
+    .sapMSwtHandle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: left .2s;
+    }
+    .sapMSwtCont.sapMSwtOn .sapMSwtHandle { left: 26px; }
+    .sapMBtn { background: none; border: none; padding: 0; cursor: pointer; }
+    .sapMBtnInner {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      border: 1px solid;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .sapMBtnAccept { background: #107e3e; color: #fff; border-color: #107e3e; }
+    .sapMBtnAccept:hover { background: #0d6b34; }
+    .step-indicator {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+    .step {
+      padding: 4px 12px;
+      border-radius: 10px;
+      background: #e5e5e5;
+      color: #6a6d70;
+      transition: background .3s, color .3s;
+    }
+    .step.active { background: #0070f3; color: #fff; }
+    .step.done   { background: #107e3e; color: #fff; }
+    .section-sep { border: none; border-top: 1px dashed #d9d9d9; margin: 16px 0 20px; }
+    #sapUiBusyIndicator {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,.6);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 14px;
+      color: #32363a;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #e5e5e5;
+      border-top-color: #0070f3;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #log {
+      margin-top: 24px;
+      max-width: 480px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-radius: 4px;
+      padding: 14px 16px;
+      font-family: monospace;
+      font-size: 13px;
+      min-height: 80px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    #log .ts   { color: #6a9955; }
+    #log .ok   { color: #4ec9b0; }
+    #log .err  { color: #f44747; }
+    #log .info { color: #9cdcfe; }
+    .badge {
+      display: inline-block;
+      background: #e8f3fc;
+      color: #0070f3;
+      border-radius: 10px;
+      font-size: 11px;
+      padding: 2px 8px;
+      margin-left: 6px;
+      font-weight: normal;
+    }
+    .sapMComboBoxInner { background: transparent; }
+    .test-helper {
+      max-width: 480px;
+      margin-top: 16px;
+      background: #fff8e1;
+      border: 1px dashed #f9a825;
+      border-radius: 4px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #6a6d70;
+    }
+    .test-helper strong { color: #32363a; display: block; margin-bottom: 8px; }
+    .test-helper .pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      padding: 4px 12px;
+      border-radius: 10px;
+      border: 1px solid #89919a;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      color: #32363a;
+      transition: background .15s, border-color .15s;
+    }
+    .pill:hover { background: #f0f0f0; }
+    .pill.active { background: #0070f3; color: #fff; border-color: #0070f3; }
+  </style>
+</head>
+<body>
+
+  <div id="sapUiBusyIndicator" style="visibility:hidden;">
+    <div class="spinner"></div>
+    <span>Bitte warten&hellip;</span>
+  </div>
+
+  <div class="shell-bar">SAP Fiori &ndash; Instorelogistik <span class="badge">TEST</span></div>
+
+  <div class="card">
+    <h3>Buchungskorrektur</h3>
+
+    <div class="step-indicator">
+      <div class="step active" id="step1">1 &middot; Artikel</div>
+      <div class="step"        id="step2">2 &middot; Menge</div>
+    </div>
+
+    <div id="section-artikel">
+      <div class="form-row">
+        <label for="__jsview1--oInputBKArtikel-inner">Artikel:</label>
+        <div class="sapMInputBase">
+          <input id="__jsview1--oInputBKArtikel-inner" class="sapMInputBaseInner"
+                 type="text" maxlength="8" placeholder="4&ndash;8 Stellen" />
+        </div>
+      </div>
+      <div class="form-row">
+        <button class="sapMBtn" id="__jsview1--btnBKBestaetigen">
+          <span class="sapMBtnInner sapMBtnAccept" id="__jsview1--btnBKBestaetigen-inner">
+            Best&auml;tigen
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <hr class="section-sep">
+
+    <div id="section-menge">
+      <div class="form-row">
+        <label for="__jsview1--oInputBKAnzERFMG-inner">Menge:</label>
+        <div class="sapMInputBase">
+          <input id="__jsview1--oInputBKAnzERFMG-inner" class="sapMInputBaseInner"
+                 type="text" placeholder="Betrag (ohne Vorzeichen)" />
+        </div>
+      </div>
+      <div class="form-row">
+        <label id="__jsview1--oLabelBKAnzERFME" for="__jsview1--oComboBoxBKAnzERFME-inner">Einheit:</label>
+        <div class="sapMInputBase">
+          <input id="__jsview1--oComboBoxBKAnzERFME-inner"
+                 class="sapMInputBaseInner sapMComboBoxInner"
+                 aria-labelledby="__jsview1--oLabelBKAnzERFME"
+                 role="combobox"
+                 aria-haspopup="listbox"
+                 aria-autocomplete="both"
+                 aria-expanded="false"
+                 autocomplete="off"
+                 type="text"
+                 value="ST" />
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Einbuchen:</label>
+        <div class="sapMSwt">
+          <div class="sapMSwtCont" id="__jsview1--oSwitchBKAnzBwArt-cont">
+            <div class="sapMSwtHandle" id="__jsview1--oSwitchBKAnzBwArt-handle"></div>
+          </div>
+          <span id="swAnzLabel">Aus (Ausbuchen)</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <button class="sapMBtn" id="__jsview1--btnBKAnzBestaetigen">
+          <span class="sapMBtnInner sapMBtnAccept" id="__jsview1--btnBKAnzBestaetigen-inner">
+            Best&auml;tigen
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <div id="current-entry" style="font-size:12px;color:#6a6d70;min-height:18px;margin-top:4px;"></div>
+  </div>
+
+  <div class="test-helper">
+    <strong>&#x1F9EA; Test-Helfer: SAP Einheit simulieren</strong>
+    <div class="pill-row" id="unit-pills">
+      <button class="pill active" data-unit="ST">ST</button>
+      <button class="pill" data-unit="CO">CO</button>
+      <button class="pill" data-unit="KG">KG</button>
+      <button class="pill" data-unit="MISMATCH">Falsche Einheit</button>
+    </div>
+  </div>
+
+  <div id="log"><span class="ts">[init]</span> <span class="info">Mock-SAP bereit &mdash; BV Auto-Eintragen ausf&uuml;hren.</span></div>
+
+  <script>
+    const BUSY_DURATION = 800;
+    let currentArticle = null;
+
+    // Logger
+    const logEl = document.getElementById('log');
+    function log(type, msg) {
+      const now = new Date().toLocaleTimeString('de-DE');
+      const line = document.createElement('div');
+      const ts   = document.createElement('span');
+      ts.className   = 'ts';
+      ts.textContent = '[' + now + ']';
+      const text = document.createElement('span');
+      text.className = type;
+      text.textContent = ' ' + msg;
+      line.appendChild(ts);
+      line.appendChild(text);
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Busy indicator
+    const busyEl = document.getElementById('sapUiBusyIndicator');
+    function showBusy(ms, cb) {
+      busyEl.style.visibility = 'visible';
+      busyEl.style.display    = 'flex';
+      log('info', '[busy] Seitenlade-Simulation (' + ms + ' ms)...');
+      setTimeout(function () {
+        busyEl.style.visibility = 'hidden';
+        busyEl.style.display    = 'none';
+        log('info', '[busy] Fertig.');
+        if (cb) cb();
+      }, ms);
+    }
+
+    // Steps
+    const step1El  = document.getElementById('step1');
+    const step2El  = document.getElementById('step2');
+    const entryEl  = document.getElementById('current-entry');
+    function setStep(n) {
+      step1El.className = 'step' + (n === 1 ? ' active' : ' done');
+      step2El.className = 'step' + (n === 2 ? ' active' : '');
+    }
+
+    // SAP mock
+    const _registry = {};
+
+    function registerInput(fullId, domId, onFirePress) {
+      const el = document.getElementById(domId);
+      if (!el) return;
+      const suffix = fullId.includes('--') ? fullId.split('--').pop() : fullId;
+      const ctrl = {
+        _el: el,
+        setValue: function (v) {
+          log('info', 'setValue(' + fullId + ', ' + v + ')');
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          setter.call(el, v);
+          el.dispatchEvent(new Event('input',  { bubbles: true }));
+        },
+        fireChange: function (params) {
+          const val = params.value !== undefined ? params.value : params.newValue;
+          log('info', 'fireChange(' + fullId + ', ' + val + ')');
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        firePress: function () {
+          log('info', 'firePress(' + fullId + ')');
+          if (onFirePress) onFirePress();
+        }
+      };
+      _registry[fullId]  = ctrl;
+      _registry[suffix]  = ctrl;
+    }
+
+    function registerSwitch(fullId, contId) {
+      const cont   = document.getElementById(contId);
+      const label  = document.getElementById('swAnzLabel');
+      const suffix = fullId.includes('--') ? fullId.split('--').pop() : fullId;
+      const ctrl = {
+        _el: cont,
+        getState:  function () { return cont.classList.contains('sapMSwtOn'); },
+        setState:  function (v) {
+          log('info', 'setState(' + fullId + ', ' + v + ')');
+          cont.classList.toggle('sapMSwtOn', !!v);
+          if (label) label.textContent = v ? 'An (Einbuchen)' : 'Aus (Ausbuchen)';
+        },
+        fireChange: function (params) {
+          log('info', 'fireChange(' + fullId + ', state:' + params.state + ')');
+        }
+      };
+      _registry[fullId] = ctrl;
+      _registry[suffix] = ctrl;
+      cont.addEventListener('click', function () { ctrl.setState(!ctrl.getState()); });
+    }
+
+    window.sap = {
+      ui: { getCore: function () {
+        return { byId: function (id) { return _registry[id] || null; } };
+      }},
+      core: { Element: { registry: {
+        forEach: function (cb) {
+          Object.keys(_registry).forEach(function (id) { cb(_registry[id], id); });
+        },
+        get: function (id) { return _registry[id] || null; }
+      }}}
+    };
+
+    // Confirm handlers
+    const artikelInput = document.getElementById('__jsview1--oInputBKArtikel-inner');
+    const anzahlInput  = document.getElementById('__jsview1--oInputBKAnzERFMG-inner');
+
+    function handleArtikelConfirm() {
+      const val = artikelInput.value.trim();
+      if (!val || !/^\d{4,8}$/.test(val)) {
+        log('err', 'Artikel-Bestaetigen: ungueltig "' + val + '"');
+        return;
+      }
+      currentArticle = val;
+      entryEl.textContent = 'Aktuell: Artikel ' + val;
+      log('ok', 'Artikel ' + val + ' bestaetigt -> Seitenlade...');
+      setStep(2);
+      showBusy(BUSY_DURATION, function () {
+        log('info', 'Bereit fuer Mengeneingabe.');
+      });
+    }
+
+    function handleAnzahlConfirm() {
+      const qty = anzahlInput.value.trim();
+      const isEinbuchen = document.getElementById('__jsview1--oSwitchBKAnzBwArt-cont')
+                         .classList.contains('sapMSwtOn');
+      if (!qty || !/^\d+$/.test(qty)) {
+        log('err', 'Anzahl-Bestaetigen: ungueltig "' + qty + '"');
+        return;
+      }
+      const sign = isEinbuchen ? '-' : '+';
+      log('ok', (isEinbuchen ? 'Eingebucht' : 'Ausgebucht') + ' ' + sign + qty + ' fuer Artikel ' + (currentArticle || '?') + ' -> Seitenlade...');
+      entryEl.textContent = '';
+      currentArticle = null;
+      setStep(1);
+      showBusy(BUSY_DURATION, function () {
+        log('info', 'Bereit fuer naechsten Artikel.');
+        artikelInput.value = '';
+        anzahlInput.value  = '';
+      });
+    }
+
+    // ComboBox registration (adds getValue on top of setValue/fireChange)
+    function registerComboBox(fullId, domId) {
+      const el = document.getElementById(domId);
+      if (!el) return;
+      const suffix = fullId.includes('--') ? fullId.split('--').pop() : fullId;
+      const ctrl = {
+        _el: el,
+        getValue: function () { return el.value; },
+        setValue: function (v) {
+          log('info', 'setValue(' + fullId + ', ' + v + ')');
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          setter.call(el, v);
+          el.dispatchEvent(new Event('input',  { bubbles: true }));
+        },
+        fireChange: function (params) {
+          const val = params.value !== undefined ? params.value : params.newValue;
+          log('info', 'fireChange(' + fullId + ', ' + val + ')');
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      };
+      _registry[fullId] = ctrl;
+      _registry[suffix] = ctrl;
+    }
+
+    // Register all controls
+    registerInput('__jsview1--oInputBKArtikel',    '__jsview1--oInputBKArtikel-inner',    null);
+    registerInput('__jsview1--btnBKBestaetigen',   '__jsview1--btnBKBestaetigen-inner',   handleArtikelConfirm);
+    registerInput('__jsview1--oInputBKAnzERFMG',   '__jsview1--oInputBKAnzERFMG-inner',   null);
+    registerInput('__jsview1--btnBKAnzBestaetigen','__jsview1--btnBKAnzBestaetigen-inner', handleAnzahlConfirm);
+    registerSwitch('__jsview1--oSwitchBKAnzBwArt', '__jsview1--oSwitchBKAnzBwArt-cont');
+    registerComboBox('__jsview1--oComboBoxBKAnzERFME', '__jsview1--oComboBoxBKAnzERFME-inner');
+
+    // Unit test-helper pills
+    const unitPills = document.getElementById('unit-pills');
+    const unitInput = document.getElementById('__jsview1--oComboBoxBKAnzERFME-inner');
+    unitPills.addEventListener('click', function (e) {
+      const pill = e.target.closest('.pill');
+      if (!pill) return;
+      const unit = pill.dataset.unit === 'MISMATCH' ? 'XX' : pill.dataset.unit;
+      unitInput.value = unit;
+      unitPills.querySelectorAll('.pill').forEach(function (p) { p.classList.remove('active'); });
+      pill.classList.add('active');
+      log('info', '[test] Einheit auf "' + unit + '" gesetzt.');
+    });
+
+    document.getElementById('__jsview1--btnBKBestaetigen').addEventListener('click', handleArtikelConfirm);
+    document.getElementById('__jsview1--btnBKAnzBestaetigen').addEventListener('click', handleAnzahlConfirm);
+  </script>
+</body>
+</html>

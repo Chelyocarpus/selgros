@@ -5,6 +5,131 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.6] - 2026-03-12
+
+### Fixed
+
+- **Infinite cross-tab sync loop caused by mirror writes** (`js/dixie-db-manager.js`, `js/data-manager.js`): `mirrorToDexie()` (called after every `syncLocalWithRemote`) invoked `dexieManager.saveMaterials/saveArchive/saveGroups/saveNotes`, each of which unconditionally broadcast a `*_UPDATED` message on `warehouse_app_sync`. Other open tabs received those broadcasts, handled them in `setupCrossTabSync` (potentially invalidating caches and triggering API calls), which could itself call `mirrorToDexie()` — creating a perpetual ping-pong between tabs visible as nonstop `GROUPS_UPDATED`/`NOTES_UPDATED`/`MATERIALS_UPDATED` messages in the console. The same false broadcast was fired by the inline Dexie mirror paths inside `DataManager.saveMaterials/saveArchive/saveGroups/saveNotes/saveMaterialItem` (the `storageBackend === 'github'` branch). Fix: all five Dexie bulk-save methods (`saveMaterials`, `saveMaterial`, `saveArchive`, `saveGroups`, `saveNotes`) now accept a `{ silent = false }` option. Mirror call sites — `mirrorToDexie()` and every `this.dexieManager.save*()` call in the `storageBackend === 'github'` branches of the DataManager save methods — pass `{ silent: true }`. User-initiated saves (Dexie as primary backend) pass no option and continue to broadcast normally.
+
+---
+
+## [3.4.5] - 2026-03-12
+
+### Performance
+
+- **O(1) targeted save for individual material mutations** (`js/data-manager.js`): `DataManager.addMaterial` previously called `saveMaterials()`, which delegates to `dbManager.saveMaterials(allMaterials)` — a full 5-phase diff, batch-create, batch-update, field-sync, and delete cycle across every material in the project. For a single-item add/edit this is unnecessary. A new `saveMaterialItem(material)` method is introduced that calls `dbManager.saveMaterial(material)` instead (already implemented in both `DexieDBManager` and `GitHubProjectsDBManager`), reducing GitHub API operations from O(N materials) to O(1). Dexie-as-mirror is also updated to use the O(1) `dexieManager.saveMaterial(material)` path. The save queue, localStorage backup, and cloud sync notification are preserved identically to `saveMaterials`.
+
+---
+
+## [3.4.4] - 2026-03-12
+
+### Fixed
+
+- **Stale `projectItems` cache after cross-tab broadcast** (`js/data-manager.js`): When a sibling tab broadcast a `MATERIALS_UPDATED`, `MATERIAL_SAVED`, or `MATERIAL_DELETED` message, `DataManager.setupCrossTabSync` updated `this.materials` in memory but left `GitHubProjectsDBManager.cache.projectItems` pointing at the old snapshot. The next `saveMaterial` call in that tab would therefore diff against a stale item list, potentially issuing a duplicate create instead of an update. The same issue applied to `BACKGROUND_SYNC_COMPLETE`, which replaces the full in-memory state. Both cases now call `this.githubManager.invalidateProjectItemsCache()` (when `storageBackend === 'github'`) immediately after updating `this.materials`, ensuring the next write fetches a fresh item list from the API.
+
+---
+
+## [3.4.3] - 2026-03-12
+
+### Fixed
+
+- **Race condition between saves and remote sync** (`js/data-manager.js`): `syncLocalWithRemote` could begin fetching remote data while a `saveMaterials` (or other write) was still in flight, then overwrite `this.materials` with stale remote data — silently discarding the locally-initiated change. Fix has two parts:
+  1. **Serial write queue** — A `_saveQueue` promise is introduced in the constructor. All four save methods (`saveMaterials`, `saveArchive`, `saveGroups`, `saveNotes`) are wrapped with a private `_enqueueSave` helper that chains each write onto the tail of the queue so concurrent saves are serialised and the queue always resolves. `syncLocalWithRemote` now opens with `await this._saveQueue` to guarantee all in-flight saves have settled before remote data is fetched.
+  2. **`updatedAt`-aware merge** — Instead of a blind `this.materials = remoteMaterials` overwrite, materials, groups, and notes are now merged per-item: the local copy is kept when its `updatedAt` is equal to or later than the remote copy, preventing a racing save from being silently lost. Archive remains a full replace (it is append-only and remote is canonical).
+
+---
+
+## [3.4.2] - 2026-03-12
+
+### Fixed
+
+- **Duplicate sync `addMaterial` shadowing the async fix** (`js/data-manager.js`): A second synchronous `addMaterial` definition in the `ENHANCED MATERIAL OPERATIONS` section was silently overriding the correct `async addMaterial` added earlier (JavaScript class prototype semantics: last definition wins). The sync duplicate called `this.saveMaterials()` without `await`, immediately returned `true`, and never awaited persistence. The stale duplicate has been removed; the single authoritative `async addMaterial` (which correctly `await`s `saveMaterials()`) now takes effect.
+
+---
+
+## [3.4.1] - 2026-03-12
+
+### Fixed
+
+- **Archive off-by-one in `addArchiveEntry`** (`js/dixie-db-manager.js`): The 50-entry trim ran *after* the `add`, letting the table momentarily hold 51 rows. Trim now runs *before* the insert — if the table is already at 50 entries the oldest are removed first, so the count never exceeds 50.
+
+---
+
+## [3.4.0] - 2026-03-12
+
+### Fixed
+
+- **`_fieldsEnsured` flag never invalidated** (`js/github-projects-db-manager.js`): The boolean flag was set once per page load and never cleared, so custom fields deleted externally (e.g. via the GitHub Projects UI) would not be recreated until a full page reload. Replaced with a timestamp `_fieldsEnsuredAt` and a 24-hour TTL — `ensureMaterialFields` re-runs field verification at most once per day per tab. Additionally, the flag is cleared (set to `null`) in two error paths so the next call always retries from scratch:
+  - When `ensureMaterialFields` itself throws (API failure during field fetch/create).
+  - When `performBackgroundSync` catches an error and broadcasts `BACKGROUND_SYNC_ERROR`, since a sync failure may indicate the project structure changed externally.
+
+---
+
+## [3.3.9] - 2026-03-12
+
+### Changed
+
+- **Unified BroadcastChannel** — three separate channels (`warehouse_sync`, `warehouse_github_sync`, `warehouse_cloud_sync`) replaced with a single `warehouse_app_sync` channel used by all three managers (`DexieDBManager`, `GitHubProjectsDBManager`, `CloudSyncManager`).
+- **Typed message envelope** — all messages now use a consistent structure `{ type, source, tabId, timestamp, payload }`:
+  - `source` (`'dexie'` | `'github'` | `'cloud'`) lets each handler ignore messages from unrelated sources without name collisions.
+  - `tabId` added to `DexieDBManager` and `GitHubProjectsDBManager` (previously only `CloudSyncManager` had one); each handler skips its own broadcasts via `tabId` equality.
+  - `payload` replaces the old `data` field.
+  - Type names changed to `UPPER_SNAKE_CASE`: `MATERIALS_UPDATED`, `ARCHIVE_UPDATED`, `GROUPS_UPDATED`, `NOTES_UPDATED`, `BACKGROUND_SYNC_COMPLETE`, `CONFLICTS_DETECTED`, `BACKGROUND_SYNC_ERROR`, `MATERIAL_SAVED`, `MATERIAL_DELETED`, `CLOUD_SYNC_STARTED`, `CLOUD_SYNC_COMPLETED`, `SETTINGS_CHANGED`.
+- **DataManager** `setupCrossTabSync` now skips `source === 'cloud'` messages (cloud-coordination events are handled exclusively by `CloudSyncManager`); updated all switch cases and inlined `MATERIAL_SAVED`/`MATERIAL_DELETED` into the `MATERIALS_UPDATED` branch to handle fine-grained Dexie events.
+- **CloudSyncManager** internal field `cloudSyncChannel` renamed to `syncChannel` for consistency with the other two managers.
+
+---
+
+## [3.3.8] - 2026-03-12
+
+### Changed
+
+- **Renamed `mirrorToLocalStorage()` → `mirrorToDexie()`** (`js/data-manager.js`): The method has always written to Dexie, never to `localStorage`. The old name was a maintenance hazard — renamed for accuracy. All three call sites updated accordingly.
+
+---
+
+## [3.3.7] - 2026-03-12
+
+### Fixed
+
+- **Read-modify-write race in `GitHubProjectsDBManager`** (`js/github-projects-db-manager.js`): `saveMaterial` and `deleteMaterial` previously called `loadMaterials()` (potentially cached/stale), mutated the in-memory map, then called `saveMaterials(all)` — two concurrent tabs could silently overwrite each other's mutations. In `useCustomFields` mode (the default), both methods now operate at the individual GitHub Projects item level: `saveMaterial` upserts only the specific `material_{code}` item and updates custom fields for changed properties only; `deleteMaterial` locates and deletes only the specific `material_{code}` item. Both update the local cache incrementally without a full table reload. Legacy mode retains the read-modify-write pattern (unavoidable for a single JSON blob) and is documented as such.
+
+---
+
+## [3.3.6] - 2026-03-12
+
+### Changed
+
+- **Bulk save methods use upsert instead of wipe-and-reinsert** (`js/dixie-db-manager.js`): `saveMaterials`, `saveArchive`, `saveGroups`, and `saveNotes` previously wiped the entire table with `clear()` then reinserted every record with `bulkAdd()` on every save, regardless of what actually changed. Each method now reads the existing primary keys, computes the set difference (records to delete), issues `bulkDelete()` only for those removed records, and `bulkPut()` to upsert the incoming records — all inside a single `rw` transaction. Unchanged records are still rewritten by `bulkPut` (Dexie's put semantics), but deleted records are now pruned correctly without discarding the whole table.
+
+---
+
+## [3.3.5] - 2026-03-12
+
+### Fixed
+
+- **`searchMaterialsByName` full table scan** (`js/dixie-db-manager.js`): The method was loading all materials into memory and filtering with JS `.filter()`, ignoring the `name` index. Replaced with `db.materials.where('name').startsWithIgnoreCase(searchTerm).toArray()`, which uses the existing B-tree index on `name` for a prefix search. An empty `searchTerm` still returns all materials. No schema migration needed — the `name` index was already defined in version 1.
+
+---
+
+## [3.3.4] - 2026-03-12
+
+### Fixed
+
+- **Async persistence failures invisible to callers** (`js/data-manager.js`, `js/ui-manager.js`, `js/tab-materials.js`): `addMaterial`, `deleteMaterial`, `deleteGroup`, and `bulkDeleteMaterials` in `DataManager` were synchronous while internally calling `saveMaterials()` / `saveGroups()` via untracked `.then()` chains or bare calls — persisted failures were silently dropped. All four methods are now `async` and internally `await` their save operations. The corresponding UI callers (`saveMaterialModal`, `UIManager.prototype.addMaterial`, `deleteMaterial`, `deleteGroup`, `bulkDeleteMaterials`) are updated to `await` the `DataManager` calls so upstream error handling catches persistence failures.
+
+---
+
+## [3.3.3] - 2026-03-12
+
+### Removed
+
+- **`js/db-manager.js`**: Deleted the legacy raw-IndexedDB `DBManager` class. It was never loaded in `index.html` after the Dexie migration and shared the `WarehouseDB` database name with `DexieDBManager`, which could cause a `VersionError` if both were ever loaded simultaneously. `DexieDBManager` (`js/dixie-db-manager.js`) is the sole IndexedDB backend.
+
+### Changed
+
+- **`README.md`**, **`docs/DATA-PERSISTENCE.md`**, **`docs/DEXIE-MIGRATION.md`**: Removed all remaining references to `db-manager.js` and updated the rollback instructions to reflect that the legacy file no longer exists.
+
 ---
 
 ## [3.3.2] - 2026-02-26
@@ -227,7 +352,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dexie as local mirror**: Every successful GitHub API save (`saveMaterials`, `saveArchive`, `saveGroups`, `saveNotes`) also writes to Dexie in the background, keeping the local cache fresh for next startup
 - **Cross-tab data mirrored**: Data received via BroadcastChannel from other tabs is also mirrored to Dexie
 - **`syncLocalWithRemote()`**: New method fetches all data types from GitHub API, updates in-memory state, mirrors to Dexie, and re-renders UI
-- **`mirrorToLocalStorage()`**: New method writes current in-memory data to Dexie in parallel (non-blocking, fire-and-forget)
+- **`mirrorToDexie()`**: New method writes current in-memory data to Dexie in parallel (non-blocking, fire-and-forget)
 - **New translations**: `loadingLocalData` and `loadingRemoteData` keys (DE/EN)
 
 ### Fixed
