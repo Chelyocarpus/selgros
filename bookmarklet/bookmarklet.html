@@ -1,0 +1,603 @@
+﻿<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BV Bookmarklets – SAP Instorelogistik</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    /* ── Design tokens ──────────────────────────────────────── */
+    :root {
+      --brand:           #e30613;
+      --brand-light:     #ff4757;
+      --brand-glow:      rgba(227, 6, 19, 0.20);
+      --bg-base:         #f0f2f8;
+      --bg-card:         rgba(255, 255, 255, 0.80);
+      --bg-card-hover:   rgba(255, 255, 255, 0.95);
+      --bg-panel:        rgba(255, 255, 255, 0.85);
+      --text-primary:    #1a1d2e;
+      --text-secondary:  #5b607a;
+      --text-muted:      #8b90a8;
+      --border:          rgba(0, 0, 0, 0.08);
+      --shadow-sm:       0 2px 8px rgba(0,0,0,0.06);
+      --shadow-md:       0 8px 24px rgba(0,0,0,0.10);
+      --radius-lg:       20px;
+      --radius-md:       14px;
+      --radius-sm:       10px;
+      --radius-pill:     100px;
+      --blur:            18px;
+      --transition-fast: 0.18s ease;
+      --transition:      0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg-base:         #0f1117;
+      --bg-card:         rgba(255, 255, 255, 0.05);
+      --bg-card-hover:   rgba(255, 255, 255, 0.09);
+      --bg-panel:        rgba(255, 255, 255, 0.04);
+      --text-primary:    #e8eaf2;
+      --text-secondary:  #9499b4;
+      --text-muted:      #60647a;
+      --border:          rgba(255, 255, 255, 0.08);
+      --shadow-sm:       0 2px 8px rgba(0,0,0,0.30);
+      --shadow-md:       0 8px 24px rgba(0,0,0,0.40);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background-color: var(--bg-base);
+      min-height: 100vh;
+      color: var(--text-primary);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* Aurora background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 10%, rgba(227,6,19,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 50% at 90% 80%, rgba(100,120,255,0.08) 0%, transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    .page {
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 8px 16px;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      -webkit-backdrop-filter: blur(var(--blur));
+              backdrop-filter: blur(var(--blur));
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .btn-nav:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+      border-color: var(--brand);
+    }
+
+    .btn-nav:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 28px;
+      background: var(--bg-panel);
+      -webkit-backdrop-filter: blur(var(--blur));
+              backdrop-filter: blur(var(--blur));
+      padding: 44px 40px 36px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand), var(--brand-light), transparent);
+    }
+
+    .header-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 60px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--brand), var(--brand-light));
+      margin-bottom: 16px;
+      box-shadow: 0 8px 28px var(--brand-glow);
+    }
+
+    .header-logo i { font-size: 1.6rem; color: #fff; }
+
+    h1 {
+      font-size: clamp(1.5rem, 2.8vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--text-primary) 40%, var(--brand));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 0.96rem;
+      margin-top: 8px;
+    }
+
+    /* ── Panels ─────────────────────────────────────────────── */
+    .panel {
+      background: var(--bg-card);
+      -webkit-backdrop-filter: blur(var(--blur));
+              backdrop-filter: blur(var(--blur));
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 22px 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .panel-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-title i { color: var(--brand); }
+
+    /* ── Install steps ───────────────────────────────────────── */
+    .steps-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .step { display: flex; gap: 12px; align-items: flex-start; }
+
+    .step-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--brand-light));
+      color: #fff;
+      font-size: 0.74rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-text {
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      padding-top: 3px;
+    }
+
+    /* ── Section label ───────────────────────────────────────── */
+    .section-label {
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Bookmarklet grid ────────────────────────────────────── */
+    .bm-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    /* ── Individual card ─────────────────────────────────────── */
+    .bm-card {
+      background: var(--bg-card);
+      -webkit-backdrop-filter: blur(var(--blur));
+              backdrop-filter: blur(var(--blur));
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      padding: 20px 20px 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: box-shadow var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .bm-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: rgba(227, 6, 19, 0.20);
+      transform: translateY(-2px);
+    }
+
+    .bm-card-header { display: flex; gap: 14px; align-items: flex-start; }
+
+    .bm-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+    }
+
+    .bm-icon i { font-size: 1rem; color: #fff; }
+    .bm-info { flex: 1; }
+
+    .bm-info h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .bm-info p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .bm-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    .drag-hint {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── Bookmarklet drag link ───────────────────────────────── */
+    .bm-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: var(--radius-pill);
+      color: #fff;
+      text-decoration: none;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: grab;
+      transition: filter var(--transition-fast), transform var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .bm-link:hover  { filter: brightness(1.12); transform: translateY(-1px); }
+    .bm-link:active { cursor: grabbing; }
+    .bm-link i      { font-size: 0.8rem; }
+
+    /* Color variants */
+    .bm-icon--blue     { background: linear-gradient(135deg, #1a5276, #2e86c1); }
+    .bm-link--blue     { background: linear-gradient(135deg, #1a5276, #2e86c1); box-shadow: 0 3px 10px rgba(26,82,118,0.40); }
+    .bm-icon--sapblue  { background: linear-gradient(135deg, #0a6ed1, #1a9ed4); }
+    .bm-link--sapblue  { background: linear-gradient(135deg, #0a6ed1, #1a9ed4); box-shadow: 0 3px 10px rgba(10,110,209,0.40); }
+    .bm-icon--green    { background: linear-gradient(135deg, #107e3e, #1abc6b); }
+    .bm-link--green    { background: linear-gradient(135deg, #107e3e, #1abc6b); box-shadow: 0 3px 10px rgba(16,126,62,0.40); }
+    .bm-icon--purple   { background: linear-gradient(135deg, #6c3483, #a569bd); }
+    .bm-link--purple   { background: linear-gradient(135deg, #6c3483, #a569bd); box-shadow: 0 3px 10px rgba(108,52,131,0.40); }
+    .bm-icon--orange   { background: linear-gradient(135deg, #a04000, #e67e22); }
+    .bm-link--orange   { background: linear-gradient(135deg, #a04000, #e67e22); box-shadow: 0 3px 10px rgba(160,64,0,0.40); }
+    .bm-icon--red      { background: linear-gradient(135deg, #8b0000, #bb0000); }
+    .bm-link--red      { background: linear-gradient(135deg, #8b0000, #bb0000); box-shadow: 0 3px 10px rgba(139,0,0,0.40); }
+
+    /* ── Workflow steps ──────────────────────────────────────── */
+    .workflow-steps { display: flex; flex-direction: column; }
+
+    .wf-step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    .wf-step:not(:last-child) { margin-bottom: 20px; }
+
+    .wf-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 13px;
+      top: 28px;
+      bottom: -20px;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .wf-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--brand-light));
+      color: #fff;
+      font-size: 0.76rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .wf-body { padding-top: 3px; }
+    .wf-title { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+    .wf-desc  { font-size: 0.83rem; color: var(--text-secondary); line-height: 1.5; }
+
+    /* ── Inline helpers ──────────────────────────────────────── */
+    code {
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      background: rgba(0,0,0,0.06);
+      color: var(--brand);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.88em;
+    }
+
+    [data-theme="dark"] code { background: rgba(255,255,255,0.08); }
+
+    kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.8em;
+      color: var(--text-secondary);
+      background: var(--bg-card);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 20px 0 8px;
+      color: var(--text-muted);
+      font-size: 0.80rem;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    footer a { color: var(--brand); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .bm-grid { grid-template-columns: 1fr; }
+      header { padding: 32px 20px; }
+      .panel { padding: 18px 20px; }
+      .steps-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <a href="../index.html" class="btn-nav" aria-label="Zurück zur Startseite">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Zurück
+      </a>
+      <button class="btn-nav" id="theme-toggle" aria-label="Farbschema wechseln">
+        <i class="fas fa-moon" id="theme-icon" aria-hidden="true"></i>
+        <span id="theme-label">Dunkel</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <header>
+      <div class="header-logo">
+        <i class="fas fa-bookmark" aria-hidden="true"></i>
+      </div>
+      <h1>BV Bookmarklets</h1>
+      <p class="subtitle">SAP Instorelogistik</p>
+    </header>
+
+    <!-- Installation guide -->
+    <section class="panel" aria-labelledby="install-title">
+      <p class="panel-title" id="install-title">
+        <i class="fas fa-circle-info" aria-hidden="true"></i> Installation
+      </p>
+      <div class="steps-row">
+        <div class="step">
+          <div class="step-num" aria-hidden="true">1</div>
+          <p class="step-text">Lesezeichenleiste einblenden (<kbd>Strg</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>)</p>
+        </div>
+        <div class="step">
+          <div class="step-num" aria-hidden="true">2</div>
+          <p class="step-text">Bookmarklet-Button in die Lesezeichenleiste ziehen (Drag &amp; Drop)</p>
+        </div>
+        <div class="step">
+          <div class="step-num" aria-hidden="true">3</div>
+          <p class="step-text">Im SAP auf den Bookmark klicken, um das Tool zu starten</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="section-label">Verfügbare Bookmarklets</p>
+    <div class="bm-grid">
+
+      <!-- BV Auto-Eintragen -->
+      <article class="bm-card">
+        <div class="bm-card-header">
+          <div class="bm-icon bm-icon--blue"><i class="fas fa-robot" aria-hidden="true"></i></div>
+          <div class="bm-info">
+            <h2>BV Auto-Eintragen</h2>
+            <p>Vollautomatischer Workflow: Liste einfügen, alle Artikel &amp; Mengen werden der Reihe nach eingetragen.</p>
+          </div>
+        </div>
+        <div class="bm-footer">
+          <span class="drag-hint"><i class="fas fa-hand" aria-hidden="true"></i> In Lesezeichen ziehen</span>
+          <a class="bm-link bm-link--blue" href="javascript:(function(){var ex=document.getElementById('__bk_auto_modal');if(ex){ex.remove();return;}function findCtrl(s){try{var c=sap.ui.getCore();var r=c.byId&&c.byId(s);if(r)return r;if(sap.ui.core&&sap.ui.core.Element&&sap.ui.core.Element.registry){var f=null;sap.ui.core.Element.registry.forEach(function(el,id){if(!f&&(id===s||id.endsWith('--'+s)||id.endsWith(s)))f=el;});if(f)return f;}}catch(e){}return null;}function waitBusy(cb){var start=Date.now();function chk(){var bi=document.getElementById('sapUiBusyIndicator');var busy=bi&&bi.style.visibility!=='hidden'&&bi.style.display!=='none';if(!busy||Date.now()-start>12000){cb();return;}setTimeout(chk,150);}setTimeout(chk,400);}function setInp(n,v){var ctrl=findCtrl(n);if(ctrl){ctrl.setValue(v);ctrl.fireChange({value:v,newValue:v});}else{var el=document.querySelector('[id$=&quot;'+n+'-inner&quot;]');if(el){el.focus();var s=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;s.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.blur();}}}function clickBtn(n){var b=findCtrl(n);if(b){b.firePress();return true;}var el=document.querySelector('[id$=&quot;'+n+'&quot;]')||document.querySelector('[id$=&quot;'+n+'-inner&quot;]');if(el){el.click();return true;}return false;}function setSw(n,state){var c=findCtrl(n);if(c){c.setState(state);c.fireChange({state:state});}else{var h=document.querySelector('[id$=&quot;'+n+'-handle&quot;]');if(h){var sw=h.parentElement;while(sw&&sw.className&&!sw.className.includes('sapMSwt'))sw=sw.parentElement;if(sw){var on=sw.classList.contains('sapMSwtOn');if(on!==state)sw.click();}}}}function ts(){return new Date().toTimeString().slice(0,8);}var ov=document.createElement('div');ov.id='__bk_auto_modal';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:72,Arial,sans-serif';var dlg=document.createElement('div');dlg.style.cssText='background:#fff;border-radius:8px;padding:24px 28px;width:420px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.3)';var ttl=document.createElement('div');ttl.style.cssText='font-size:16px;font-weight:bold;color:#32363a;margin-bottom:2px';ttl.textContent='BV Auto-Eintragen';var sub=document.createElement('div');sub.style.cssText='font-size:12px;color:#6a6d70;margin-bottom:14px';sub.textContent='Liste einfügen — eine Zeile pro Artikel (Format: 219320 -8 ST)';var ta=document.createElement('textarea');ta.placeholder='219320 -8 ST\n317014 -2 CO\n414951 -4 ST';ta.style.cssText='width:100%;min-height:110px;font-family:monospace;font-size:13px;border:1px solid #89919a;border-radius:4px;padding:8px;resize:vertical;box-sizing:border-box;color:#32363a';var errEl=document.createElement('div');errEl.style.cssText='color:#bb0000;font-size:12px;margin-top:6px;min-height:16px';var pbWrap=document.createElement('div');pbWrap.style.cssText='display:none;height:6px;background:#e5e5e5;border-radius:3px;margin-top:14px;overflow:hidden';var pb=document.createElement('div');pb.style.cssText='height:100%;width:0%;background:#0a6ed1;border-radius:3px;transition:width .3s';pbWrap.appendChild(pb);var logWrap=document.createElement('div');logWrap.style.cssText='display:none;margin-top:10px;max-height:180px;overflow-y:auto;border:1px solid #e5e5e5;border-radius:4px;background:#1d1d1d;padding:8px 10px;font-family:monospace;font-size:12px;line-height:1.7';var summaryEl=document.createElement('div');summaryEl.style.cssText='display:none;font-size:12px;font-weight:bold;margin-top:8px;padding:6px 10px;border-radius:4px;text-align:center';var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:10px;justify-content:flex-end;margin-top:16px';var btnC=document.createElement('button');btnC.type='button';btnC.textContent='Abbrechen';btnC.style.cssText='height:36px;padding:0 16px;border-radius:4px;border:1px solid #89919a;background:#fff;font-size:14px;cursor:pointer;color:#32363a';var btnOK=document.createElement('button');btnOK.type='button';btnOK.textContent='Starten';btnOK.style.cssText='height:36px;padding:0 16px;border-radius:4px;border:none;background:#0a6ed1;color:#fff;font-size:14px;font-weight:bold;cursor:pointer';var logRows=[];var userScrolledUp=false;logWrap.addEventListener('scroll',function(){userScrolledUp=(logWrap.scrollHeight-logWrap.scrollTop-logWrap.clientHeight)>20;});function addLog(idx,art,qty,status,msg){if(!logRows[idx]){var row=document.createElement('div');row.style.cssText='padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';logWrap.appendChild(row);logRows[idx]=row;}var icon=status==='pending'?'⏳':status==='busy'?'↻':status==='done'?'✓':'✗';var col=status==='pending'?'#888':status==='busy'?'#6db3f2':status==='done'?'#66bb6a':'#e57373';logRows[idx].style.color=col;logRows[idx].textContent='['+ts()+'] '+icon+' '+art+' · '+qty+' — '+msg;if(!userScrolledUp)logWrap.scrollTop=logWrap.scrollHeight;}function setProgress(done,total){pb.style.width=Math.round(done/total*100)+'%';}function run(items){ta.style.display='none';sub.style.display='none';errEl.style.display='none';btnRow.style.display='none';pbWrap.style.display='block';logWrap.style.display='block';userScrolledUp=false;var idx=0,errors=0;for(var k=0;k<items.length;k++)addLog(k,items[k][0],items[k][1],'pending','Wartend');function next(){if(idx>=items.length){var ok=items.length-errors;summaryEl.style.display='block';if(errors===0){summaryEl.style.background='#e8f5e9';summaryEl.style.color='#1b5e20';summaryEl.textContent='✓ Fertig — alle '+items.length+' Einträge erfolgreich';btnOK.style.display='none';}else{summaryEl.style.background='#fff3e0';summaryEl.style.color='#e65100';summaryEl.textContent=ok+' ok — '+errors+' Fehler';}btnC.textContent='Schließen';btnRow.style.display='flex';return;}var art=items[idx][0],qty=items[idx][1],expectedUnit=items[idx][2];var isNeg=qty<0,abs=String(Math.abs(qty));addLog(idx,art,qty,'busy','Artikelnummer…');setInp('oInputBKArtikel',art);setTimeout(function(){if(!clickBtn('btnBKBestaetigen')){errors++;addLog(idx,art,qty,'error','Artikel-Bestätigen nicht gefunden');setProgress(++idx,items.length);next();return;}addLog(idx,art,qty,'busy','Warte auf SAP…');waitBusy(function(){if(expectedUnit){var uomCtrl=findCtrl('oComboBoxBKAnzERFME');var uomEl=document.querySelector('[id$=&quot;oComboBoxBKAnzERFME-inner&quot;]');var sapUnit=((uomCtrl&&uomCtrl.getValue?uomCtrl.getValue():null)||(uomEl?uomEl.value:'')||'').trim().toUpperCase();if(sapUnit&&sapUnit!==expectedUnit){errors++;addLog(idx,art,qty,'error','Einheit: '+sapUnit+' ≠ '+expectedUnit+' — übersprungen');setProgress(++idx,items.length);next();return;}}addLog(idx,art,qty,'busy',(isNeg?'Einbuchen':'Ausbuchen')+': Menge + Schalter…');setInp('oInputBKAnzERFMG',abs);setSw('oSwitchBKAnzBwArt',isNeg);setTimeout(function(){if(!clickBtn('btnBKAnzBestaetigen')){errors++;addLog(idx,art,qty,'error','Anzahl-Bestätigen nicht gefunden');setProgress(++idx,items.length);next();return;}addLog(idx,art,qty,'busy','Warte auf SAP…');waitBusy(function(){addLog(idx,art,qty,'done',isNeg?'Eingebucht':'Ausgebucht');setProgress(++idx,items.length);next();});},200);});},150);}next();}btnOK.onclick=function(){var raw=ta.value.trim();if(!raw){errEl.textContent='Bitte Liste einfügen.';ta.style.borderColor='#bb0000';ta.focus();return;}function parseGermanNumber(s){var d=s.lastIndexOf('.');var c=s.lastIndexOf(',');if(c>d){s=s.replace(/\./g,'').replace(',','.');}else{s=s.replace(/,/g,'');}return parseFloat(s);}var lines=raw.split('\n'),items=[];for(var j=0;j<lines.length;j++){var ln=lines[j].trim();if(!ln)continue;var m=ln.match(/^(\d{4,8})\s+(-?[\d.,]+)\s+([A-Za-z]{1,5})$/);if(!m){errEl.textContent='Zeile '+(j+1)+': Ungültiges Format (erwartet: Artikelnr Menge Einheit)';ta.style.borderColor='#bb0000';ta.focus();return;}var qty=parseGermanNumber(m[2]);if(isNaN(qty)||qty===0){errEl.textContent='Zeile '+(j+1)+': Menge darf nicht 0 oder ungültig sein';ta.style.borderColor='#bb0000';ta.focus();return;}var rounded=qty>=0?Math.ceil(qty):Math.floor(qty);items.push([m[1],rounded,m[3].toUpperCase()]);}if(!items.length){errEl.textContent='Keine gültigen Einträge.';return;}run(items);};btnC.onclick=function(){ov.remove();};ta.onkeydown=function(e){e.stopPropagation();if(e.key==='Escape')ov.remove();};ov.onclick=function(e){if(e.target===ov)ov.remove();};btnRow.appendChild(btnC);btnRow.appendChild(btnOK);dlg.appendChild(ttl);dlg.appendChild(sub);dlg.appendChild(ta);dlg.appendChild(errEl);dlg.appendChild(pbWrap);dlg.appendChild(logWrap);dlg.appendChild(summaryEl);dlg.appendChild(btnRow);ov.appendChild(dlg);document.body.appendChild(ov);setTimeout(function(){ta.focus();},50);})()"><i class="fas fa-robot" aria-hidden="true"></i> BV Auto-Eintragen</a>
+        </div>
+      </article>
+
+      <!-- Artikelliste extrahieren -->
+      <article class="bm-card">
+        <div class="bm-card-header">
+          <div class="bm-icon bm-icon--purple"><i class="fas fa-list-check" aria-hidden="true"></i></div>
+          <div class="bm-info">
+            <h2>Artikelliste extrahieren</h2>
+            <p>Scannt die SAP Artikelliste und erstellt eine kopierbare Liste im Format <code>219320 -8 ST</code>.</p>
+          </div>
+        </div>
+        <div class="bm-footer">
+          <span class="drag-hint"><i class="fas fa-hand" aria-hidden="true"></i> In Lesezeichen ziehen</span>
+          <a class="bm-link bm-link--purple" href="javascript:(function(){var ex=document.getElementById('__artliste_modal');if(ex){ex.remove();return;}var results=[];var items=document.querySelectorAll('li.sapMCLI');for(var i=0;i<items.length;i++){var item=items[i];var btn=item.querySelector('button.labelButton bdi');if(!btn)continue;var bdis=item.querySelectorAll('bdi');var art=null;for(var j=0;j<bdis.length;j++){var t=bdis[j].textContent.trim();if(/^\d{5,}$/.test(t)){art=t;break;}}if(art){var bt=btn.textContent.trim();var bm=bt.match(/^(-?[\d.,]+)\s*([A-Za-z]{1,5})$/);var q=bm?bm[1].replace(',','.'):bt;var u=bm?bm[2].toUpperCase():'';results.push(art+' '+q+(u?' '+u:''));}}if(!results.length){var d=document.createElement('div');d.style.cssText='position:fixed;bottom:24px;right:24px;background:#df6e0c;color:#fff;padding:12px 18px;border-radius:6px;font-size:14px;z-index:2147483647;box-shadow:0 4px 12px rgba(0,0,0,.3);font-family:72,Arial,sans-serif';d.textContent='Keine Artikel gefunden. Bitte \u00f6ffne die Artikelliste.';document.body.appendChild(d);setTimeout(function(){d.remove();},3000);return;}var txt=results.join('\n');var ov=document.createElement('div');ov.id='__artliste_modal';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:72,Arial,sans-serif';var dlg=document.createElement('div');dlg.style.cssText='background:#fff;border-radius:8px;padding:24px 28px;min-width:320px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.3)';var ttl=document.createElement('div');ttl.style.cssText='font-size:16px;font-weight:bold;color:#32363a;margin-bottom:4px';ttl.textContent='Artikelliste \u2014 '+results.length+' Eintr\u00e4ge';var sub=document.createElement('div');sub.style.cssText='font-size:12px;color:#6a6d70;margin-bottom:12px';sub.textContent='Artikelnummer + Menge + Einheit';var ta=document.createElement('textarea');ta.readOnly=true;ta.value=txt;ta.style.cssText='width:100%;min-height:180px;font-family:monospace;font-size:13px;border:1px solid #d9d9d9;border-radius:4px;padding:8px;resize:vertical;box-sizing:border-box;color:#32363a;';var row=document.createElement('div');row.style.cssText='display:flex;gap:10px;justify-content:flex-end;margin-top:14px';var cpBtn=document.createElement('button');cpBtn.type='button';cpBtn.textContent='Kopieren';cpBtn.style.cssText='height:36px;padding:0 16px;border-radius:4px;border:none;background:#0a6ed1;color:#fff;font-size:14px;cursor:pointer';cpBtn.onclick=function(){if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){cpBtn.textContent='\u2713 Kopiert';cpBtn.style.background='#107e3e';setTimeout(function(){cpBtn.textContent='Kopieren';cpBtn.style.background='#0a6ed1';},2000);});}else{ta.select();document.execCommand('copy');}};var clBtn=document.createElement('button');clBtn.type='button';clBtn.textContent='Schlie\u00dfen';clBtn.style.cssText='height:36px;padding:0 16px;border-radius:4px;border:1px solid #89919a;background:#fff;font-size:14px;cursor:pointer;color:#32363a';clBtn.onclick=function(){ov.remove();};ov.onclick=function(e){if(e.target===ov)ov.remove();};row.appendChild(cpBtn);row.appendChild(clBtn);dlg.appendChild(ttl);dlg.appendChild(sub);dlg.appendChild(ta);dlg.appendChild(row);ov.appendChild(dlg);document.body.appendChild(ov);ta.select();})();"><i class="fas fa-list-check" aria-hidden="true"></i> Artikelliste extrahieren</a>
+        </div>
+      </article>
+
+      <!-- PAL löschen -->
+      <article class="bm-card">
+        <div class="bm-card-header">
+          <div class="bm-icon bm-icon--red"><i class="fas fa-trash-can" aria-hidden="true"></i></div>
+          <div class="bm-info">
+            <h2>PAL löschen</h2>
+            <p>Liste von Palettennummern eingeben – jede Palette wird automatisch eingetragen, bestätigt und gelöscht.</p>
+          </div>
+        </div>
+        <div class="bm-footer">
+          <span class="drag-hint"><i class="fas fa-hand" aria-hidden="true"></i> In Lesezeichen ziehen</span>
+          <a class="bm-link bm-link--red" href="javascript:(function(){var ex=document.getElementById('__bk_pal_modal');if(ex){ex.remove();return;}function findCtrl(id){try{var c=sap.ui.getCore();var r=c.byId&&c.byId(id);if(r)return r;if(sap.ui.core&&sap.ui.core.Element&&sap.ui.core.Element.registry){var f=null;sap.ui.core.Element.registry.forEach(function(el,elId){if(!f&&(elId===id||elId.endsWith('--'+id)||elId.endsWith(id)))f=el;});if(f)return f;}}catch(e){}return null;}function waitBusy(cb){var start=Date.now();function chk(){var bi=document.getElementById('sapUiBusyIndicator');var busy=bi&&bi.style.visibility!=='hidden'&&bi.style.display!=='none';if(!busy||Date.now()-start>12000){cb();return;}setTimeout(chk,150);}setTimeout(chk,400);}function setInp(n,v){var ctrl=findCtrl(n);if(ctrl){ctrl.setValue(v);ctrl.fireChange({value:v,newValue:v});}else{var el=document.querySelector('[id$=&quot;'+n+'-inner&quot;]');if(el){el.focus();var s=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;s.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.blur();}}}function clickBtn(n){var b=findCtrl(n);if(b){b.firePress();return true;}var el=document.querySelector('[id$=&quot;'+n+'&quot;]')||document.querySelector('[id$=&quot;'+n+'-content&quot;]')||document.querySelector('[id$=&quot;'+n+'-inner&quot;]');if(el){el.click();return true;}return false;}function waitForMbox(cb,t){var start=Date.now();var lim=t||8000;function chk(){var el=document.getElementById('__mbox-btn-4')||document.querySelector('[id*=&quot;mbox&quot;][id$=&quot;-btn-4&quot;]');if(el){cb(el);return;}if(Date.now()-start>lim){cb(null);return;}setTimeout(chk,100);}setTimeout(chk,200);}function ts(){return new Date().toTimeString().slice(0,8);}var ov=document.createElement('div');ov.id='__bk_pal_modal';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:72,Arial,sans-serif';var dlg=document.createElement('div');dlg.style.cssText='background:#fff;border-radius:8px;padding:24px 28px;width:420px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.3)';var ttl=document.createElement('div');ttl.style.cssText='font-size:16px;font-weight:bold;color:#32363a;margin-bottom:2px';ttl.textContent='PAL löschen';var sub=document.createElement('div');sub.style.cssText='font-size:12px;color:#6a6d70;margin-bottom:14px';sub.textContent='Palettennummern eintragen – eine pro Zeile';var skipRow=document.createElement('label');skipRow.style.cssText='display:flex;align-items:center;gap:7px;font-size:12px;color:#32363a;margin-bottom:12px;cursor:pointer;user-select:none';var skipChk=document.createElement('input');skipChk.type='checkbox';skipChk.checked=true;skipChk.style.cssText='width:14px;height:14px;accent-color:#bb0000;cursor:pointer;flex-shrink:0';var skipLbl=document.createElement('span');skipLbl.textContent='001191-Paletten überspringen';skipRow.appendChild(skipChk);skipRow.appendChild(skipLbl);var ta=document.createElement('textarea');ta.placeholder='123456\n789012\n345678';ta.style.cssText='width:100%;min-height:110px;font-family:monospace;font-size:13px;border:1px solid #89919a;border-radius:4px;padding:8px;resize:vertical;box-sizing:border-box;color:#32363a';var errEl=document.createElement('div');errEl.style.cssText='color:#bb0000;font-size:12px;margin-top:6px;min-height:16px';var SKIP_PREFIX='001191';var pbWrap=document.createElement('div');pbWrap.style.cssText='display:none;height:6px;background:#e5e5e5;border-radius:3px;margin-top:14px;overflow:hidden';var pb=document.createElement('div');pb.style.cssText='height:100%;width:0%;background:#bb0000;border-radius:3px;transition:width .3s';pbWrap.appendChild(pb);var logWrap=document.createElement('div');logWrap.style.cssText='display:none;margin-top:10px;max-height:180px;overflow-y:auto;border:1px solid #e5e5e5;border-radius:4px;background:#1d1d1d;padding:8px 10px;font-family:monospace;font-size:12px;line-height:1.7';var summaryEl=document.createElement('div');summaryEl.style.cssText='display:none;font-size:12px;font-weight:bold;margin-top:8px;padding:6px 10px;border-radius:4px;text-align:center';var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:10px;justify-content:flex-end;margin-top:16px';var btnC=document.createElement('button');btnC.type='button';btnC.textContent='Abbrechen';btnC.style.cssText='height:36px;padding:0 16px;border-radius:4px;border:1px solid #89919a;background:#fff;font-size:14px;cursor:pointer;color:#32363a';var btnOK=document.createElement('button');btnOK.type='button';btnOK.textContent='Starten';btnOK.style.cssText='height:36px;padding:0 16px;border-radius:4px;border:none;background:#bb0000;color:#fff;font-size:14px;font-weight:bold;cursor:pointer';var logRows=[];var userScrolledUp=false;logWrap.addEventListener('scroll',function(){userScrolledUp=(logWrap.scrollHeight-logWrap.scrollTop-logWrap.clientHeight)>20;});function addLog(idx,pal,status,msg){if(!logRows[idx]){var row=document.createElement('div');row.style.cssText='padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';logWrap.appendChild(row);logRows[idx]=row;}var icons={pending:'⏳',busy:'↻',done:'✓',error:'✗'};var cols={pending:'#888',busy:'#6db3f2',done:'#66bb6a',error:'#e57373'};logRows[idx].style.color=cols[status]||'#888';logRows[idx].textContent='['+ts()+'] '+(icons[status]||'?')+' '+pal+' — '+msg;if(!userScrolledUp)logWrap.scrollTop=logWrap.scrollHeight;}function setProgress(done,total){pb.style.width=Math.round(done/total*100)+'%';}function run(pallets){ta.style.display='none';sub.style.display='none';skipRow.style.display='none';errEl.style.display='none';btnRow.style.display='none';pbWrap.style.display='block';logWrap.style.display='block';userScrolledUp=false;var skipEnabled=skipChk.checked;var idx=0,errors=0,skipped=0;for(var k=0;k<pallets.length;k++)addLog(k,pallets[k],'pending','Wartend');function next(){if(idx>=pallets.length){var ok=pallets.length-errors;summaryEl.style.display='block';var skipNote=skipped>0?' ('+skipped+' übersprungen)':'';if(errors===0){summaryEl.style.background='#e8f5e9';summaryEl.style.color='#1b5e20';summaryEl.textContent='✓ Fertig — '+ok+' gelöscht'+skipNote;btnOK.style.display='none';}else{summaryEl.style.background='#fff3e0';summaryEl.style.color='#e65100';summaryEl.textContent=ok+' gelöscht — '+errors+' Fehler'+skipNote;}btnC.textContent='Schließen';btnRow.style.display='flex';return;}var pal=pallets[idx];if(skipEnabled&&pal.indexOf(SKIP_PREFIX)===0){addLog(idx,pal,'done','Übersprungen (001191)');skipped++;setProgress(++idx,pallets.length);setTimeout(next,0);return;}addLog(idx,pal,'busy','Palettennummer eintragen…');setInp('oInputPalPage4',pal);setTimeout(function(){if(!clickBtn('oButtonSubmitPage4')){errors++;addLog(idx,pal,'error','Submit-Button nicht gefunden');setProgress(++idx,pallets.length);next();return;}addLog(idx,pal,'busy','Warte auf Bestätigungsdialog…');waitForMbox(function(btn){if(!btn){errors++;addLog(idx,pal,'error','Bestätigungs-Dialog nicht erschienen');setProgress(++idx,pallets.length);next();return;}btn.click();addLog(idx,pal,'busy','Bestätigt – warte auf SAP…');waitBusy(function(){setInp('oInputPalPage4','');addLog(idx,pal,'done','Gelöscht');setProgress(++idx,pallets.length);setTimeout(next,150);});});},200);}next();}btnOK.onclick=function(){var raw=ta.value.trim();if(!raw){errEl.textContent='Bitte Palettennummern eingeben.';ta.style.borderColor='#bb0000';ta.focus();return;}var seen={};var pallets=raw.split('\n').map(function(l){return l.trim();}).filter(function(l){if(!/^\d+$/.test(l)||seen[l])return false;seen[l]=true;return true;});if(!pallets.length){errEl.textContent='Keine gültigen Einträge (nur Zahlen, Duplikate werden ignoriert).';return;}run(pallets);};btnC.onclick=function(){ov.remove();};ta.onkeydown=function(e){e.stopPropagation();if(e.key==='Escape')ov.remove();};ov.onclick=function(e){if(e.target===ov)ov.remove();};btnRow.appendChild(btnC);btnRow.appendChild(btnOK);dlg.appendChild(ttl);dlg.appendChild(sub);dlg.appendChild(skipRow);dlg.appendChild(ta);dlg.appendChild(errEl);dlg.appendChild(pbWrap);dlg.appendChild(logWrap);dlg.appendChild(summaryEl);dlg.appendChild(btnRow);ov.appendChild(dlg);document.body.appendChild(ov);setTimeout(function(){ta.focus();},50);})()" aria-label="PAL löschen Bookmarklet in Lesezeichen ziehen"><i class="fas fa-trash-can" aria-hidden="true"></i> PAL l&ouml;schen</a>
+        </div>
+      </article>
+
+      <!-- Palettennummern extrahieren -->
+      <article class="bm-card">
+        <div class="bm-card-header">
+          <div class="bm-icon bm-icon--orange"><i class="fas fa-pallet" aria-hidden="true"></i></div>
+          <div class="bm-info">
+            <h2>Palettennummern extrahieren</h2>
+            <p>Scannt die SAP Reporting-&Uuml;bersicht und erstellt eine kopierbare Liste aller Palettennummern.</p>
+          </div>
+        </div>
+        <div class="bm-footer">
+          <span class="drag-hint"><i class="fas fa-hand" aria-hidden="true"></i> In Lesezeichen ziehen</span>
+          <a class="bm-link bm-link--orange" href="javascript:(function(){var ex=document.getElementById('__pallnr_modal');if(ex){ex.remove();return;}var seen=Object.create(null);var results=[];var els=document.querySelectorAll('[id*=&quot;oLabelReportingOverviewPALL2&quot;]');for(var i=0;i<els.length;i++){var t=els[i].textContent.trim();if(t&&!seen[t]){seen[t]=1;results.push(t);}}if(!results.length){var d=document.createElement('div');d.style.cssText='position:fixed;bottom:24px;right:24px;background:#df6e0c;color:#fff;padding:12px 18px;border-radius:6px;font-size:14px;z-index:2147483647;box-shadow:0 4px 12px rgba(0,0,0,.3);font-family:72,Arial,sans-serif';d.textContent='Keine Palettennummern gefunden. Bitte \u00f6ffne die Reporting-\u00dcbersicht.';document.body.appendChild(d);setTimeout(function(){d.remove();},3000);return;}var txt=results.join('\n');var ov=document.createElement('div');ov.id='__pallnr_modal';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:72,Arial,sans-serif';var dlg=document.createElement('div');dlg.style.cssText='background:#fff;border-radius:8px;padding:24px 28px;min-width:320px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.3)';var ttl=document.createElement('div');ttl.style.cssText='font-size:16px;font-weight:bold;color:#32363a;margin-bottom:4px';ttl.textContent='Palettennummern \u2014 '+results.length+' Eintr\u00e4ge';var sub=document.createElement('div');sub.style.cssText='font-size:12px;color:#6a6d70;margin-bottom:12px';sub.textContent='Palettennummern aus der Reporting-\u00dcbersicht';var ta=document.createElement('textarea');ta.readOnly=true;ta.value=txt;ta.style.cssText='width:100%;min-height:180px;font-family:monospace;font-size:13px;border:1px solid #d9d9d9;border-radius:4px;padding:8px;resize:vertical;box-sizing:border-box;color:#32363a;';var row=document.createElement('div');row.style.cssText='display:flex;gap:10px;justify-content:flex-end;margin-top:14px';var cpBtn=document.createElement('button');cpBtn.type='button';cpBtn.textContent='Kopieren';cpBtn.style.cssText='height:36px;padding:0 16px;border-radius:4px;border:none;background:#a04000;color:#fff;font-size:14px;cursor:pointer';cpBtn.onclick=function(){if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){cpBtn.textContent='\u2713 Kopiert';cpBtn.style.background='#107e3e';setTimeout(function(){cpBtn.textContent='Kopieren';cpBtn.style.background='#a04000';},2000);});}else{ta.select();document.execCommand('copy');}};var clBtn=document.createElement('button');clBtn.type='button';clBtn.textContent='Schlie\u00dfen';clBtn.style.cssText='height:36px;padding:0 16px;border-radius:4px;border:1px solid #89919a;background:#fff;font-size:14px;cursor:pointer;color:#32363a';clBtn.onclick=function(){ov.remove();};ov.onclick=function(e){if(e.target===ov)ov.remove();};row.appendChild(cpBtn);row.appendChild(clBtn);dlg.appendChild(ttl);dlg.appendChild(sub);dlg.appendChild(ta);dlg.appendChild(row);ov.appendChild(dlg);document.body.appendChild(ov);ta.select();})();"><i class="fas fa-pallet" aria-hidden="true"></i> Palettennummern extrahieren</a>
+        </div>
+      </article>
+
+    </div><!-- end .bm-grid -->
+
+    <!-- Combined Workflow -->
+    <section class="panel" aria-labelledby="workflow-title">
+      <p class="panel-title" id="workflow-title">
+        <i class="fas fa-arrows-spin" aria-hidden="true"></i> Kombinierter Workflow
+      </p>
+      <div class="workflow-steps">
+        <div class="wf-step">
+          <div class="wf-num" aria-hidden="true">1</div>
+          <div class="wf-body">
+            <p class="wf-title">Artikelliste extrahieren</p>
+            <p class="wf-desc">Im SAP die Reporting-Übersicht Artikelliste öffnen, Bookmarklet klicken, Liste kopieren.</p>
+          </div>
+        </div>
+        <div class="wf-step">
+          <div class="wf-num" aria-hidden="true">2</div>
+          <div class="wf-body">
+            <p class="wf-title">BV-Maske öffnen</p>
+            <p class="wf-desc">Im SAP Instorelogistik die Bestandsveränderungs-Maske öffnen (erster Artikel muss eintragbar sein).</p>
+          </div>
+        </div>
+        <div class="wf-step">
+          <div class="wf-num" aria-hidden="true">3</div>
+          <div class="wf-body">
+            <p class="wf-title">BV Auto-Eintragen starten</p>
+            <p class="wf-desc">Bookmarklet klicken, kopierte Liste einfügen, <strong>Starten</strong> klicken – alle Artikel werden automatisch eingetragen.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <a href="../index.html"><i class="fas fa-arrow-left" aria-hidden="true"></i> Zurück zum Portal</a>
+    </footer>
+
+  </div><!-- end .page -->
+
+  <script>
+    (() => {
+      'use strict';
+      const THEME_KEY  = 'portal-theme';
+      const html       = document.documentElement;
+      const toggleBtn  = document.getElementById('theme-toggle');
+      const themeIcon  = document.getElementById('theme-icon');
+      const themeLabel = document.getElementById('theme-label');
+
+      const THEME_MAP = {
+        light: { icon: 'fa-moon', label: 'Dunkel', next: 'dark'  },
+        dark:  { icon: 'fa-sun',  label: 'Hell',   next: 'light' }
+      };
+
+      const applyTheme = (theme) => {
+        html.setAttribute('data-theme', theme);
+        const { icon, label } = THEME_MAP[theme];
+        themeIcon.className   = `fas ${icon}`;
+        themeLabel.textContent = label;
+        localStorage.setItem(THEME_KEY, theme);
+      };
+
+      const saved = localStorage.getItem(THEME_KEY);
+      applyTheme(saved && THEME_MAP[saved] ? saved : 'light');
+
+      toggleBtn.addEventListener('click', () => {
+        applyTheme(THEME_MAP[html.getAttribute('data-theme')].next);
+      });
+    })();
+  </script>
+</body>
+</html>

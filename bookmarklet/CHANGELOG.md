@@ -1,0 +1,72 @@
+# Changelog
+
+All notable changes to BV Bookmarklets are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.3.3] - 2026-03-14
+
+### Changed
+- BV Auto-Eintragen now accepts German locale number formatting in the quantity column — comma as decimal separator and dot as thousands separator (e.g. `70297	-109,000	CO` or `12345	1.234,56	ST`); plain dot-decimal values continue to work unchanged
+- Updated subtitle and placeholder to reflect the extended format
+
+## [1.3.2] - 2026-03-14
+
+### Changed
+- PAL löschen input parsing now strips non-numeric lines (e.g. pasted column headers like "Palettennummer") and silently deduplicates repeated numbers — only unique, all-digit entries are processed
+
+## [1.3.1] - 2026-03-14
+
+### Fixed
+- PAL löschen bookmarklet was processing pallet numbers digit-by-digit: the minified `javascript:` URL contained a literal newline character inside the `split()` string, which browsers strip from URLs, turning `split('\n')` into `split('')` (split-by-character). Replaced the literal newline with the `\n` escape sequence.
+- Same literal-newline issue fixed in the textarea `placeholder` string in the minified bookmarklet.
+
+## [1.3.0] - 2026-03-14
+
+### Added
+- New bookmarklet **PAL löschen**: accepts a list of pallet numbers (one per line) and deletes each one automatically — enters the number into `oInputPalPage4`, clicks `oButtonSubmitPage4`, waits for the `__mbox-btn-4` confirmation button, confirms, waits for SAP processing, clears the input, then moves to the next entry
+- **Skip-001191 option** in PAL löschen: checkbox (on by default) — pallets whose number starts with `001191` are skipped automatically and counted separately in the summary; the option can be toggled per run
+- `pal-loeschen-source.js` — readable, unminified source of the PAL löschen script for easier editing before minification
+- `pal-loeschen-test.html` — mock SAP test page for validating the bookmarklet locally, including a `001191xxx` test pill
+- Red color variant (`.bm-icon--red` / `.bm-link--red`) for destructive-action bookmarklets
+
+## [1.2.0] - 2026-03-13
+
+### Added
+- `bv-auto-source.js` — readable, unminified source of the BV Auto-Eintragen script for easier editing before minification
+- **Artikelliste extrahieren** now includes the unit in the output (e.g. `219320 -8 ST`), matching the mandatory `ARTNO QTY UNIT` format required by BV Auto-Eintragen
+- New bookmarklet **Palettennummern extrahieren**: scans the SAP Reporting-Übersicht for all `oLabelReportingOverviewPALL2` elements and presents a deduplicated, copyable list of pallet numbers
+
+### Fixed
+- Decimal quantities (e.g. `219320 -1.0004`) now accepted and rounded up via `Math.ceil` instead of failing validation
+- Log panel no longer forces auto-scroll to the bottom when the user has manually scrolled up; auto-scroll resumes once the user returns to the bottom
+- "Starten" button is hidden after a fully successful run so the completed state is unambiguous; "Schließen" remains as the only action
+
+## [1.1.0] - 2026-03-12
+
+### Added
+- Viewport meta tag for proper mobile rendering
+- Inter font and FontAwesome 6.5.1 for consistent typography and icons
+- Dark mode toggle with `localStorage` persistence, matching the portal design system
+- Back navigation button linking to the main portal
+- Aurora gradient background matching the project design language
+- Installation guide with numbered step indicators at the top of the page
+- Combined Workflow section explaining the end-to-end automation process
+- FontAwesome icons on all five bookmarklet drag buttons
+- Card grid layout with hover effects for each bookmarklet
+
+### Changed
+- Replaced plain inline-style page with the project's full design system (CSS variables, design tokens, glassmorphism cards)
+- All five bookmarklets now display in a responsive two-column card grid
+- Bookmarklet buttons styled via CSS classes instead of inline `style` attributes
+- Structural HTML updated to use semantic elements (`<section>`, `<article>`, `<header>`, `<footer>`)
+- Page title updated to "BV Bookmarklets – SAP Instorelogistik"
+
+### Preserved
+- All five bookmarklet `href` JavaScript payloads are unchanged and fully functional
+
+## [1.0.0] - 2025-01-01
+
+### Added
+- Initial release with five bookmarklets: BV Auto-Eintragen, BV Artikel eintragen, Switch Debug, BV Anzahl eintragen, Artikelliste extrahieren

@@ -333,7 +333,7 @@ function renderMaterialModal() {
 }
 
 // Add new material (from materials tab form)
-UIManager.prototype.addMaterial = function() {
+UIManager.prototype.addMaterial = async function() {
     const code = document.getElementById('newMaterialCode').value.trim();
     const name = document.getElementById('newMaterialName').value.trim();
     const capacity = document.getElementById('newMaterialCapacity').value.trim();
@@ -359,7 +359,7 @@ UIManager.prototype.addMaterial = function() {
     }
 
     try {
-        this.dataManager.addMaterial(
+        await this.dataManager.addMaterial(
             code,
             capacity,
             name,
@@ -2010,7 +2010,7 @@ UIManager.prototype.deleteGroup = async function(groupId) {
         return;
     }
     
-    if (this.dataManager.deleteGroup(groupId)) {
+    if (await this.dataManager.deleteGroup(groupId)) {
         this.showToast(`Group "${SecurityUtils.escapeHTML(group.name)}" deleted successfully!`, 'success');
         this.renderGroupsList();
         this.renderMaterialsList({ preserveState: true }); // Update materials list to reflect changes
@@ -2533,7 +2533,7 @@ UIManager.prototype.bulkDeleteMaterials = async function() {
     
     if (!confirmed) return;
     
-    const result = this.dataManager.bulkDeleteMaterials(materialCodes);
+    const result = await this.dataManager.bulkDeleteMaterials(materialCodes);
     
     if (result.success) {
         // Clear selection BEFORE re-rendering to prevent deleted items from being restored

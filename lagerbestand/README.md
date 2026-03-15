@@ -74,8 +74,7 @@ lagerbestand/
 │   ├── data-manager.js       # Data persistence and backend management
 │   ├── cloud-sync-manager.js # GitHub Projects sync and conflict resolution
 │   ├── github-projects-db-manager.js # GitHub Projects API integration
-│   ├── db-manager.js         # Legacy IndexedDB manager
-│   ├── dixie-db-manager.js   # Dexie.js database migration
+│   ├── dixie-db-manager.js   # Primary IndexedDB storage via Dexie.js
 │   ├── report-processor.js   # LX02 report parsing and analysis
 │   ├── ui-manager.js         # UI management and notifications
 │   ├── tab-check-stock.js    # Check Stock tab functionality
@@ -355,8 +354,7 @@ All dependencies are loaded via CDN - no installation required!
 - **data-manager.js** (~400 lines): Multi-backend data management (Dexie + GitHub Projects)
 - **cloud-sync-manager.js** (~300 lines): Background sync and conflict resolution
 - **github-projects-db-manager.js** (~500 lines): GitHub Projects API integration
-- **db-manager.js** (~150 lines): Legacy IndexedDB manager
-- **dixie-db-manager.js** (~200 lines): Modern Dexie.js migration layer
+- **dixie-db-manager.js** (~200 lines): Primary IndexedDB storage via Dexie.js
 - **report-processor.js** (~200 lines): LX02 parsing, stock analysis, alerts
 - **ui-manager.js** (~250 lines): UI state, notifications, modals, dark mode
 

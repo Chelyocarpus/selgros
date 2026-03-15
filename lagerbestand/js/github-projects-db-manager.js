@@ -55,6 +55,7 @@ class GitHubProjectsDBManager {
         };
         
         // Cross-tab sync using BroadcastChannel
+        this.tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
         this.syncChannel = null;
         this.initBroadcastChannel();
         
@@ -123,7 +124,7 @@ class GitHubProjectsDBManager {
     initBroadcastChannel() {
         try {
             if ('BroadcastChannel' in window) {
-                this.syncChannel = new BroadcastChannel('warehouse_github_sync');
+                this.syncChannel = new BroadcastChannel('warehouse_app_sync');
                 console.log('GitHubProjects: BroadcastChannel initialized');
                 
                 // Listen for sync events from other tabs
@@ -406,7 +407,9 @@ class GitHubProjectsDBManager {
         
         // Build batched mutation
         const mutations = [];
-        const variables = { projectId };
+        // projectId is conditionally added to variables later, after we know which
+        // operation types are present (only create/delete/fieldUpdate need it).
+        const variables = {};
         
         // Add create operations
         creates.forEach((op, index) => {
@@ -478,10 +481,17 @@ class GitHubProjectsDBManager {
         });
         
         if (mutations.length === 0) return;
-        
-        // Build variable definitions for the mutation
+
+        // $projectId is only used by create, delete, and fieldUpdate operations — never by
+        // update operations. Declaring it when no such operation is present causes GitHub's
+        // GraphQL validator to reject the request with "variableNotUsed".
+        const needsProjectId = creates.length > 0 || deletes.length > 0 || fieldUpdates.length > 0;
+        if (needsProjectId) {
+            variables.projectId = projectId;
+        }
+
         const varDefs = [];
-        varDefs.push('$projectId: ID!');
+        if (needsProjectId) varDefs.push('$projectId: ID!');
         creates.forEach((op, i) => {
             varDefs.push(`$create${i}_title: String!`);
             varDefs.push(`$create${i}_body: String!`);
@@ -933,54 +943,65 @@ class GitHubProjectsDBManager {
     }
     
     async ensureMaterialFields() {
-        // Skip if already verified this session
-        if (this._fieldsEnsured) return true;
-        
+        // Re-verify once every 24 hours so externally-deleted fields are recreated
+        // without requiring a page reload.
+        const FIELDS_TTL_MS = 24 * 60 * 60 * 1000;
+        if (this._fieldsEnsuredAt && (Date.now() - this._fieldsEnsuredAt) < FIELDS_TTL_MS) {
+            return true;
+        }
+
         console.log('GitHubProjects: Ensuring project fields exist...');
-        
-        const fields = await this.getProjectFields();
-        
-        // Define required fields (for both materials and groups)
-        const requiredFields = [
-            { name: 'Item Type', dataType: 'TEXT' }, // To distinguish Materials from Groups
-            // Material-specific fields
-            { name: 'Material Code', dataType: 'TEXT' },
-            { name: 'Material Name', dataType: 'TEXT' },
-            { name: 'MKT Capacity', dataType: 'NUMBER' },
-            { name: 'Promo Capacity', dataType: 'NUMBER' },
-            { name: 'Promo Active', dataType: 'TEXT' },
-            { name: 'Group', dataType: 'TEXT' },
-            // Group-specific fields
-            { name: 'Group Name', dataType: 'TEXT' },
-            { name: 'Description', dataType: 'TEXT' },
-            { name: 'Color', dataType: 'TEXT' }
-        ];
-        
-        // Create missing fields
-        const createdFields = [];
-        for (const fieldDef of requiredFields) {
-            if (!fields[fieldDef.name]) {
-                console.log(`GitHubProjects: Field "${fieldDef.name}" not found, creating...`);
-                const created = await this.createProjectField(fieldDef.name, fieldDef.dataType);
-                if (created) {
-                    createdFields.push(fieldDef.name);
+
+        try {
+            const fields = await this.getProjectFields();
+
+            // Define required fields (for both materials and groups)
+            const requiredFields = [
+                { name: 'Item Type', dataType: 'TEXT' }, // To distinguish Materials from Groups
+                // Material-specific fields
+                { name: 'Material Code', dataType: 'TEXT' },
+                { name: 'Material Name', dataType: 'TEXT' },
+                { name: 'MKT Capacity', dataType: 'NUMBER' },
+                { name: 'Promo Capacity', dataType: 'NUMBER' },
+                { name: 'Promo Active', dataType: 'TEXT' },
+                { name: 'Group', dataType: 'TEXT' },
+                // Group-specific fields
+                { name: 'Group Name', dataType: 'TEXT' },
+                { name: 'Description', dataType: 'TEXT' },
+                { name: 'Color', dataType: 'TEXT' }
+            ];
+
+            // Create missing fields
+            const createdFields = [];
+            for (const fieldDef of requiredFields) {
+                if (!fields[fieldDef.name]) {
+                    console.log(`GitHubProjects: Field "${fieldDef.name}" not found, creating...`);
+                    const created = await this.createProjectField(fieldDef.name, fieldDef.dataType);
+                    if (created) {
+                        createdFields.push(fieldDef.name);
+                    }
+                } else {
+                    console.log(`GitHubProjects: Field "${fieldDef.name}" already exists`);
                 }
-            } else {
-                console.log(`GitHubProjects: Field "${fieldDef.name}" already exists`);
             }
+
+            if (createdFields.length > 0) {
+                console.log(`GitHubProjects: Created ${createdFields.length} new fields: ${createdFields.join(', ')}`);
+                // Reload fields to get the new ones
+                this.projectFields.cached = false;
+                await this.getProjectFields();
+            } else {
+                console.log('GitHubProjects: All required fields already exist');
+            }
+
+            this._fieldsEnsuredAt = Date.now();
+            return true;
+        } catch (error) {
+            // Clear the timestamp so the next call retries from scratch rather than
+            // silently skipping field verification after a transient API failure.
+            this._fieldsEnsuredAt = null;
+            throw error;
         }
-        
-        if (createdFields.length > 0) {
-            console.log(`GitHubProjects: Created ${createdFields.length} new fields: ${createdFields.join(', ')}`);
-            // Reload fields to get the new ones
-            this.projectFields.cached = false;
-            await this.getProjectFields();
-        } else {
-            console.log('GitHubProjects: All required fields already exist');
-        }
-        
-        this._fieldsEnsured = true;
-        return true;
     }
     
     // =================== PROJECT VIEWS ===================
@@ -1330,8 +1351,8 @@ class GitHubProjectsDBManager {
             this.cache.materials = materialsObj;
             this.cache.lastFetch.materials = Date.now();
             
-            // Broadcast change with data so other tabs can update locally
-            this.broadcastChange('materials_updated', { materials: materialsObj });
+            // Broadcast change with payload so other tabs can update locally
+            this.broadcastChange('MATERIALS_UPDATED', { materials: materialsObj });
             
             return true;
         } catch (error) {
@@ -1395,20 +1416,114 @@ class GitHubProjectsDBManager {
     }
     
     async saveMaterial(material) {
-        // Load all materials, update, and save
+        if (!this.checkAvailability()) {
+            throw new Error('GitHub Projects not configured');
+        }
+
+        if (this.config.useCustomFields) {
+            // Item-level upsert: each material is its own independent GitHub Projects item,
+            // so two tabs operating on different materials never race, and two tabs
+            // operating on the same material produce an idempotent last-write-wins result
+            // at the individual item level — no full table read required.
+            try {
+                await this.ensureMaterialFields();
+
+                const title = `material_${material.code}`;
+                const body = JSON.stringify(material, null, 2);
+
+                const existingItems = await this.findAllItemsByType('material_');
+                const existingItem = existingItems.find(
+                    item => item.content?.title === title
+                );
+
+                if (existingItem) {
+                    const existingBody = existingItem.content?.body;
+                    if (existingBody !== body) {
+                        await this.updateProjectItem(existingItem.content.id, title, body);
+
+                        // Only sync fields that actually changed
+                        let changedFields = null;
+                        try {
+                            const oldData = JSON.parse(existingBody || '{}');
+                            const changed = [];
+                            if (oldData.group !== material.group) changed.push('Group');
+                            if (oldData.name !== material.name) changed.push('Material Name');
+                            if (oldData.capacity !== material.capacity) changed.push('MKT Capacity');
+                            if (oldData.promoCapacity !== material.promoCapacity) changed.push('Promo Capacity');
+                            if (oldData.promoActive !== material.promoActive) changed.push('Promo Active');
+                            if (changed.length > 0) changedFields = changed;
+                        } catch { /* use full sync as fallback */ }
+
+                        await this.syncMaterialToProjectFields(existingItem.id, material, changedFields);
+                    }
+                } else {
+                    const created = await this.createProjectItem(title, body);
+                    await this.syncMaterialToProjectFields(created.id, material, null);
+                }
+
+                await this.flushOperationQueue();
+
+                // Update cache incrementally — no full reload needed
+                this.cache.materials = { ...(this.cache.materials || {}), [material.code]: material };
+                this.cache.lastFetch.materials = Date.now();
+
+                this.broadcastChange('MATERIALS_UPDATED', { materials: this.cache.materials });
+                console.log(`GitHubProjects: Saved material ${material.code}`);
+                return true;
+            } catch (error) {
+                console.error('GitHubProjects: Error saving material:', error);
+                throw error;
+            }
+        }
+
+        // Legacy mode: falls back to a full read-modify-write on a single JSON blob.
+        // Concurrent tabs may overwrite each other's changes. Prefer useCustomFields mode.
         const materials = await this.loadMaterials();
         materials[material.code] = material;
         await this.saveMaterials(materials);
-        // saveMaterials already broadcasts with full data
         return true;
     }
-    
+
     async deleteMaterial(code) {
-        // Load, remove, and save - saveMaterials handles actual deletion in custom fields mode
+        if (!this.checkAvailability()) {
+            throw new Error('GitHub Projects not configured');
+        }
+
+        if (this.config.useCustomFields) {
+            // Single-item delete: targets only the specific material's GitHub Projects item.
+            // Two tabs deleting different materials operate on independent items — no race.
+            // Two tabs deleting the same material: the second delete is a no-op (item already gone).
+            try {
+                const existingItems = await this.findAllItemsByType('material_');
+                const existingItem = existingItems.find(
+                    item => item.content?.title === `material_${code}`
+                );
+
+                if (existingItem) {
+                    await this.deleteProjectItem(existingItem.id);
+                    await this.flushOperationQueue();
+                }
+
+                // Update cache incrementally — no full reload needed
+                const updated = { ...(this.cache.materials || {}) };
+                delete updated[code];
+                this.cache.materials = updated;
+                this.cache.lastFetch.materials = Date.now();
+
+                this.broadcastChange('MATERIALS_UPDATED', { materials: this.cache.materials });
+                console.log(`GitHubProjects: Deleted material ${code}`);
+                return true;
+            } catch (error) {
+                console.error('GitHubProjects: Error deleting material:', error);
+                throw error;
+            }
+        }
+
+        // Legacy mode: falls back to a full read-modify-write on a single JSON blob.
+        // Concurrent tabs may overwrite each other's changes. Prefer useCustomFields mode.
         const materials = await this.loadMaterials();
         delete materials[code];
         await this.saveMaterials(materials);
-        // saveMaterials already broadcasts with full data
         return true;
     }
     
@@ -1455,7 +1570,7 @@ class GitHubProjectsDBManager {
                 this.cache.archive = reducedArchive;
                 this.cache.lastFetch.archive = Date.now();
                 
-                this.broadcastChange('archive_updated', { archive: reducedArchive });
+                this.broadcastChange('ARCHIVE_UPDATED', { archive: reducedArchive });
                 
                 console.warn('GitHubProjects: Archive was too large, saved reduced version (20 entries, summary only)');
                 return true;
@@ -1473,7 +1588,7 @@ class GitHubProjectsDBManager {
             this.cache.archive = limitedArchive;
             this.cache.lastFetch.archive = Date.now();
             
-            this.broadcastChange('archive_updated', { archive: limitedArchive });
+            this.broadcastChange('ARCHIVE_UPDATED', { archive: limitedArchive });
             
             console.log('GitHubProjects: Saved archive to GitHub Projects (rawData stripped)');
             return true;
@@ -1597,7 +1712,7 @@ class GitHubProjectsDBManager {
             this.cache.groups = groupsObj;
             this.cache.lastFetch.groups = Date.now();
             
-            this.broadcastChange('groups_updated', { groups: groupsObj });
+            this.broadcastChange('GROUPS_UPDATED', { groups: groupsObj });
             
             return true;
         } catch (error) {
@@ -1708,7 +1823,7 @@ class GitHubProjectsDBManager {
             this.cache.notes = notesObj;
             this.cache.lastFetch.notes = Date.now();
             
-            this.broadcastChange('notes_updated', { notes: notesObj });
+            this.broadcastChange('NOTES_UPDATED', { notes: notesObj });
             
             return true;
         } catch (error) {
@@ -2148,7 +2263,7 @@ class GitHubProjectsDBManager {
             // 6. Broadcast results with resolved data snapshot
             const manualConflicts = this.syncState.conflictQueue.length;
             
-            this.broadcastChange('background_sync_complete', {
+            this.broadcastChange('BACKGROUND_SYNC_COMPLETE', {
                 timestamp: this.syncState.lastSync,
                 conflicts: totalConflicts,
                 autoResolved,
@@ -2163,7 +2278,7 @@ class GitHubProjectsDBManager {
             
             if (manualConflicts > 0) {
                 // Notify UI that conflicts need manual resolution
-                this.broadcastChange('conflicts_detected', {
+                this.broadcastChange('CONFLICTS_DETECTED', {
                     count: manualConflicts
                 });
             }
@@ -2172,9 +2287,14 @@ class GitHubProjectsDBManager {
         } catch (error) {
             console.error('GitHubProjects: Background sync failed:', error);
             
-            this.broadcastChange('background_sync_error', {
+            this.broadcastChange('BACKGROUND_SYNC_ERROR', {
                 error: error.message
             });
+
+            // A sync error may indicate the project structure changed externally
+            // (e.g. custom fields deleted). Reset the fields-ensured timestamp so
+            // the next save call re-verifies and recreates any missing fields.
+            this._fieldsEnsuredAt = null;
         } finally {
             this.syncState.isSyncing = false;
         }
@@ -2456,13 +2576,15 @@ class GitHubProjectsDBManager {
     
     // =================== CROSS-TAB COMMUNICATION ===================
     
-    broadcastChange(type, data = null) {
+    broadcastChange(type, payload = null) {
         if (this.syncChannel) {
             try {
                 this.syncChannel.postMessage({
                     type,
+                    source: 'github',
+                    tabId: this.tabId,
                     timestamp: Date.now(),
-                    data
+                    payload
                 });
             } catch (error) {
                 console.warn('GitHubProjects: Failed to broadcast change:', error);
@@ -2483,56 +2605,60 @@ class GitHubProjectsDBManager {
     }
     
     handleCrossTabMessage(message) {
+        // Ignore messages from our own tab or from other sources (dexie, cloud)
+        if (message.tabId === this.tabId) return;
+        if (message.source !== 'github') return;
+
         console.log('GitHubProjects: Received cross-tab message:', message.type);
-        
-        const { data } = message;
-        
-        // Update local cache directly from broadcast data (no API calls needed)
+
+        const { payload } = message;
+
+        // Update local cache directly from broadcast payload (no API calls needed)
         switch (message.type) {
-            case 'materials_updated':
-                if (data?.materials) {
-                    this.cache.materials = data.materials;
+            case 'MATERIALS_UPDATED':
+                if (payload?.materials) {
+                    this.cache.materials = payload.materials;
                     this.cache.lastFetch.materials = Date.now();
                 } else {
                     this.clearCache('materials');
                     this.invalidateProjectItemsCache();
                 }
                 break;
-            
-            case 'archive_updated':
-                if (data?.archive) {
-                    this.cache.archive = data.archive;
+
+            case 'ARCHIVE_UPDATED':
+                if (payload?.archive) {
+                    this.cache.archive = payload.archive;
                     this.cache.lastFetch.archive = Date.now();
                 } else {
                     this.clearCache('archive');
                     this.invalidateProjectItemsCache();
                 }
                 break;
-            
-            case 'groups_updated':
-                if (data?.groups) {
-                    this.cache.groups = data.groups;
+
+            case 'GROUPS_UPDATED':
+                if (payload?.groups) {
+                    this.cache.groups = payload.groups;
                     this.cache.lastFetch.groups = Date.now();
                 } else {
                     this.clearCache('groups');
                     this.invalidateProjectItemsCache();
                 }
                 break;
-            
-            case 'notes_updated':
-                if (data?.notes) {
-                    this.cache.notes = data.notes;
+
+            case 'NOTES_UPDATED':
+                if (payload?.notes) {
+                    this.cache.notes = payload.notes;
                     this.cache.lastFetch.notes = Date.now();
                 } else {
                     this.clearCache('notes');
                     this.invalidateProjectItemsCache();
                 }
                 break;
-            
-            case 'background_sync_complete':
+
+            case 'BACKGROUND_SYNC_COMPLETE':
                 // Another tab completed sync with fresh API data — apply it
-                if (data?.snapshot) {
-                    const { materials, groups, notes, archive } = data.snapshot;
+                if (payload?.snapshot) {
+                    const { materials, groups, notes, archive } = payload.snapshot;
                     if (materials) { this.cache.materials = materials; this.cache.lastFetch.materials = Date.now(); }
                     if (groups) { this.cache.groups = groups; this.cache.lastFetch.groups = Date.now(); }
                     if (notes) { this.cache.notes = notes; this.cache.lastFetch.notes = Date.now(); }
@@ -2541,9 +2667,9 @@ class GitHubProjectsDBManager {
                     this.clearCache();
                 }
                 break;
-            
-            case 'conflicts_detected':
-                console.log(`GitHubProjects: ${data?.count || 0} conflict(s) detected in another tab`);
+
+            case 'CONFLICTS_DETECTED':
+                console.log(`GitHubProjects: ${payload?.count || 0} conflict(s) detected in another tab`);
                 break;
         }
     }

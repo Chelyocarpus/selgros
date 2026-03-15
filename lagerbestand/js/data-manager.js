@@ -32,6 +32,9 @@ class DataManager {
         
         // Async initialization - wait for it to complete
         this.initPromise = this.initializeData();
+
+        // Serial write queue: syncLocalWithRemote awaits this before fetching remote
+        this._saveQueue = Promise.resolve();
     }
     
     // Wait for initialization to complete
@@ -243,47 +246,82 @@ class DataManager {
      */
     async syncLocalWithRemote() {
         if (!this.githubManager.checkAvailability()) return;
-        
+
+        // Wait for any in-flight saves to finish before reading remote state,
+        // so we don't accidentally overwrite locally-written data.
+        await this._saveQueue;
+
         try {
             console.log('DataManager: Syncing local mirror with GitHub...');
-            
+
             // Fetch fresh data from GitHub API
             const remoteMaterials = await this.githubManager.loadMaterials().catch(() => null);
             const remoteArchive = await this.githubManager.loadArchive().catch(() => null);
             const remoteGroups = await this.githubManager.loadGroups().catch(() => null);
             const remoteNotes = await this.githubManager.loadNotes().catch(() => null);
-            
+
             let dataChanged = false;
-            
-            // Update in-memory state if remote has data
+
+            // Merge materials: keep the item with the later updatedAt so a locally
+            // initiated save that raced with this sync is never silently lost.
             if (remoteMaterials && Object.keys(remoteMaterials).length > 0) {
-                this.materials = remoteMaterials;
-                dataChanged = true;
+                for (const [code, remoteItem] of Object.entries(remoteMaterials)) {
+                    const localItem = this.materials[code];
+                    const remoteIsNewer = !localItem
+                        || !localItem.updatedAt
+                        || remoteItem.updatedAt > localItem.updatedAt;
+                    if (remoteIsNewer) {
+                        this.materials[code] = remoteItem;
+                        dataChanged = true;
+                    }
+                }
             }
+
+            // Archive is append-only and remote is canonical — replace if non-empty.
             if (remoteArchive && remoteArchive.length > 0) {
                 this.archive = remoteArchive;
                 dataChanged = true;
             }
+
+            // Merge groups by updatedAt
             if (remoteGroups && Object.keys(remoteGroups).length > 0) {
-                this.groups = remoteGroups;
-                dataChanged = true;
+                for (const [id, remoteGroup] of Object.entries(remoteGroups)) {
+                    const localGroup = this.groups[id];
+                    const remoteIsNewer = !localGroup
+                        || !localGroup.updatedAt
+                        || remoteGroup.updatedAt > localGroup.updatedAt;
+                    if (remoteIsNewer) {
+                        this.groups[id] = remoteGroup;
+                        dataChanged = true;
+                    }
+                }
             }
+
+            // Merge notes by updatedAt
             if (remoteNotes && Object.keys(remoteNotes).length > 0) {
-                this.notes = remoteNotes;
-                dataChanged = true;
+                for (const [id, remoteNote] of Object.entries(remoteNotes)) {
+                    const localNote = this.notes[id];
+                    const remoteIsNewer = !localNote
+                        || !localNote.updatedAt
+                        || remoteNote.updatedAt > localNote.updatedAt;
+                    if (remoteIsNewer) {
+                        this.notes[id] = remoteNote;
+                        dataChanged = true;
+                    }
+                }
             }
-            
+
             if (dataChanged) {
                 // Mirror to Dexie for next startup
-                await this.mirrorToLocalStorage();
-                
+                await this.mirrorToDexie();
+
                 // Re-render UI if available
                 if (typeof ui !== 'undefined') {
                     if (ui.renderMaterialsList) ui.renderMaterialsList();
                     if (ui.renderGroupsList) ui.renderGroupsList();
                     if (ui.renderNotesList) ui.renderNotesList();
                 }
-                
+
                 console.log('DataManager: Local mirror updated from GitHub');
             } else {
                 console.log('DataManager: GitHub returned no data, keeping local');
@@ -298,21 +336,21 @@ class DataManager {
      * Mirror current in-memory data to Dexie for fast local-first loading.
      * Called after successful GitHub API fetches/saves.
      */
-    async mirrorToLocalStorage() {
+    async mirrorToDexie() {
         if (!this.dexieManager.checkAvailability()) return;
         
         try {
             await Promise.all([
-                this.dexieManager.saveMaterials(this.materials).catch(e => 
+                this.dexieManager.saveMaterials(this.materials, { silent: true }).catch(e =>
                     console.warn('DataManager: Failed to mirror materials to Dexie:', e.message)),
-                this.dexieManager.saveArchive(this.archive).catch(e => 
+                this.dexieManager.saveArchive(this.archive, { silent: true }).catch(e =>
                     console.warn('DataManager: Failed to mirror archive to Dexie:', e.message)),
-                this.dexieManager.saveGroups(this.groups).catch(e => 
+                this.dexieManager.saveGroups(this.groups, { silent: true }).catch(e =>
                     console.warn('DataManager: Failed to mirror groups to Dexie:', e.message)),
-                this.dexieManager.saveNotes(this.notes).catch(e => 
+                this.dexieManager.saveNotes(this.notes, { silent: true }).catch(e =>
                     console.warn('DataManager: Failed to mirror notes to Dexie:', e.message))
             ]);
-            console.log('DataManager: Data mirrored to Dexie local storage');
+            console.log('DataManager: Data mirrored to Dexie');
         } catch (error) {
             console.warn('DataManager: Mirror to Dexie failed:', error.message);
         }
@@ -326,28 +364,37 @@ class DataManager {
         
         this.dbManager.onSyncMessage(async (message) => {
             console.log('DataManager: Received sync message from another tab:', message.type);
-            
-            const { data } = message;
+
+            // Ignore cloud-coordination messages (handled by CloudSyncManager)
+            if (message.source === 'cloud') return;
+
+            const { payload } = message;
             
             try {
                 switch (message.type) {
-                    case 'materials_updated':
-                        // Use broadcast data directly if available (no API call needed)
-                        this.materials = data?.materials || await this.dbManager.loadMaterials();
+                    case 'MATERIALS_UPDATED':
+                    case 'MATERIAL_SAVED':
+                    case 'MATERIAL_DELETED':
+                        // Use broadcast payload directly if available (no API call needed)
+                        this.materials = payload?.materials || await this.dbManager.loadMaterials();
+                        // Invalidate cached project items so the next save fetches fresh state
+                        if (this.storageBackend === 'github') {
+                            this.githubManager.invalidateProjectItemsCache();
+                        }
                         if (typeof ui !== 'undefined' && ui.renderMaterialsList) {
                             ui.renderMaterialsList();
                         }
                         break;
                         
-                    case 'archive_updated':
-                        this.archive = data?.archive || await this.dbManager.loadArchive();
+                    case 'ARCHIVE_UPDATED':
+                        this.archive = payload?.archive || await this.dbManager.loadArchive();
                         if (typeof ui !== 'undefined' && ui.renderArchiveList) {
                             ui.renderArchiveList();
                         }
                         break;
                         
-                    case 'groups_updated':
-                        this.groups = data?.groups || await this.dbManager.loadGroups();
+                    case 'GROUPS_UPDATED':
+                        this.groups = payload?.groups || await this.dbManager.loadGroups();
                         if (typeof ui !== 'undefined') {
                             if (ui.renderMaterialsList) {
                                 ui.renderMaterialsList();
@@ -358,17 +405,17 @@ class DataManager {
                         }
                         break;
                         
-                    case 'notes_updated':
-                        this.notes = data?.notes || await this.dbManager.loadNotes();
+                    case 'NOTES_UPDATED':
+                        this.notes = payload?.notes || await this.dbManager.loadNotes();
                         if (typeof ui !== 'undefined' && ui.renderNotesList) {
                             ui.renderNotesList();
                         }
                         break;
                     
-                    case 'background_sync_complete':
+                    case 'BACKGROUND_SYNC_COMPLETE':
                         // Use snapshot data from broadcast if available
-                        if (data?.snapshot) {
-                            const { materials, groups, notes, archive } = data.snapshot;
+                        if (payload?.snapshot) {
+                            const { materials, groups, notes, archive } = payload.snapshot;
                             if (materials) this.materials = materials;
                             if (groups) this.groups = groups;
                             if (notes) this.notes = notes;
@@ -380,6 +427,11 @@ class DataManager {
                             this.groups = await this.dbManager.loadGroups().catch(() => ({}));
                             this.notes = await this.dbManager.loadNotes().catch(() => ({}));
                         }
+                        // Invalidate cached project items; the snapshot may differ from what
+                        // the GitHub manager last fetched in this tab.
+                        if (this.storageBackend === 'github') {
+                            this.githubManager.invalidateProjectItemsCache();
+                        }
                         // Re-render active views
                         if (typeof ui !== 'undefined') {
                             if (ui.renderMaterialsList) ui.renderMaterialsList();
@@ -388,10 +440,10 @@ class DataManager {
                         }
                         break;
                     
-                    case 'conflicts_detected':
+                    case 'CONFLICTS_DETECTED':
                         // Show conflict notification to user
                         if (typeof ui !== 'undefined' && ui.showToast) {
-                            const count = data?.count || 0;
+                            const count = payload?.count || 0;
                             const msg = (typeof languageManager !== 'undefined')
                                 ? languageManager.t('syncConflictsFound').replace('{count}', count)
                                 : `${count} sync conflict(s) detected — review needed`;
@@ -404,7 +456,7 @@ class DataManager {
                 }
                 
                 // Show toast notification for data changes
-                if (message.type !== 'conflicts_detected' && typeof ui !== 'undefined' && ui.showToast) {
+                if (message.type !== 'CONFLICTS_DETECTED' && typeof ui !== 'undefined' && ui.showToast) {
                     const syncMsg = (typeof languageManager !== 'undefined')
                         ? languageManager.t('dataUpdatedFromTab') || 'Data updated from another tab'
                         : 'Data updated from another tab';
@@ -412,8 +464,8 @@ class DataManager {
                 }
                 
                 // Mirror received data to Dexie for local-first loading
-                if (this.storageBackend === 'github' && message.type !== 'conflicts_detected') {
-                    this.mirrorToLocalStorage().catch(() => {});
+                if (this.storageBackend === 'github' && message.type !== 'CONFLICTS_DETECTED') {
+                    this.mirrorToDexie().catch(() => {});
                 }
             } catch (error) {
                 console.error('DataManager: Error handling sync message:', error);
@@ -506,112 +558,111 @@ class DataManager {
     // =================== SAVE METHODS (Dexie primary, localStorage backup) ===================
 
     // Save materials to Dexie (and localStorage as backup)
+    /**
+     * Serialize writes through _saveQueue so syncLocalWithRemote can safely
+     * await all in-flight saves before pulling remote state.
+     * - Runs `fn` after the current queue tail (even if a prior save failed).
+     * - Keeps _saveQueue itself non-rejecting so future enqueues never break.
+     * - Returns the real promise of `fn` so callers still get the true result.
+     */
+    _enqueueSave(fn) {
+        const promise = this._saveQueue.then(fn, fn);
+        this._saveQueue = promise.catch(() => {});
+        return promise;
+    }
+
     async saveMaterials() {
-        try {
-            // Primary: Save to active backend
-            if (this.dbManager.checkAvailability()) {
-                await this.dbManager.saveMaterials(this.materials);
-            }
-            
-            // Mirror to Dexie if GitHub is the active backend
-            if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
-                this.dexieManager.saveMaterials(this.materials).catch(e =>
-                    console.warn('DataManager: Dexie mirror failed for materials:', e.message));
-            }
-            
-            // Backup: Save to localStorage
-            localStorage.setItem(this.STORAGE_KEYS.MATERIALS, JSON.stringify(this.materials));
-            
-            // Notify cloud sync of local change
-            this.notifyLocalChange('materials');
-            
-            return true;
-        } catch (e) {
-            console.error('Error saving materials:', e);
-            
-            // Fallback to localStorage only
+        return this._enqueueSave(async () => {
             try {
+                // Primary: Save to active backend
+                if (this.dbManager.checkAvailability()) {
+                    await this.dbManager.saveMaterials(this.materials);
+                }
+
+                // Mirror to Dexie if GitHub is the active backend
+                if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                    this.dexieManager.saveMaterials(this.materials, { silent: true }).catch(e =>
+                        console.warn('DataManager: Dexie mirror failed for materials:', e.message));
+                }
+
+                // Backup: Save to localStorage
                 localStorage.setItem(this.STORAGE_KEYS.MATERIALS, JSON.stringify(this.materials));
+
+                // Notify cloud sync of local change
                 this.notifyLocalChange('materials');
+
                 return true;
-            } catch (localError) {
-                console.error('Error saving to localStorage:', localError);
-                // UI Manager will show toast notification for errors
-                return false;
+            } catch (e) {
+                console.error('Error saving materials:', e);
+
+                // Fallback to localStorage only
+                try {
+                    localStorage.setItem(this.STORAGE_KEYS.MATERIALS, JSON.stringify(this.materials));
+                    this.notifyLocalChange('materials');
+                    return true;
+                } catch (localError) {
+                    console.error('Error saving to localStorage:', localError);
+                    return false;
+                }
             }
-        }
+        });
+    }
+
+    // Save a single material to the active backend (O(1) – skips full diff for individual mutations).
+    async saveMaterialItem(material) {
+        return this._enqueueSave(async () => {
+            try {
+                if (this.dbManager.checkAvailability()) {
+                    await this.dbManager.saveMaterial(material);
+                }
+
+                // Mirror individual item to Dexie when GitHub is the active backend
+                if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                    this.dexieManager.saveMaterial(material, { silent: true }).catch(e =>
+                        console.warn('DataManager: Dexie mirror failed for material:', e.message));
+                }
+
+                // Backup: full map is the only per-item option in localStorage
+                localStorage.setItem(this.STORAGE_KEYS.MATERIALS, JSON.stringify(this.materials));
+
+                this.notifyLocalChange('materials');
+
+                return true;
+            } catch (e) {
+                console.error('Error saving material:', e);
+
+                // Fallback to localStorage only
+                try {
+                    localStorage.setItem(this.STORAGE_KEYS.MATERIALS, JSON.stringify(this.materials));
+                    this.notifyLocalChange('materials');
+                    return true;
+                } catch (localError) {
+                    console.error('Error saving to localStorage:', localError);
+                    return false;
+                }
+            }
+        });
     }
 
     // Save archive to Dexie (and localStorage as backup)
     async saveArchive() {
-        try {
-            // Auto-cleanup before saving to prevent quota issues
-            await this.cleanupArchiveIfNeeded();
-            
-            // Primary: Save to active backend
-            if (this.dbManager.checkAvailability()) {
-                await this.dbManager.saveArchive(this.archive);
-            }
-            
-            // Mirror to Dexie if GitHub is the active backend
-            if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
-                this.dexieManager.saveArchive(this.archive).catch(e =>
-                    console.warn('DataManager: Dexie mirror failed for archive:', e.message));
-            }
-            
-            // Backup: Save to localStorage (without raw data to save space)
-            const lightweightArchive = this.archive.map(entry => ({
-                id: entry.id,
-                timestamp: entry.timestamp,
-                fileName: entry.fileName,
-                summary: entry.summary
-            }));
-            localStorage.setItem(this.STORAGE_KEYS.ARCHIVE, JSON.stringify(lightweightArchive));
-            
-            // Notify cloud sync of local change
-            this.notifyLocalChange('archive');
-            
-            return true;
-        } catch (e) {
-            console.error('Error saving archive:', e);
-            
-            // If quota exceeded, try aggressive cleanup
-            if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
-                console.warn('Storage quota exceeded, performing aggressive cleanup...');
-                await this.aggressiveArchiveCleanup();
-                
-                // Retry save after cleanup
-                try {
-                    if (this.dbManager.checkAvailability()) {
-                        await this.dbManager.saveArchive(this.archive);
-                    }
-                    
-                    const lightweightArchive = this.archive.map(entry => ({
-                        id: entry.id,
-                        timestamp: entry.timestamp,
-                        fileName: entry.fileName,
-                        summary: entry.summary
-                    }));
-                    localStorage.setItem(this.STORAGE_KEYS.ARCHIVE, JSON.stringify(lightweightArchive));
-                    
-                    if (typeof ui !== 'undefined' && ui.showToast) {
-                        ui.showToast('Archive cleaned up to save space. Older reports removed.', 'warning');
-                    }
-                    
-                    return true;
-                } catch (retryError) {
-                    console.error('Archive save failed even after cleanup:', retryError);
-                    
-                    // Last resort: show user-friendly error
-                    if (typeof ui !== 'undefined' && ui.showToast) {
-                        ui.showToast('Storage full. Please clear old archive entries.', 'error');
-                    }
-                    return false;
-                }
-            }
-            
-            // Fallback to localStorage only (lightweight version)
+        return this._enqueueSave(async () => {
             try {
+                // Auto-cleanup before saving to prevent quota issues
+                await this.cleanupArchiveIfNeeded();
+
+                // Primary: Save to active backend
+                if (this.dbManager.checkAvailability()) {
+                    await this.dbManager.saveArchive(this.archive);
+                }
+
+                // Mirror to Dexie if GitHub is the active backend
+                if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                    this.dexieManager.saveArchive(this.archive, { silent: true }).catch(e =>
+                        console.warn('DataManager: Dexie mirror failed for archive:', e.message));
+                }
+
+                // Backup: Save to localStorage (without raw data to save space)
                 const lightweightArchive = this.archive.map(entry => ({
                     id: entry.id,
                     timestamp: entry.timestamp,
@@ -619,15 +670,67 @@ class DataManager {
                     summary: entry.summary
                 }));
                 localStorage.setItem(this.STORAGE_KEYS.ARCHIVE, JSON.stringify(lightweightArchive));
+
+                // Notify cloud sync of local change
+                this.notifyLocalChange('archive');
+
                 return true;
-            } catch (localError) {
-                console.error('localStorage save also failed:', localError);
-                if (typeof ui !== 'undefined' && ui.showToast) {
-                    ui.showToast('Error saving archive. Storage might be full.', 'error');
+            } catch (e) {
+                console.error('Error saving archive:', e);
+
+                // If quota exceeded, try aggressive cleanup
+                if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+                    console.warn('Storage quota exceeded, performing aggressive cleanup...');
+                    await this.aggressiveArchiveCleanup();
+
+                    // Retry save after cleanup
+                    try {
+                        if (this.dbManager.checkAvailability()) {
+                            await this.dbManager.saveArchive(this.archive);
+                        }
+
+                        const lightweightArchive = this.archive.map(entry => ({
+                            id: entry.id,
+                            timestamp: entry.timestamp,
+                            fileName: entry.fileName,
+                            summary: entry.summary
+                        }));
+                        localStorage.setItem(this.STORAGE_KEYS.ARCHIVE, JSON.stringify(lightweightArchive));
+
+                        if (typeof ui !== 'undefined' && ui.showToast) {
+                            ui.showToast('Archive cleaned up to save space. Older reports removed.', 'warning');
+                        }
+
+                        return true;
+                    } catch (retryError) {
+                        console.error('Archive save failed even after cleanup:', retryError);
+
+                        if (typeof ui !== 'undefined' && ui.showToast) {
+                            ui.showToast('Storage full. Please clear old archive entries.', 'error');
+                        }
+                        return false;
+                    }
                 }
-                return false;
+
+                // Fallback to localStorage only (lightweight version)
+                try {
+                    const lightweightArchive = this.archive.map(entry => ({
+                        id: entry.id,
+                        timestamp: entry.timestamp,
+                        fileName: entry.fileName,
+                        summary: entry.summary
+                    }));
+                    localStorage.setItem(this.STORAGE_KEYS.ARCHIVE, JSON.stringify(lightweightArchive));
+                    return true;
+                } catch (localError) {
+                    console.error('localStorage save also failed:', localError);
+                    if (typeof ui !== 'undefined' && ui.showToast) {
+                        ui.showToast('Error saving archive. Storage might be full.', 'error');
+                    }
+                    return false;
+                }
             }
-        }
+        });
     }
 
     // Auto-cleanup archive if getting too large
@@ -707,72 +810,76 @@ class DataManager {
 
     // Save groups to Dexie (and localStorage as backup)
     async saveGroups() {
-        try {
-            // Primary: Save to active backend
-            if (this.dbManager.checkAvailability()) {
-                await this.dbManager.saveGroups(this.groups);
-            }
-            
-            // Mirror to Dexie if GitHub is the active backend
-            if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
-                this.dexieManager.saveGroups(this.groups).catch(e =>
-                    console.warn('DataManager: Dexie mirror failed for groups:', e.message));
-            }
-            
-            // Backup: Save to localStorage
-            localStorage.setItem(this.STORAGE_KEYS.GROUPS, JSON.stringify(this.groups));
-            
-            // Notify cloud sync of local change
-            this.notifyLocalChange('groups');
-            
-            return true;
-        } catch (e) {
-            console.error('Error saving groups:', e);
-            
-            // Fallback to localStorage only
+        return this._enqueueSave(async () => {
             try {
+                // Primary: Save to active backend
+                if (this.dbManager.checkAvailability()) {
+                    await this.dbManager.saveGroups(this.groups);
+                }
+
+                // Mirror to Dexie if GitHub is the active backend
+                if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                    this.dexieManager.saveGroups(this.groups, { silent: true }).catch(e =>
+                        console.warn('DataManager: Dexie mirror failed for groups:', e.message));
+                }
+
+                // Backup: Save to localStorage
                 localStorage.setItem(this.STORAGE_KEYS.GROUPS, JSON.stringify(this.groups));
+
+                // Notify cloud sync of local change
                 this.notifyLocalChange('groups');
+
                 return true;
-            } catch (localError) {
-                return false;
+            } catch (e) {
+                console.error('Error saving groups:', e);
+
+                // Fallback to localStorage only
+                try {
+                    localStorage.setItem(this.STORAGE_KEYS.GROUPS, JSON.stringify(this.groups));
+                    this.notifyLocalChange('groups');
+                    return true;
+                } catch (localError) {
+                    return false;
+                }
             }
-        }
+        });
     }
 
     // Save notes to Dexie (and localStorage as backup)
     async saveNotes() {
-        try {
-            // Primary: Save to active backend
-            if (this.dbManager.checkAvailability()) {
-                await this.dbManager.saveNotes(this.notes);
-            }
-            
-            // Mirror to Dexie if GitHub is the active backend
-            if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
-                this.dexieManager.saveNotes(this.notes).catch(e =>
-                    console.warn('DataManager: Dexie mirror failed for notes:', e.message));
-            }
-            
-            // Backup: Save to localStorage
-            localStorage.setItem(this.STORAGE_KEYS.NOTES, JSON.stringify(this.notes));
-            
-            // Notify cloud sync of local change
-            this.notifyLocalChange('notes');
-            
-            return true;
-        } catch (e) {
-            console.error('Error saving notes:', e);
-            
-            // Fallback to localStorage only
+        return this._enqueueSave(async () => {
             try {
+                // Primary: Save to active backend
+                if (this.dbManager.checkAvailability()) {
+                    await this.dbManager.saveNotes(this.notes);
+                }
+
+                // Mirror to Dexie if GitHub is the active backend
+                if (this.storageBackend === 'github' && this.dexieManager.checkAvailability()) {
+                    this.dexieManager.saveNotes(this.notes, { silent: true }).catch(e =>
+                        console.warn('DataManager: Dexie mirror failed for notes:', e.message));
+                }
+
+                // Backup: Save to localStorage
                 localStorage.setItem(this.STORAGE_KEYS.NOTES, JSON.stringify(this.notes));
+
+                // Notify cloud sync of local change
                 this.notifyLocalChange('notes');
+
                 return true;
-            } catch (localError) {
-                return false;
+            } catch (e) {
+                console.error('Error saving notes:', e);
+
+                // Fallback to localStorage only
+                try {
+                    localStorage.setItem(this.STORAGE_KEYS.NOTES, JSON.stringify(this.notes));
+                    this.notifyLocalChange('notes');
+                    return true;
+                } catch (localError) {
+                    return false;
+                }
             }
-        }
+        });
     }
 
     // Save alert rules to Dexie (and localStorage as backup)
@@ -850,7 +957,7 @@ class DataManager {
     }
 
     // Add or update material
-    addMaterial(code, capacity, name = '', promoCapacity = null, promoActive = false, promoEndDate = null, group = null, tags = [], notes = '') {
+    async addMaterial(code, capacity, name = '', promoCapacity = null, promoActive = false, promoEndDate = null, group = null, tags = [], notes = '') {
         // Use validation utilities
         const codeValidation = ValidationUtils.validateMaterialCode(code);
         if (!codeValidation.valid) {
@@ -931,24 +1038,22 @@ class DataManager {
             });
         }
         
-        // Async save
-        this.saveMaterials().then(success => {
-            if (success) {
-                // Add to history
-                if (oldData) {
-                    this.addToHistory({
-                        type: 'EDIT_MATERIAL',
-                        data: { oldData, newData: material }
-                    });
-                } else {
-                    this.addToHistory({
-                        type: 'ADD_MATERIAL',
-                        data: material
-                    });
-                }
+        // Use targeted single-item save (O(1)) instead of the full O(N) bulk diff
+        const success = await this.saveMaterialItem(material);
+        if (success) {
+            if (oldData) {
+                this.addToHistory({
+                    type: 'EDIT_MATERIAL',
+                    data: { oldData, newData: material }
+                });
+            } else {
+                this.addToHistory({
+                    type: 'ADD_MATERIAL',
+                    data: material
+                });
             }
-        });
-        
+        }
+
         return true;
     }
     getMaterial(code) {
@@ -1653,7 +1758,7 @@ class DataManager {
     }
 
     // Bulk delete materials
-    bulkDeleteMaterials(materialCodes) {
+    async bulkDeleteMaterials(materialCodes) {
         try {
             const deletedMaterials = [];
 
@@ -1674,7 +1779,7 @@ class DataManager {
                         (deletedMaterials.length > 5 ? '...' : '')
                 });
                 
-                this.saveMaterials();
+                await this.saveMaterials();
                 
                 // Add to history
                 this.addToHistory({
@@ -1870,7 +1975,7 @@ class DataManager {
     }
 
     // Delete group
-    deleteGroup(groupId) {
+    async deleteGroup(groupId) {
         if (this.groups[groupId]) {
             const groupName = this.groups[groupId].name;
             
@@ -1891,8 +1996,8 @@ class DataManager {
                 groupName: groupName
             });
             
-            this.saveMaterials();
-            return this.saveGroups();
+            await this.saveMaterials();
+            return await this.saveGroups();
         }
         return false;
     }
@@ -1953,123 +2058,8 @@ class DataManager {
         return false;
     }
 
-    // =================== ENHANCED MATERIAL OPERATIONS ===================
-
-    /**
-     * Add or update material with validation and history tracking
-     * @param {string} code - Material code
-     * @param {number} capacity - Material capacity
-     * @param {string} name - Material name
-     * @param {number|null} promoCapacity - Promotional capacity
-     * @param {boolean} promoActive - Whether promotion is active
-     * @param {string|null} promoEndDate - Promotion end date
-     * @param {string|null} group - Material group ID
-     * @param {string[]} tags - Material tags
-     * @param {string} notes - Material notes
-     * @returns {boolean} Success status
-     * @throws {Error} Validation errors
-     */
-    addMaterial(code, capacity, name = '', promoCapacity = null, promoActive = false, promoEndDate = null, group = null, tags = [], notes = '') {
-        // Use validation utilities
-        const codeValidation = ValidationUtils.validateMaterialCode(code);
-        if (!codeValidation.valid) {
-            throw new Error(codeValidation.message);
-        }
-        
-        const capacityValidation = ValidationUtils.validateCapacity(capacity);
-        if (!capacityValidation.valid) {
-            throw new Error(capacityValidation.message);
-        }
-        
-        // Validate promo capacity if provided
-        if (promoCapacity !== null && promoCapacity !== undefined && promoCapacity !== '') {
-            const promoValidation = ValidationUtils.validateCapacity(promoCapacity);
-            if (!promoValidation.valid) {
-                throw new Error('Promo ' + promoValidation.message.toLowerCase());
-            }
-        }
-        
-        // Validate promo end date if provided
-        if (promoEndDate) {
-            const dateValidation = ValidationUtils.validateDate(promoEndDate);
-            if (!dateValidation.valid) {
-                throw new Error('Promo end date: ' + dateValidation.message);
-            }
-        }
-        
-        // Sanitize inputs
-        const sanitizedCode = SecurityUtils.sanitizeHTML(code.trim());
-        const sanitizedName = SecurityUtils.sanitizeHTML(name.trim());
-        const sanitizedNotes = SecurityUtils.sanitizeHTML(notes);
-        
-        // Sanitize tags
-        const sanitizedTags = Array.isArray(tags) 
-            ? tags.map(tag => SecurityUtils.sanitizeHTML(tag.trim())).filter(tag => tag.length > 0)
-            : [];
-
-        const material = {
-            code: sanitizedCode,
-            name: sanitizedName,
-            capacity: capacityValidation.value,
-            promoCapacity: promoCapacity !== null && promoCapacity !== undefined && promoCapacity !== '' 
-                ? ValidationUtils.validateCapacity(promoCapacity).value 
-                : null,
-            promoActive: promoActive || false,
-            promoEndDate: promoEndDate || null,
-            group: group || null,
-            tags: sanitizedTags,
-            notes: sanitizedNotes,
-            createdAt: this.materials[sanitizedCode]?.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        // Store old data for history if editing
-        const oldData = this.materials[sanitizedCode] ? { ...this.materials[sanitizedCode] } : null;
-        
-        // Check rate limiting
-        if (!SecurityUtils.rateLimiter.check('addMaterial', 20, 1000)) {
-            throw new Error('Too many operations. Please wait a moment.');
-        }
-        
-        this.materials[sanitizedCode] = material;
-        
-        // Set pending change details for cloud sync tracking
-        if (oldData) {
-            this.setPendingChangeDetails({
-                action: 'edit',
-                materialCode: sanitizedCode,
-                materialName: material.name || sanitizedCode,
-                changes: this.getChangeSummary(oldData, material)
-            });
-        } else {
-            this.setPendingChangeDetails({
-                action: 'add',
-                materialCode: sanitizedCode,
-                materialName: material.name || sanitizedCode,
-                capacity: material.capacity
-            });
-        }
-        
-        if (this.saveMaterials()) {
-            // Add to history
-            if (oldData) {
-                this.addToHistory({
-                    type: 'EDIT_MATERIAL',
-                    data: { oldData, newData: material }
-                });
-            } else {
-                this.addToHistory({
-                    type: 'ADD_MATERIAL',
-                    data: material
-                });
-            }
-            return true;
-        }
-        return false;
-    }
-
     // Delete material with history tracking
-    deleteMaterial(code) {
+    async deleteMaterial(code) {
         const material = this.materials[code];
         if (material) {
             // Set pending change details for cloud sync tracking
@@ -2081,7 +2071,7 @@ class DataManager {
             
             delete this.materials[code];
             
-            if (this.saveMaterials()) {
+            if (await this.saveMaterials()) {
                 this.addToHistory({
                     type: 'DELETE_MATERIAL',
                     data: material

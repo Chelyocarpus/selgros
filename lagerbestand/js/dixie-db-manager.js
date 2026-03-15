@@ -12,6 +12,7 @@ class DexieDBManager {
         this.isAvailable = false;
         
         // Cross-tab sync using BroadcastChannel
+        this.tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
         this.syncChannel = null;
         this.initBroadcastChannel();
         
@@ -23,7 +24,7 @@ class DexieDBManager {
     initBroadcastChannel() {
         try {
             if ('BroadcastChannel' in window) {
-                this.syncChannel = new BroadcastChannel('warehouse_sync');
+                this.syncChannel = new BroadcastChannel('warehouse_app_sync');
                 console.log('Dexie: BroadcastChannel initialized for cross-tab sync');
             } else {
                 console.warn('Dexie: BroadcastChannel not supported in this browser');
@@ -34,13 +35,15 @@ class DexieDBManager {
     }
     
     // Broadcast change notification to other tabs
-    broadcastChange(type, data = null) {
+    broadcastChange(type, payload = null) {
         if (this.syncChannel) {
             try {
                 this.syncChannel.postMessage({
-                    type: type,
+                    type,
+                    source: 'dexie',
+                    tabId: this.tabId,
                     timestamp: Date.now(),
-                    data: data
+                    payload
                 });
             } catch (error) {
                 console.warn('Dexie: Failed to broadcast change:', error);
@@ -117,19 +120,24 @@ class DexieDBManager {
     // =================== MATERIALS ===================
 
     // Save all materials (bulk operation)
-    async saveMaterials(materialsObj) {
+    async saveMaterials(materialsObj, { silent = false } = {}) {
         if (!this.checkAvailability()) {
             throw new Error('Database not available');
         }
 
         try {
-            // Convert object to array
             const materialsArray = Object.values(materialsObj);
-            
-            // Clear existing materials and add new ones
+            const incomingKeys = new Set(materialsArray.map(m => m.code));
+
             await this.db.transaction('rw', this.db.materials, async () => {
-                await this.db.materials.clear();
-                await this.db.materials.bulkAdd(materialsArray);
+                // Remove records that no longer exist in the incoming set
+                const existingKeys = await this.db.materials.toCollection().primaryKeys();
+                const keysToDelete = existingKeys.filter(k => !incomingKeys.has(k));
+                if (keysToDelete.length > 0) {
+                    await this.db.materials.bulkDelete(keysToDelete);
+                }
+                // Upsert all incoming records
+                await this.db.materials.bulkPut(materialsArray);
             });
 
             // Update metadata
@@ -140,10 +148,9 @@ class DexieDBManager {
             });
 
             console.log(`Dexie: Saved ${materialsArray.length} materials`);
-            
-            // Broadcast change to other tabs
-            this.broadcastChange('materials_updated', { count: materialsArray.length });
-            
+            // silent=true suppresses broadcast for mirror writes that should not
+            // trigger cross-tab sync handlers (e.g. mirrorToDexie after GitHub fetch)
+            if (!silent) this.broadcastChange('MATERIALS_UPDATED', { count: materialsArray.length });
             return true;
         } catch (error) {
             console.error('Dexie: Error saving materials:', error);
@@ -175,7 +182,7 @@ class DexieDBManager {
     }
 
     // Add or update single material
-    async saveMaterial(material) {
+    async saveMaterial(material, { silent = false } = {}) {
         if (!this.checkAvailability()) {
             throw new Error('Database not available');
         }
@@ -183,10 +190,9 @@ class DexieDBManager {
         try {
             await this.db.materials.put(material);
             console.log(`Dexie: Saved material ${material.code}`);
-            
-            // Broadcast change to other tabs
-            this.broadcastChange('material_saved', { code: material.code });
-            
+
+            if (!silent) this.broadcastChange('MATERIAL_SAVED', { code: material.code });
+
             return true;
         } catch (error) {
             console.error('Dexie: Error saving material:', error);
@@ -205,7 +211,7 @@ class DexieDBManager {
             console.log(`Dexie: Deleted material ${code}`);
             
             // Broadcast change to other tabs
-            this.broadcastChange('material_deleted', { code: code });
+            this.broadcastChange('MATERIAL_DELETED', { code: code });
             
             return true;
         } catch (error) {
@@ -232,18 +238,25 @@ class DexieDBManager {
     // =================== ARCHIVE ===================
 
     // Save all archive entries (bulk operation)
-    async saveArchive(archiveArray) {
+    async saveArchive(archiveArray, { silent = false } = {}) {
         if (!this.checkAvailability()) {
             throw new Error('Database not available');
         }
 
         try {
-            // Limit to 50 entries
+            // Limit to 50 entries (newest first — caller is expected to pre-sort)
             const limitedArchive = archiveArray.slice(0, 50);
+            const incomingIds = new Set(limitedArchive.map(e => e.id));
 
             await this.db.transaction('rw', this.db.archive, async () => {
-                await this.db.archive.clear();
-                await this.db.archive.bulkAdd(limitedArchive);
+                // Remove entries that are no longer in the incoming set
+                const existingKeys = await this.db.archive.toCollection().primaryKeys();
+                const keysToDelete = existingKeys.filter(k => !incomingIds.has(k));
+                if (keysToDelete.length > 0) {
+                    await this.db.archive.bulkDelete(keysToDelete);
+                }
+                // Upsert all incoming entries
+                await this.db.archive.bulkPut(limitedArchive);
             });
 
             // Update metadata
@@ -254,10 +267,7 @@ class DexieDBManager {
             });
 
             console.log(`Dexie: Saved ${limitedArchive.length} archive entries`);
-            
-            // Broadcast change to other tabs
-            this.broadcastChange('archive_updated', { count: limitedArchive.length });
-            
+            if (!silent) this.broadcastChange('ARCHIVE_UPDATED', { count: limitedArchive.length });
             return true;
         } catch (error) {
             console.error('Dexie: Error saving archive:', error);
@@ -293,17 +303,17 @@ class DexieDBManager {
         }
 
         try {
-            await this.db.archive.add(entry);
-            
-            // Keep only last 50 entries
+            // Trim to 49 entries before inserting so the archive never exceeds 50
             const count = await this.db.archive.count();
-            if (count > 50) {
+            if (count >= 50) {
                 const oldestEntries = await this.db.archive
                     .orderBy('timestamp')
-                    .limit(count - 50)
+                    .limit(count - 49)
                     .primaryKeys();
                 await this.db.archive.bulkDelete(oldestEntries);
             }
+
+            await this.db.archive.add(entry);
 
             return true;
         } catch (error) {
@@ -347,24 +357,28 @@ class DexieDBManager {
     // =================== GROUPS ===================
 
     // Save all groups
-    async saveGroups(groupsObj) {
+    async saveGroups(groupsObj, { silent = false } = {}) {
         if (!this.checkAvailability()) {
             throw new Error('Database not available');
         }
 
         try {
             const groupsArray = Object.values(groupsObj);
-            
+            const incomingKeys = new Set(groupsArray.map(g => g.id));
+
             await this.db.transaction('rw', this.db.groups, async () => {
-                await this.db.groups.clear();
-                await this.db.groups.bulkAdd(groupsArray);
+                // Remove groups that no longer exist in the incoming set
+                const existingKeys = await this.db.groups.toCollection().primaryKeys();
+                const keysToDelete = existingKeys.filter(k => !incomingKeys.has(k));
+                if (keysToDelete.length > 0) {
+                    await this.db.groups.bulkDelete(keysToDelete);
+                }
+                // Upsert all incoming groups
+                await this.db.groups.bulkPut(groupsArray);
             });
 
             console.log(`Dexie: Saved ${groupsArray.length} groups`);
-            
-            // Broadcast change to other tabs
-            this.broadcastChange('groups_updated', { count: groupsArray.length });
-            
+            if (!silent) this.broadcastChange('GROUPS_UPDATED', { count: groupsArray.length });
             return true;
         } catch (error) {
             console.error('Dexie: Error saving groups:', error);
@@ -397,24 +411,28 @@ class DexieDBManager {
     // =================== NOTES ===================
 
     // Save all notes
-    async saveNotes(notesObj) {
+    async saveNotes(notesObj, { silent = false } = {}) {
         if (!this.checkAvailability()) {
             throw new Error('Database not available');
         }
 
         try {
             const notesArray = Object.values(notesObj);
-            
+            const incomingKeys = new Set(notesArray.map(n => n.id));
+
             await this.db.transaction('rw', this.db.notes, async () => {
-                await this.db.notes.clear();
-                await this.db.notes.bulkAdd(notesArray);
+                // Remove notes that no longer exist in the incoming set
+                const existingKeys = await this.db.notes.toCollection().primaryKeys();
+                const keysToDelete = existingKeys.filter(k => !incomingKeys.has(k));
+                if (keysToDelete.length > 0) {
+                    await this.db.notes.bulkDelete(keysToDelete);
+                }
+                // Upsert all incoming notes
+                await this.db.notes.bulkPut(notesArray);
             });
 
             console.log(`Dexie: Saved ${notesArray.length} notes`);
-            
-            // Broadcast change to other tabs
-            this.broadcastChange('notes_updated', { count: notesArray.length });
-            
+            if (!silent) this.broadcastChange('NOTES_UPDATED', { count: notesArray.length });
             return true;
         } catch (error) {
             console.error('Dexie: Error saving notes:', error);
@@ -686,12 +704,13 @@ class DexieDBManager {
         }
 
         try {
-            const allMaterials = await this.db.materials.toArray();
-            const lowerSearch = searchTerm.toLowerCase();
-            
-            return allMaterials.filter(material => 
-                material.name && material.name.toLowerCase().includes(lowerSearch)
-            );
+            if (!searchTerm) {
+                return await this.db.materials.toArray();
+            }
+            return await this.db.materials
+                .where('name')
+                .startsWithIgnoreCase(searchTerm)
+                .toArray();
         } catch (error) {
             console.error('Dexie: Error searching materials:', error);
             throw error;

@@ -23,7 +23,7 @@ class CloudSyncManager {
         this.tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
         
         // Cross-tab sync channel
-        this.cloudSyncChannel = null;
+        this.syncChannel = null;
         
         // Callbacks for UI updates
         this.onRemoteSync = null;
@@ -124,7 +124,7 @@ class CloudSyncManager {
         });
         
         // Broadcast to other tabs so they reload settings
-        this.broadcastCloudSyncEvent('settings_changed', {
+        this.broadcastCloudSyncEvent('SETTINGS_CHANGED', {
             provider: this.settings.provider,
             enabled: this.settings.enabled
         });
@@ -798,11 +798,11 @@ class CloudSyncManager {
     initCrossTabSync() {
         try {
             if ('BroadcastChannel' in window) {
-                this.cloudSyncChannel = new BroadcastChannel('warehouse_cloud_sync');
+                this.syncChannel = new BroadcastChannel('warehouse_app_sync');
                 console.log('CloudSyncManager: BroadcastChannel initialized for cross-tab sync');
                 
                 // Listen for sync messages from other tabs
-                this.cloudSyncChannel.onmessage = (event) => {
+                this.syncChannel.onmessage = (event) => {
                     this.handleCrossTabMessage(event.data);
                 };
             } else {
@@ -814,14 +814,15 @@ class CloudSyncManager {
     }
 
     // Broadcast cloud sync event to other tabs
-    broadcastCloudSyncEvent(type, data = null) {
-        if (this.cloudSyncChannel) {
+    broadcastCloudSyncEvent(type, payload = null) {
+        if (this.syncChannel) {
             try {
-                this.cloudSyncChannel.postMessage({
-                    type: type,
-                    timestamp: Date.now(),
+                this.syncChannel.postMessage({
+                    type,
+                    source: 'cloud',
                     tabId: this.tabId,
-                    data: data
+                    timestamp: Date.now(),
+                    payload
                 });
             } catch (error) {
                 console.warn('CloudSyncManager: Failed to broadcast:', error);
@@ -831,23 +832,26 @@ class CloudSyncManager {
 
     // Handle incoming cross-tab messages
     handleCrossTabMessage(message) {
-        // Ignore messages from our own tab
+        // Ignore messages from our own tab or from other sources (dexie, github)
         if (message.tabId === this.tabId) return;
+        if (message.source !== 'cloud') return;
 
         console.log('CloudSyncManager: Received cross-tab message:', message.type);
 
+        const { payload } = message;
+
         switch (message.type) {
-            case 'cloud_sync_completed':
+            case 'CLOUD_SYNC_COMPLETED':
                 // Another tab completed a cloud sync - refresh our data
-                this.onRemoteSyncCompleted(message.data);
+                this.onRemoteSyncCompleted(payload);
                 break;
 
-            case 'cloud_sync_started':
+            case 'CLOUD_SYNC_STARTED':
                 // Another tab started syncing - show indicator
-                this.onRemoteSyncStarted(message.data);
+                this.onRemoteSyncStarted(payload);
                 break;
 
-            case 'settings_changed':
+            case 'SETTINGS_CHANGED':
                 // Another tab changed settings - reload
                 this.settings = this.loadSettings();
                 this.setupAutoSync();
@@ -944,7 +948,7 @@ class CloudSyncManager {
         const startTime = Date.now();
         
         // Broadcast sync started
-        this.broadcastCloudSyncEvent('cloud_sync_started', {
+        this.broadcastCloudSyncEvent('CLOUD_SYNC_STARTED', {
             direction,
             provider: this.settings.provider
         });
@@ -966,7 +970,7 @@ class CloudSyncManager {
             });
 
             // Broadcast completion to other tabs
-            this.broadcastCloudSyncEvent('cloud_sync_completed', {
+            this.broadcastCloudSyncEvent('CLOUD_SYNC_COMPLETED', {
                 direction,
                 provider: this.settings.provider,
                 timestamp: new Date().toISOString()
