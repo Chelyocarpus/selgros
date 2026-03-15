@@ -5,7 +5,7 @@
 const translations = {
     de: {
         // Header
-        appTitle: 'Lagerbestandswarnsystem',
+        appTitle: 'Bestandskontrolle',
         appSubtitle: 'Überwachen Sie Lagerbestände und erhalten Sie Warnungen bei Kapazitätsproblemen',
         
         // Tabs
@@ -839,7 +839,7 @@ const translations = {
     },
     en: {
         // Header
-        appTitle: 'Warehouse Warning System',
+        appTitle: 'Bestandskontrolle',
         appSubtitle: 'Monitor inventory levels and receive alerts for capacity issues',
         
         // Tabs

@@ -1,4 +1,4 @@
-# Warehouse Early Warning System
+# Bestandskontrolle
 
 A modern, accessible web application for monitoring warehouse inventory levels and receiving alerts for capacity issues.
 
