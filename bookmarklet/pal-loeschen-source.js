@@ -96,9 +96,14 @@
     const start = Date.now();
     const limit = t || 8_000;
     const chk = () => {
-      const el = document.getElementById('__mbox-btn-4') ||
-                 document.querySelector('[id*="mbox"][id$="-btn-4"]');
-      if (el) { cb(el); return; }
+      // SAP UI5 marks the primary dialog action with sapMBtnEmphasized on the inner
+      // span — this is stable regardless of counter value or button order in the DOM.
+      // The offsetParent check ensures we ignore hidden stale dialogs.
+      const inner = document.querySelector(
+        'button[id^="__mbox-btn-"] .sapMBtnEmphasized'
+      );
+      const el = inner?.closest('button[id^="__mbox-btn-"]');
+      if (el?.offsetParent !== null) { cb(el); return; }
       if (Date.now() - start > limit) { cb(null); return; }
       setTimeout(chk, 100);
     };
