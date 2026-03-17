@@ -360,8 +360,10 @@
     // first load and __mbox-btn-37 (or higher) in a longer session.
     const mboxOverlay = document.getElementById('__mbox-overlay');
     const mboxBody    = document.getElementById('__mbox-body');
-    const mboxBtnConfirm = document.getElementById('__mbox-btn-4');
-    const mboxBtnCancel  = document.getElementById('__mbox-btn-5');
+    const mboxBtnConfirm      = document.getElementById('__mbox-btn-4');
+    const mboxBtnConfirmInner = document.getElementById('__mbox-btn-4-inner');
+    const mboxBtnCancel       = document.getElementById('__mbox-btn-5');
+    const mboxBtnCancelInner  = document.getElementById('__mbox-btn-5-inner');
     let   mboxOnConfirm = null;
     let   mboxOnCancel  = null;
     // Counter starts at 2; each showMbox call advances it by 10 to simulate
@@ -371,8 +373,10 @@
     function showMbox(palNr, onConfirm, onCancel) {
       // Advance counter by 10 to mirror SAP's global counter accumulating between dialogs
       mboxCounter += 10;
-      mboxBtnConfirm.id = '__mbox-btn-' + mboxCounter;
-      mboxBtnCancel.id  = '__mbox-btn-' + (mboxCounter + 1);
+      mboxBtnConfirm.id      = '__mbox-btn-' + mboxCounter;
+      mboxBtnConfirmInner.id = '__mbox-btn-' + mboxCounter + '-inner';
+      mboxBtnCancel.id       = '__mbox-btn-' + (mboxCounter + 1);
+      mboxBtnCancelInner.id  = '__mbox-btn-' + (mboxCounter + 1) + '-inner';
       mboxBody.textContent = 'Palette ' + palNr + ' wirklich löschen?';
       mboxOnConfirm = onConfirm;
       mboxOnCancel  = onCancel;

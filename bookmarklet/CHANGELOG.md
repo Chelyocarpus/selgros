@@ -5,6 +5,12 @@ All notable changes to BV Bookmarklets are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5] - 2026-03-17
+
+### Fixed
+- PAL löschen test page: `showMbox` now also updates the inner `<span>` IDs (e.g. `__mbox-btn-12-inner`) alongside the outer `<button>` IDs, eliminating duplicate IDs across consecutive dialogs and better mirroring real SAP UI5 DOM structure.
+- PAL löschen: `waitForMbox` visibility check replaced `offsetParent !== null` with `getClientRects().length > 0`, which correctly detects fixed-position elements as visible (unlike `offsetParent` which is `null` for `position:fixed` regardless of visibility).
+
 ## [1.3.4] - 2026-03-17
 
 ### Fixed

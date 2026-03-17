@@ -96,14 +96,16 @@
     const start = Date.now();
     const limit = t || 8_000;
     const chk = () => {
-      // SAP UI5 marks the primary dialog action with sapMBtnEmphasized on the inner
-      // span — this is stable regardless of counter value or button order in the DOM.
-      // The offsetParent check ensures we ignore hidden stale dialogs.
-      const inner = document.querySelector(
-        'button[id^="__mbox-btn-"] .sapMBtnEmphasized'
-      );
-      const el = inner?.closest('button[id^="__mbox-btn-"]');
-      if (el?.offsetParent !== null) { cb(el); return; }
+      // SAP UI5 assigns an incrementing global element counter to dialog buttons,
+      // producing IDs like __mbox-btn-4 on a fresh page and __mbox-btn-37 (or higher)
+      // after other UI elements have been created. Match by prefix, not exact ID.
+      // getClientRects().length > 0 is a robust visibility check: it returns an
+      // empty array for elements in display:none subtrees while still returning
+      // a rect for fixed-position elements, unlike offsetParent which is null
+      // for fixed elements even when they are fully visible.
+      const el = [...document.querySelectorAll('button[id^="__mbox-btn-"]')]
+                   .find(b => b.getClientRects().length > 0);
+      if (el) { cb(el); return; }
       if (Date.now() - start > limit) { cb(null); return; }
       setTimeout(chk, 100);
     };
