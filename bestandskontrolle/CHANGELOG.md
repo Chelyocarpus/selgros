@@ -5,6 +5,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-03-15
+
+### Performance
+
+- **Dexie schema v2 with compound indexes** (`js/dixie-db-manager.js`): Added a Dexie version 2 schema definition (v1 is preserved for existing databases to upgrade from). Three compound indexes are created automatically without data migration: `[group+capacity]` and `[group+updatedAt]` on `materials` replace client-side `.filter()` sorting when querying materials within a group; `[materialCode+createdAt]` on `notes` enables `getNotesByMaterial` to return notes pre-sorted by recency via an index range scan instead of a full-table scan + client sort. A standalone `updatedAt` index is also added to `groups` for sync staleness checks. Two new helper methods are exposed: `getMaterialsByGroupSortedByCapacity(groupId)` (uses `[group+capacity]` descending) and the updated `getNotesByMaterial(materialCode)` (now uses the compound index with `.reverse()`, returns newest-first).
+
+- **Per-type cache TTL differentiation** (`js/github-projects-db-manager.js`): Replaced the single flat `cache.ttl = 5 min` with a `cacheTTLs` map that assigns TTLs based on data hotness: `materials` and `groups` stay at 5 min (edited frequently), `notes` at 10 min, `archive` at 15 min (append-only), `alertRules` and `storageTypes` at 30 min (cold config data), and `projectItems` at 2 min (raw API list). A `getCacheTTL(type)` helper encapsulates the lookup with a fallback to `cache.ttl`. Both `isCacheValid` and `getProjectItemsCached` now call `getCacheTTL` instead of using the old hardcoded constants. `getCacheItemStatus` also uses per-type TTL for accurate `expiresIn` reporting.
+
+- **Batched `saveGroups` in GitHub custom-fields mode** (`js/github-projects-db-manager.js`): The previous implementation iterated groups with sequential `await` calls — one API round-trip per create/update/delete. Replaced with a three-phase batch strategy: Phase 1 categorises all operations without touching the API; Phase 2 executes creates via `Promise.all` and syncs new-group fields in parallel; Phase 3 executes updates via `Promise.all`; Phase 4 executes deletes via `Promise.all`. A `flushOperationQueue()` call at the end ensures any batched mutations are committed before the method returns. For N groups this reduces sequential round-trips from O(N) to O(4) phases.
+
+- **`syncGroupToProjectFields` uses batch field updates** (`js/github-projects-db-manager.js`): The method previously called `updateItemFieldValue` once per field in a `for` loop (4 sequential API calls per group). It now collects all field-update descriptors into an array and calls `batchUpdateItemFields` once, reducing 4 sequential GraphQL mutations to a single batched request. Matches the existing pattern used by `syncMaterialToProjectFields`.
+
+### Fixed
+
+- **`addArchiveEntry` TOCTOU race condition** (`js/dixie-db-manager.js`): The count check, oldest-entry delete, and new entry insert were three separate IndexedDB operations. Two concurrent calls could both read the same count (e.g. 50), each delete one entry, then each insert — leaving the archive at 50 but losing an entry. All three operations are now executed inside a single `db.transaction('rw', ...)` so only one caller can mutate the table at a time.
+
+- **Server-reported rate-limit respected in `checkRateLimit`** (`js/github-projects-db-manager.js`): The rate limiter only checked the client-side request counter; the `x-ratelimit-remaining` header value (stored in `rateLimiter.remaining` by `updateRateLimit`) was never consulted. After a burst the server can report exhaustion before the local window counter catches up. `checkRateLimit` now throws immediately when `remaining <= 0`, reporting how many seconds until the reset window (derived from `rateLimiter.resetTime`).
+
+- **`addNote` fire-and-forget save** (`js/data-manager.js`): `addNote` called `this.saveNotes()` without `await` and without returning the Promise, so callers could not detect a failed save and the note might appear in the UI before it was persisted. The method is now `async` and `await`s `saveNotes()`.
+
+- **`importMaterialsFromCSV` / `importMaterialsFromJSON` fire-and-forget saves** (`js/data-manager.js`): Both methods called `this.saveMaterials()` without `await`, returning a sync success result before the data was actually written. Both are now `async` and `await` the save; callers that did not previously await them now receive a `Promise` that resolves to the same `{ success, imported, errors }` shape.
+
+- **`bulkUpdateMaterials` fire-and-forget save** (`js/data-manager.js`): Same pattern as above — now `async` and `await`s `this.saveMaterials()`.
+
+- **`importData` fire-and-forget saves** (`js/data-manager.js`): The lightweight `importData` method called `saveMaterials()` and `saveArchive()` without `await`, returning `{ success: true }` before either write completed. Now `async`; both save Promises are collected and awaited via `Promise.all` before the success result is returned.
+
+- **`undo` / `redo` swallowed save errors** (`js/data-manager.js`): All six `saveMaterials()` calls inside `undo` (ADD, DELETE, EDIT, BULK_IMPORT, BULK_UPDATE, BULK_DELETE) and the same six inside `redo` were fire-and-forget. A failed persistence attempt returned `{ success: true }` to the caller. All calls now attach a `.catch(e => console.error(...))` handler so failures surface in the console instead of being silently discarded. The methods remain synchronous (callers read `.success` immediately) since making them `async` would require updating the entire call chain.
+
+- **`addToArchive` silent save failure** (`js/data-manager.js`): `this.saveArchive()` was called without a `.catch()` handler. Persistence failures (quota exceeded, Dexie error) were invisible. A `.catch(e => console.error(...))` is now attached; the method remains synchronous by design since callers receive the in-memory entry immediately for display.
+
+---
+
 ## [3.4.7] - 2026-03-15
 
 ### Changed

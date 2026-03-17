@@ -1081,7 +1081,10 @@ class DataManager {
         };
 
         this.archive.unshift(archiveEntry); // Add to beginning
-        this.saveArchive();
+        // saveArchive is async; fire-and-forget here is intentional (caller receives
+        // the entry immediately for in-memory display). Errors are logged rather than
+        // silently swallowed.
+        this.saveArchive().catch(e => console.error('DataManager: Failed to persist archive entry:', e));
         return archiveEntry; // Return entry so caller can track the ID
     }
 
@@ -1131,24 +1134,29 @@ class DataManager {
     }
 
     // Import data from JSON
-    importData(data) {
+    async importData(data) {
         try {
             // Validate data structure
             if (!data || typeof data !== 'object') {
                 throw new Error('Invalid data format');
             }
 
+            const saves = [];
+
             // Import materials if present
             if (data.materials) {
                 this.materials = data.materials;
-                this.saveMaterials();
+                saves.push(this.saveMaterials());
             }
 
             // Import archive if present
             if (data.archive && Array.isArray(data.archive)) {
                 this.archive = data.archive;
-                this.saveArchive();
+                saves.push(this.saveArchive());
             }
+
+            // Await all saves before reporting success
+            await Promise.all(saves);
 
             return {
                 success: true,
@@ -1308,19 +1316,19 @@ class DataManager {
             switch (action.type) {
                 case 'ADD_MATERIAL':
                     delete this.materials[action.data.code];
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: undo save failed:', e));
                     result = { success: true, message: `Material ${action.data.code} removed` };
                     break;
                     
                 case 'DELETE_MATERIAL':
                     this.materials[action.data.code] = action.data;
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: undo save failed:', e));
                     result = { success: true, message: `Material ${action.data.code} restored` };
                     break;
                     
                 case 'EDIT_MATERIAL':
                     this.materials[action.data.oldData.code] = action.data.oldData;
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: undo save failed:', e));
                     result = { success: true, message: `Material ${action.data.oldData.code} reverted` };
                     break;
                     
@@ -1329,7 +1337,7 @@ class DataManager {
                     action.data.imported.forEach(code => {
                         delete this.materials[code];
                     });
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: undo save failed:', e));
                     result = { success: true, message: `Bulk import of ${action.data.imported.length} materials undone` };
                     break;
                     
@@ -1338,7 +1346,7 @@ class DataManager {
                     action.data.oldStates.forEach(({ code, oldData }) => {
                         this.materials[code] = oldData;
                     });
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: undo save failed:', e));
                     result = { success: true, message: `Bulk update of ${action.data.oldStates.length} materials undone` };
                     break;
                     
@@ -1347,7 +1355,7 @@ class DataManager {
                     action.data.materials.forEach(material => {
                         this.materials[material.code] = material;
                     });
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: undo save failed:', e));
                     result = { success: true, message: `Bulk delete of ${action.data.materials.length} materials undone` };
                     break;
             }
@@ -1373,19 +1381,19 @@ class DataManager {
             switch (action.type) {
                 case 'ADD_MATERIAL':
                     this.materials[action.data.code] = action.data;
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: redo save failed:', e));
                     result = { success: true, message: `Material ${action.data.code} re-added` };
                     break;
                     
                 case 'DELETE_MATERIAL':
                     delete this.materials[action.data.code];
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: redo save failed:', e));
                     result = { success: true, message: `Material ${action.data.code} re-deleted` };
                     break;
                     
                 case 'EDIT_MATERIAL':
                     this.materials[action.data.newData.code] = action.data.newData;
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: redo save failed:', e));
                     result = { success: true, message: `Material ${action.data.newData.code} re-edited` };
                     break;
                     
@@ -1394,7 +1402,7 @@ class DataManager {
                     action.data.materials.forEach(material => {
                         this.materials[material.code] = material;
                     });
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: redo save failed:', e));
                     result = { success: true, message: `Bulk import of ${action.data.materials.length} materials redone` };
                     break;
                     
@@ -1403,7 +1411,7 @@ class DataManager {
                     action.data.materials.forEach(material => {
                         this.materials[material.code] = material;
                     });
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: redo save failed:', e));
                     result = { success: true, message: `Bulk update of ${action.data.materials.length} materials redone` };
                     break;
                     
@@ -1412,7 +1420,7 @@ class DataManager {
                     action.data.materials.forEach(material => {
                         delete this.materials[material.code];
                     });
-                    this.saveMaterials();
+                    this.saveMaterials().catch(e => console.error('DataManager: redo save failed:', e));
                     result = { success: true, message: `Bulk delete of ${action.data.materials.length} materials redone` };
                     break;
             }
@@ -1551,7 +1559,7 @@ class DataManager {
     }
 
     // Import materials from CSV content
-    importMaterialsFromCSV(csvContent) {
+    async importMaterialsFromCSV(csvContent) {
         try {
             const lines = csvContent.trim().split('\n');
             if (lines.length < 2) {
@@ -1603,7 +1611,7 @@ class DataManager {
             });
 
             if (imported.length > 0) {
-                this.saveMaterials();
+                await this.saveMaterials();
                 
                 // Add to history for undo
                 this.addToHistory({
@@ -1630,7 +1638,7 @@ class DataManager {
     }
 
     // Import materials from JSON (batch)
-    importMaterialsFromJSON(jsonContent) {
+    async importMaterialsFromJSON(jsonContent) {
         try {
             const data = typeof jsonContent === 'string' ? JSON.parse(jsonContent) : jsonContent;
             const materialsArray = Array.isArray(data) ? data : [data];
@@ -1668,7 +1676,7 @@ class DataManager {
             });
 
             if (imported.length > 0) {
-                this.saveMaterials();
+                await this.saveMaterials();
                 
                 this.addToHistory({
                     type: 'BULK_IMPORT',
@@ -1694,7 +1702,7 @@ class DataManager {
     }
 
     // Bulk update materials
-    bulkUpdateMaterials(materialCodes, updates) {
+    async bulkUpdateMaterials(materialCodes, updates) {
         try {
             const updatedMaterials = [];
             const oldStates = [];
@@ -1731,7 +1739,7 @@ class DataManager {
             });
 
             if (updatedMaterials.length > 0) {
-                this.saveMaterials();
+                await this.saveMaterials();
                 
                 // Add to history
                 this.addToHistory({
@@ -2005,7 +2013,7 @@ class DataManager {
     // =================== USER NOTES ===================
 
     // Add note (can be material-specific or general)
-    addNote(materialCode, content) {
+    async addNote(materialCode, content) {
         const noteId = 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
         
         const note = {
@@ -2017,7 +2025,7 @@ class DataManager {
         };
         
         this.notes[noteId] = note;
-        this.saveNotes();
+        await this.saveNotes();
         return noteId;
     }
 

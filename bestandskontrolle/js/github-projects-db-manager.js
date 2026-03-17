@@ -40,7 +40,20 @@ class GitHubProjectsDBManager {
             storageTypes: null,
             projectItems: null, // Cache for all project items
             lastFetch: {},
-            ttl: 5 * 60 * 1000 // 5 minutes cache TTL
+            ttl: 5 * 60 * 1000 // default/fallback TTL (5 min)
+        };
+
+        // Per-type cache TTLs: hot data expires quickly; cold config data lives longer.
+        // This reduces unnecessary API calls for rarely-changing collections while
+        // keeping frequently-edited data (materials, groups) fresh.
+        this.cacheTTLs = {
+            materials:    5  * 60 * 1000, // 5 min  — hot, edited frequently
+            groups:       5  * 60 * 1000, // 5 min  — hot, edited frequently
+            notes:        10 * 60 * 1000, // 10 min — moderately active
+            archive:      15 * 60 * 1000, // 15 min — append-only, changes rarely
+            alertRules:   30 * 60 * 1000, // 30 min — cold config data
+            storageTypes: 30 * 60 * 1000, // 30 min — cold config data
+            projectItems:  2 * 60 * 1000  //  2 min — raw item list expires fast
         };
         
         // Sync state
@@ -265,6 +278,16 @@ class GitHubProjectsDBManager {
         
         if (this.rateLimiter.requests.length >= this.rateLimiter.maxRequests) {
             throw new Error('GitHub API rate limit exceeded. Please wait before making more requests.');
+        }
+
+        // Also honour the server-reported remaining count from x-ratelimit-remaining
+        // headers. After a burst the server may report exhaustion before our local
+        // request counter reaches maxRequests.
+        if (this.rateLimiter.remaining !== null && this.rateLimiter.remaining <= 0) {
+            const resetIn = this.rateLimiter.resetTime
+                ? Math.max(0, Math.ceil((this.rateLimiter.resetTime - now) / 1000))
+                : 60;
+            throw new Error(`GitHub API rate limit exhausted (server report). Resets in ~${resetIn}s.`);
         }
         
         this.rateLimiter.requests.push(now);
@@ -1657,44 +1680,76 @@ class GitHubProjectsDBManager {
                     }
                 });
                 
-                // Create/update each group — only sync fields for new or changed items
+                // Phase 1: Categorise all operations before executing them so we can
+                // batch creates, updates, and deletes with Promise.all instead of
+                // serialising them one-by-one in a loop.
                 let gCreated = 0, gUpdated = 0, gSkipped = 0;
-                
+                const createOps = [];
+                const updateOps = [];
+                const deleteOps = [];
+
                 for (const [id, group] of Object.entries(groupsObj)) {
                     const title = `group_${id}`;
                     const body = JSON.stringify(group, null, 2);
-                    
-                    let itemId;
+
                     if (existingMap[id]) {
                         const existingBody = existingMap[id].content?.body;
                         if (existingBody === body) {
                             gSkipped++;
                             continue;
                         }
-                        
-                        // Update existing — body-only (1 API call, fields are cosmetic)
-                        await this.updateProjectItem(existingMap[id].content.id, title, body);
-                        gUpdated++;
+                        updateOps.push({ id, group, title, body });
                     } else {
-                        // Create new
-                        const result = await this.createProjectItem(title, body);
-                        itemId = result.id;
-                        gCreated++;
-                        
-                        // Sync custom fields only on creation (for GitHub Projects board display)
-                        await this.syncGroupToProjectFields(itemId, group);
+                        createOps.push({ id, group, title, body });
                     }
                 }
-                
-                console.log(`GitHubProjects: Groups synced — ${gCreated} created, ${gUpdated} updated, ${gSkipped} unchanged`);
-                
-                // Delete groups that no longer exist
+
                 for (const [id, item] of Object.entries(existingMap)) {
                     if (!groupsObj[id]) {
-                        await this.deleteProjectItem(item.id);
-                        console.log(`GitHubProjects: Deleted group ${id}`);
+                        deleteOps.push({ id, item });
                     }
                 }
+
+                // Phase 2: Execute creates in batch
+                if (createOps.length > 0) {
+                    console.log(`GitHubProjects: Batching ${createOps.length} group creates`);
+                    const createResults = await Promise.all(
+                        createOps.map(op =>
+                            this.createProjectItem(op.title, op.body)
+                                .then(result => ({ ...op, itemId: result.id }))
+                        )
+                    );
+                    gCreated = createResults.length;
+                    // Sync custom fields for newly created groups in parallel
+                    await Promise.all(
+                        createResults.map(r => this.syncGroupToProjectFields(r.itemId, r.group))
+                    );
+                }
+
+                // Phase 3: Execute updates in batch (body-only — fields are cosmetic)
+                if (updateOps.length > 0) {
+                    console.log(`GitHubProjects: Batching ${updateOps.length} group updates`);
+                    await Promise.all(
+                        updateOps.map(op =>
+                            this.updateProjectItem(existingMap[op.id].content.id, op.title, op.body)
+                        )
+                    );
+                    gUpdated = updateOps.length;
+                }
+
+                // Phase 4: Execute deletes in batch
+                if (deleteOps.length > 0) {
+                    console.log(`GitHubProjects: Batching ${deleteOps.length} group deletes`);
+                    await Promise.all(
+                        deleteOps.map(op => this.deleteProjectItem(op.item.id))
+                    );
+                    console.log(`GitHubProjects: Deleted groups: ${deleteOps.map(op => op.id).join(', ')}`);
+                }
+
+                // Phase 5: Flush any remaining queued batch operations
+                await this.flushOperationQueue();
+
+                console.log(`GitHubProjects: Groups synced — ${gCreated} created, ${gUpdated} updated, ${gSkipped} unchanged`);
             } else {
                 // LEGACY MODE: Save all groups as one JSON item
                 const serialized = this.serializeData('groups', groupsObj);
@@ -1733,16 +1788,17 @@ class GitHubProjectsDBManager {
                 { prop: 'color', fieldName: 'Color', value: { text: group.color || '' } }
             ];
             
-            // Update each field if it exists in the project
+            // Build batch of field updates and execute in one request
+            const fieldUpdates = [];
             for (const mapping of fieldMappings) {
                 const field = fields[mapping.fieldName];
                 if (field) {
-                    try {
-                        await this.updateItemFieldValue(itemId, field.id, mapping.value);
-                    } catch (error) {
-                        console.warn(`GitHubProjects: Could not update field "${mapping.fieldName}":`, error.message);
-                    }
+                    fieldUpdates.push({ fieldId: field.id, value: mapping.value });
                 }
+            }
+
+            if (fieldUpdates.length > 0) {
+                await this.batchUpdateItemFields(itemId, fieldUpdates);
             }
             
             console.log(`GitHubProjects: Synced group ${group.name} to project fields`);
@@ -2032,13 +2088,12 @@ class GitHubProjectsDBManager {
 
     // Cached version of getProjectItems for better performance
     async getProjectItemsCached() {
-        // Cache project items for 2 minutes to avoid repeated API calls
         const cacheKey = 'projectItems';
         const now = Date.now();
         
         if (this.cache[cacheKey] && 
             this.cache.lastFetch[cacheKey] && 
-            (now - this.cache.lastFetch[cacheKey]) < (2 * 60 * 1000)) {
+            (now - this.cache.lastFetch[cacheKey]) < this.getCacheTTL(cacheKey)) {
             return this.cache[cacheKey];
         }
         
@@ -2059,6 +2114,14 @@ class GitHubProjectsDBManager {
     }
     
     // =================== CACHE MANAGEMENT ===================
+
+    /**
+     * Returns the TTL in milliseconds for the given cache type.
+     * Falls back to the global default TTL for unknown types.
+     */
+    getCacheTTL(type) {
+        return this.cacheTTLs[type] ?? this.cache.ttl;
+    }
     
     isCacheValid(type) {
         if (!this.config.cacheEnabled) {
@@ -2070,8 +2133,8 @@ class GitHubProjectsDBManager {
             return false;
         }
         
-        const age = Date.now() - lastFetch;
-        return age < this.cache.ttl;
+        const ttl = this.getCacheTTL(type);
+        return (Date.now() - lastFetch) < ttl;
     }
     
     clearCache(type = null) {
@@ -2109,14 +2172,15 @@ class GitHubProjectsDBManager {
             return { cached: false, age: 0 };
         }
         
+        const ttl = this.getCacheTTL(type);
         const age = now - lastFetch;
-        const valid = age < this.cache.ttl;
+        const valid = age < ttl;
         
         return {
             cached: !!this.cache[type],
             valid,
             age,
-            expiresIn: valid ? this.cache.ttl - age : 0
+            expiresIn: valid ? ttl - age : 0
         };
     }
     

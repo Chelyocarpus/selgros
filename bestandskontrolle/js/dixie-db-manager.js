@@ -73,12 +73,29 @@ class DexieDBManager {
             // Create database instance
             this.db = new Dexie(this.dbName);
 
-            // Define schema (version 1)
+            // Define schema (version 1) — kept for upgrade path from existing databases
             this.db.version(1).stores({
                 materials: 'code, name, capacity, group, updatedAt',
                 archive: 'id, timestamp',
                 groups: 'id, name',
                 notes: 'id, materialCode, createdAt',
+                alertRules: 'key',
+                storageTypes: 'key',
+                metadata: 'key'
+            });
+
+            // Version 2: Add compound indexes for common query patterns.
+            // Dexie handles the upgrade automatically — no data migration needed
+            // because we are only adding new indexes, not changing existing ones.
+            //   [group+capacity]   — getMaterialsByGroup sorted by capacity
+            //   [group+updatedAt]  — getMaterialsByGroup sorted by recency
+            //   [materialCode+createdAt] — getNotesByMaterial chronologically ordered
+            //   groups.updatedAt   — detect group staleness during sync
+            this.db.version(2).stores({
+                materials: 'code, name, capacity, group, updatedAt, [group+capacity], [group+updatedAt]',
+                archive: 'id, timestamp',
+                groups: 'id, name, updatedAt',
+                notes: 'id, materialCode, createdAt, [materialCode+createdAt]',
                 alertRules: 'key',
                 storageTypes: 'key',
                 metadata: 'key'
@@ -296,24 +313,26 @@ class DexieDBManager {
         }
     }
 
-    // Add single archive entry
+    // Add single archive entry — capped at 50 entries, atomic via transaction
     async addArchiveEntry(entry) {
         if (!this.checkAvailability()) {
             throw new Error('Database not available');
         }
 
         try {
-            // Trim to 49 entries before inserting so the archive never exceeds 50
-            const count = await this.db.archive.count();
-            if (count >= 50) {
-                const oldestEntries = await this.db.archive
-                    .orderBy('timestamp')
-                    .limit(count - 49)
-                    .primaryKeys();
-                await this.db.archive.bulkDelete(oldestEntries);
-            }
-
-            await this.db.archive.add(entry);
+            await this.db.transaction('rw', this.db.archive, async () => {
+                // Read count inside the transaction to avoid TOCTOU race between
+                // two concurrent addArchiveEntry calls.
+                const count = await this.db.archive.count();
+                if (count >= 50) {
+                    const oldestEntries = await this.db.archive
+                        .orderBy('timestamp')
+                        .limit(count - 49)
+                        .primaryKeys();
+                    await this.db.archive.bulkDelete(oldestEntries);
+                }
+                await this.db.archive.add(entry);
+            });
 
             return true;
         } catch (error) {
@@ -659,40 +678,66 @@ class DexieDBManager {
         }
     }
 
-    // Query materials by group
+    // Query materials by group using the dedicated group index
     async getMaterialsByGroup(groupId) {
         if (!this.checkAvailability()) {
             throw new Error('Database not available');
         }
 
         try {
-            const materials = await this.db.materials
+            return await this.db.materials
                 .where('group')
                 .equals(groupId)
                 .toArray();
-            
-            return materials;
         } catch (error) {
             console.error('Dexie: Error getting materials by group:', error);
             throw error;
         }
     }
 
-    // Query notes by material
+    // Query notes by material, sorted newest-first using the compound index
     async getNotesByMaterial(materialCode) {
         if (!this.checkAvailability()) {
             throw new Error('Database not available');
         }
 
         try {
+            // Use the [materialCode+createdAt] compound index (added in schema v2)
+            // to retrieve notes for this material in chronological order without
+            // a client-side sort — O(log N) lookup instead of full-table scan.
             const notes = await this.db.notes
-                .where('materialCode')
-                .equals(materialCode)
+                .where('[materialCode+createdAt]')
+                .between(
+                    [materialCode, Dexie.minKey],
+                    [materialCode, Dexie.maxKey]
+                )
+                .reverse() // newest first
                 .toArray();
-            
+
             return notes;
         } catch (error) {
             console.error('Dexie: Error getting notes by material:', error);
+            throw error;
+        }
+    }
+
+    // Query materials by group sorted by capacity (descending) using compound index
+    async getMaterialsByGroupSortedByCapacity(groupId) {
+        if (!this.checkAvailability()) {
+            throw new Error('Database not available');
+        }
+
+        try {
+            return await this.db.materials
+                .where('[group+capacity]')
+                .between(
+                    [groupId, Dexie.minKey],
+                    [groupId, Dexie.maxKey]
+                )
+                .reverse() // highest capacity first
+                .toArray();
+        } catch (error) {
+            console.error('Dexie: Error getting materials by group (sorted by capacity):', error);
             throw error;
         }
     }
