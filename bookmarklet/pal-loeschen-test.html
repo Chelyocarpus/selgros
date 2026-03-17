@@ -225,13 +225,7 @@
     }
     .pill:hover { background: #f0f0f0; }
     .pill.active { background: #bb0000; color: #fff; border-color: #bb0000; }
-    .test-helper label { font-size: 12px; color: #32363a; margin-right: 4px; }
-    .test-helper select {
-      border: 1px solid #89919a;
-      border-radius: 4px;
-      padding: 2px 6px;
-      font-size: 12px;
-    }
+
   </style>
 </head>
 <body>
@@ -253,11 +247,11 @@
         Soll die Palette gel&ouml;scht werden?
       </div>
       <div class="mbox-footer">
+        <button class="sapMBtn" id="__mbox-btn-4">
+          <span class="sapMBtnInner sapMBtnReject sapMBtnEmphasized" id="__mbox-btn-4-inner">L&ouml;schen</span>
+        </button>
         <button class="sapMBtn" id="__mbox-btn-5">
           <span class="sapMBtnInner sapMBtnDefault" id="__mbox-btn-5-inner">Abbrechen</span>
-        </button>
-        <button class="sapMBtn" id="__mbox-btn-4">
-          <span class="sapMBtnInner sapMBtnReject" id="__mbox-btn-4-inner">L&ouml;schen</span>
         </button>
       </div>
     </div>
@@ -307,14 +301,7 @@
       <button class="pill" data-pal="999999">999999</button>
       <button class="pill" data-pal="001191001">001191001 (skip)</button>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <label for="sim-mode">Dialog-Simulation:</label>
-      <select id="sim-mode">
-        <option value="confirm">Dialog erscheint &rarr; Best&auml;tigen</option>
-        <option value="timeout">Dialog erscheint nicht (Timeout-Test)</option>
-        <option value="reject">Dialog erscheint &rarr; Abbrechen geklickt</option>
-      </select>
-    </div>
+
   </div>
 
   <div id="log">
@@ -368,32 +355,50 @@
     }
 
     // ── MessageBox mock ─────────────────────────────────────────────────────
+    // Simulate real SAP UI5 behaviour: the global element counter advances with
+    // every UI creation, so MessageBox buttons get IDs like __mbox-btn-4 on the
+    // first load and __mbox-btn-37 (or higher) in a longer session.
     const mboxOverlay = document.getElementById('__mbox-overlay');
     const mboxBody    = document.getElementById('__mbox-body');
+    const mboxBtnConfirm      = document.getElementById('__mbox-btn-4');
+    const mboxBtnConfirmInner = document.getElementById('__mbox-btn-4-inner');
+    const mboxBtnCancel       = document.getElementById('__mbox-btn-5');
+    const mboxBtnCancelInner  = document.getElementById('__mbox-btn-5-inner');
     let   mboxOnConfirm = null;
     let   mboxOnCancel  = null;
+    // Counter starts at 2; each showMbox call advances it by 10 to simulate
+    // the SAP global counter accumulating across other UI events.
+    let   mboxCounter   = 2;
 
     function showMbox(palNr, onConfirm, onCancel) {
+      // Advance counter by 10 to mirror SAP's global counter accumulating between dialogs
+      mboxCounter += 10;
+      mboxBtnConfirm.id      = '__mbox-btn-' + mboxCounter;
+      mboxBtnConfirmInner.id = '__mbox-btn-' + mboxCounter + '-inner';
+      mboxBtnCancel.id       = '__mbox-btn-' + (mboxCounter + 1);
+      mboxBtnCancelInner.id  = '__mbox-btn-' + (mboxCounter + 1) + '-inner';
       mboxBody.textContent = 'Palette ' + palNr + ' wirklich löschen?';
       mboxOnConfirm = onConfirm;
       mboxOnCancel  = onCancel;
       mboxOverlay.classList.add('visible');
-      setStatus('dialog', 'Dialog offen');
-      log('info', '[mbox] Bestätigungsdialog für Palette ' + palNr + ' angezeigt.');
+      setStatus('dialog', 'Dialog offen (__mbox-btn-' + mboxCounter + ')');
+      log('info', '[mbox] Buttons __mbox-btn-' + mboxCounter + ' / __mbox-btn-' + (mboxCounter + 1) + ' für Palette ' + palNr + ' angezeigt.');
     }
 
     function hideMbox() {
       mboxOverlay.classList.remove('visible');
     }
 
-    document.getElementById('__mbox-btn-4').addEventListener('click', function () {
-      log('ok', '[mbox] Löschen bestätigt (btn-4).');
+    // Listeners are kept on the element references — they stay active even after
+    // the IDs are reassigned on each dialog invocation.
+    mboxBtnConfirm.addEventListener('click', function () {
+      log('ok', '[mbox] Löschen bestätigt (' + mboxBtnConfirm.id + ').');
       hideMbox();
       if (mboxOnConfirm) mboxOnConfirm();
     });
 
-    document.getElementById('__mbox-btn-5').addEventListener('click', function () {
-      log('warn', '[mbox] Abbrechen gedrückt (btn-5).');
+    mboxBtnCancel.addEventListener('click', function () {
+      log('warn', '[mbox] Abbrechen gedrückt (' + mboxBtnCancel.id + ').');
       hideMbox();
       setStatus('ready', 'Bereit');
       if (mboxOnCancel) mboxOnCancel();
@@ -448,41 +453,30 @@
     };
 
     // ── Submit handler ──────────────────────────────────────────────────────
-    const palInput  = document.getElementById('__jsview2--oInputPalPage4-inner');
-    const simSelect = document.getElementById('sim-mode');
+    const palInput = document.getElementById('__jsview2--oInputPalPage4-inner');
 
     function handleSubmit() {
-      const pal  = palInput.value.trim();
-      const mode = simSelect.value;
-
+      const pal = palInput.value.trim();
       if (!pal) {
         log('err', 'Submit: Palettennummer ist leer.');
         return;
       }
-
-      log('info', 'Submit: Palette "' + pal + '" eingereicht (Modus: ' + mode + ').');
+      log('info', 'Submit: Palette "' + pal + '" eingereicht.');
       setStatus('busy', 'Warte auf Dialog…');
-
-      if (mode === 'timeout') {
-        // Dialog never appears — bookmarklet will hit its 8 s timeout
-        log('warn', '[sim] Dialog wird NICHT angezeigt (Timeout-Test).');
-        return;
-      }
-
-      // Simulate a short network delay before the dialog appears
+      // Simulate SAP network latency before the confirmation dialog appears
       setTimeout(function () {
         showMbox(pal,
-          /* onConfirm */ function () {
+          function () {
             log('info', '[sim] SAP verarbeitet Löschung…');
             showBusy(BUSY_DURATION, function () {
               log('ok', 'Palette ' + pal + ' gelöscht.');
             });
           },
-          /* onCancel */ function () {
+          function () {
             log('warn', '[sim] Löschung abgebrochen.');
           }
         );
-      }, mode === 'reject' ? 300 : 400);
+      }, 400);
     }
 
     registerInput(

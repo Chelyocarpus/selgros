@@ -5,6 +5,19 @@ All notable changes to BV Bookmarklets are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5] - 2026-03-17
+
+### Fixed
+- PAL löschen test page: `showMbox` now also updates the inner `<span>` IDs (e.g. `__mbox-btn-12-inner`) alongside the outer `<button>` IDs, eliminating duplicate IDs across consecutive dialogs and better mirroring real SAP UI5 DOM structure.
+- PAL löschen: `waitForMbox` visibility check replaced `offsetParent !== null` with `getClientRects().length > 0`, which correctly detects fixed-position elements as visible (unlike `offsetParent` which is `null` for `position:fixed` regardless of visibility).
+
+## [1.3.4] - 2026-03-17
+
+### Fixed
+- PAL löschen: `waitForMbox` now only matches a **visible** `__mbox-btn-N` button (`offsetParent !== null`), preventing it from clicking stale hidden buttons from a previous dialog before the new confirmation dialog has appeared. The root cause was that `button[id^="__mbox-btn-"]` matched buttons inside the collapsed `display:none` overlay at the 200 ms poll point, 200 ms before the dialog's 400 ms appearance delay.
+- PAL löschen: `waitForMbox` now selects the correct button regardless of the counter value in the ID (e.g. `__mbox-btn-37`), replacing the previous hard-coded `__mbox-btn-4` exact match.
+- PAL löschen test page now simulates the real SAP behaviour by advancing the button ID counter by 10 on each dialog invocation (e.g. `__mbox-btn-12`, `__mbox-btn-22`, …)
+
 ## [1.3.3] - 2026-03-14
 
 ### Changed
