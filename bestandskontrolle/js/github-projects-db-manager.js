@@ -1713,15 +1713,21 @@ class GitHubProjectsDBManager {
                 // Phase 2: Execute creates in batch
                 if (createOps.length > 0) {
                     console.log(`GitHubProjects: Batching ${createOps.length} group creates`);
-                    const createResults = await Promise.all(
+                    const createSettled = await Promise.allSettled(
                         createOps.map(op =>
                             this.createProjectItem(op.title, op.body)
                                 .then(result => ({ ...op, itemId: result.id }))
                         )
                     );
+                    const createResults = createSettled
+                        .filter(r => r.status === 'fulfilled')
+                        .map(r => r.value);
+                    createSettled
+                        .filter(r => r.status === 'rejected')
+                        .forEach((r, i) => console.error(`GitHubProjects: Failed to create group "${createOps[i].id}":`, r.reason));
                     gCreated = createResults.length;
                     // Sync custom fields for newly created groups in parallel
-                    await Promise.all(
+                    await Promise.allSettled(
                         createResults.map(r => this.syncGroupToProjectFields(r.itemId, r.group))
                     );
                 }
@@ -1729,21 +1735,32 @@ class GitHubProjectsDBManager {
                 // Phase 3: Execute updates in batch (body-only — fields are cosmetic)
                 if (updateOps.length > 0) {
                     console.log(`GitHubProjects: Batching ${updateOps.length} group updates`);
-                    await Promise.all(
+                    const updateSettled = await Promise.allSettled(
                         updateOps.map(op =>
                             this.updateProjectItem(existingMap[op.id].content.id, op.title, op.body)
                         )
                     );
-                    gUpdated = updateOps.length;
+                    updateSettled
+                        .filter(r => r.status === 'rejected')
+                        .forEach((r, i) => console.error(`GitHubProjects: Failed to update group "${updateOps[i].id}":`, r.reason));
+                    gUpdated = updateSettled.filter(r => r.status === 'fulfilled').length;
                 }
 
                 // Phase 4: Execute deletes in batch
                 if (deleteOps.length > 0) {
                     console.log(`GitHubProjects: Batching ${deleteOps.length} group deletes`);
-                    await Promise.all(
+                    const deleteSettled = await Promise.allSettled(
                         deleteOps.map(op => this.deleteProjectItem(op.item.id))
                     );
-                    console.log(`GitHubProjects: Deleted groups: ${deleteOps.map(op => op.id).join(', ')}`);
+                    deleteSettled
+                        .filter(r => r.status === 'rejected')
+                        .forEach((r, i) => console.error(`GitHubProjects: Failed to delete group "${deleteOps[i].id}":`, r.reason));
+                    const deletedIds = deleteOps
+                        .filter((_, i) => deleteSettled[i].status === 'fulfilled')
+                        .map(op => op.id);
+                    if (deletedIds.length > 0) {
+                        console.log(`GitHubProjects: Deleted groups: ${deletedIds.join(', ')}`);
+                    }
                 }
 
                 // Phase 5: Flush any remaining queued batch operations
@@ -1798,7 +1815,16 @@ class GitHubProjectsDBManager {
             }
 
             if (fieldUpdates.length > 0) {
-                await this.batchUpdateItemFields(itemId, fieldUpdates);
+                try {
+                    await this.batchUpdateItemFields(itemId, fieldUpdates);
+                } catch (error) {
+                    console.error('[GitHubProjectsDbManager] Failed batch field update', {
+                        itemId,
+                        fieldIds: fieldUpdates.map(update => update.fieldId),
+                        error,
+                    });
+                    throw error;
+                }
             }
             
             console.log(`GitHubProjects: Synced group ${group.name} to project fields`);

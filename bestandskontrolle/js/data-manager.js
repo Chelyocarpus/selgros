@@ -1196,10 +1196,10 @@ class DataManager {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
-                    const result = this.importData(data);
+                    const result = await this.importData(data);
                     
                     if (result.success) {
                         resolve(result);
