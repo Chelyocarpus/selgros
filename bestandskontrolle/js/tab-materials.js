@@ -1172,14 +1172,14 @@ UIManager.prototype.importMaterialsFile = function(event) {
         return new Promise((resolve) => {
             const reader = new FileReader();
             
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     let content = e.target.result;
                     let result;
                     
                     // Handle JSON files
                     if (file.name.match(/\.json$/i)) {
-                        result = this.dataManager.importMaterialsFromJSON(content);
+                        result = await this.dataManager.importMaterialsFromJSON(content);
                     }
                     // Handle Excel files using SheetJS if available
                     else if (file.name.match(/\.(xlsx|xls)$/i) && typeof XLSX !== 'undefined') {
@@ -1187,11 +1187,11 @@ UIManager.prototype.importMaterialsFile = function(event) {
                         const sheetName = workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[sheetName];
                         content = XLSX.utils.sheet_to_csv(worksheet);
-                        result = this.dataManager.importMaterialsFromCSV(content);
+                        result = await this.dataManager.importMaterialsFromCSV(content);
                     }
                     // Handle CSV files
                     else {
-                        result = this.dataManager.importMaterialsFromCSV(content);
+                        result = await this.dataManager.importMaterialsFromCSV(content);
                     }
                     
                     if (result.success) {
@@ -2206,7 +2206,7 @@ UIManager.prototype.editNote = function(noteId) {
 };
 
 // Save note
-UIManager.prototype.saveNote = function(noteId = null) {
+UIManager.prototype.saveNote = async function(noteId = null) {
     const materialCode = document.getElementById('noteMaterial').value || null;
     const content = document.getElementById('noteContent').value.trim();
     
@@ -2225,7 +2225,7 @@ UIManager.prototype.saveNote = function(noteId = null) {
         }
     } else {
         // Create new note
-        const newNoteId = this.dataManager.addNote(materialCode, content);
+        const newNoteId = await this.dataManager.addNote(materialCode, content);
         if (newNoteId) {
             success = true;
             this.showToast('Note added successfully!', 'success');
