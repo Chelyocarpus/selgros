@@ -43,18 +43,109 @@
   }
 
   /**
-   * Waits until the SAP busy indicator disappears, then calls cb.
-   * Times out after 12 seconds.
+   * Two-phase busy wait:
+   *  Phase 1 – waits up to 3 s for the busy indicator to appear.
+   *  Phase 2 – once it appears (or if it never did), waits for it to disappear.
+   * Total timeout: 15 s.
+   *
+   * The old single-phase approach started polling 400 ms after a button click,
+   * which was too soon — if SAP hadn't shown the indicator yet the function
+   * returned immediately (false "not busy"), causing the loop to advance to
+   * the next pallet while SAP was still processing.
    */
   function waitBusy(cb) {
     const start = Date.now();
-    const chk = () => {
+    const isBusy = () => {
       const bi = document.getElementById('sapUiBusyIndicator');
-      const busy = bi && bi.style.visibility !== 'hidden' && bi.style.display !== 'none';
-      if (!busy || Date.now() - start > 12_000) { cb(); return; }
-      setTimeout(chk, 150);
+      return bi && bi.style.visibility !== 'hidden' && bi.style.display !== 'none';
     };
-    setTimeout(chk, 400);
+
+    // Phase 2: busy indicator is visible – wait for it to disappear.
+    function phase2() {
+      if (!isBusy() || Date.now() - start > 15_000) { cb(); return; }
+      let settled = false;
+      const done = () => { if (settled) return; settled = true; obs.disconnect(); clearTimeout(fb); cb(); };
+      const biEl = document.getElementById('sapUiBusyIndicator');
+      const obs = new MutationObserver(() => { if (!isBusy()) done(); });
+      obs.observe(biEl || document.body, { subtree: !biEl, attributes: true, attributeFilter: ['style', 'class'] });
+      // Fallback: re-check every 500 ms in case MutationObserver misses a change.
+      const fb = setTimeout(() => { obs.disconnect(); if (!settled) phase2(); }, 500);
+    }
+
+    // Phase 1: wait up to 3 s for the busy indicator to appear.
+    function phase1() {
+      if (isBusy()) { phase2(); return; }
+      if (Date.now() - start > 3_000) { phase2(); return; }
+      let advanced = false;
+      const obs = new MutationObserver(() => {
+        if (!advanced && isBusy()) { advanced = true; obs.disconnect(); clearTimeout(fb); phase2(); }
+      });
+      obs.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class'] });
+      const fb = setTimeout(() => { obs.disconnect(); if (!advanced) phase1(); }, 500);
+    }
+
+    setTimeout(phase1, 300);
+  }
+
+  /**
+   * Polls until no visible SAP MessageBox confirmation button exists in the DOM.
+   * This is used to verify that a dialog was actually dismissed before moving on.
+   * Times out after 10 s and proceeds anyway.
+   * @param {function} cb
+   */
+  function waitForMboxGone(cb) {
+    const start = Date.now();
+    const isGone = () => ![...document.querySelectorAll('button[id^="__mbox-btn-"]')]
+                           .some(b => b.getClientRects().length > 0);
+    if (isGone()) { setTimeout(cb, 0); return; }
+    let settled = false;
+    const done = () => { if (settled) return; settled = true; obs.disconnect(); clearTimeout(fb); cb(); };
+    const obs = new MutationObserver(() => { if (isGone()) done(); });
+    obs.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class', 'aria-hidden'] });
+    let fb;
+    const poll = () => {
+      if (settled) return;
+      if (isGone() || Date.now() - start > 10_000) { done(); return; }
+      fb = setTimeout(poll, 400);
+    };
+    fb = setTimeout(poll, 150);
+  }
+
+  /**
+   * Waits until the SAP pallet-number input field is empty (SAP clears it
+   * automatically after a successful booking). Times out after 8 s.
+   * @param {string}   name  - control ID suffix (e.g. 'oInputPalPage4')
+   * @param {function} cb
+   */
+  function waitForInputClear(name, cb) {
+    const start = Date.now();
+    const getVal = () => {
+      const ctrl = findCtrl(name);
+      return ctrl
+        ? (ctrl.getValue ? ctrl.getValue() : '')
+        : (document.querySelector(`[id$="${name}-inner"]`)?.value ?? '');
+    };
+    if (!getVal()) { setTimeout(cb, 0); return; }
+    const el = document.querySelector(`[id$="${name}-inner"]`);
+    let settled = false;
+    const done = () => {
+      if (settled) return; settled = true;
+      clearTimeout(fb);
+      if (el) { el.removeEventListener('input', onEvt); el.removeEventListener('change', onEvt); }
+      cb();
+    };
+    const onEvt = () => { if (!getVal()) done(); };
+    if (el) {
+      el.addEventListener('input', onEvt);
+      el.addEventListener('change', onEvt);
+    }
+    let fb;
+    const poll = () => {
+      if (settled) return;
+      if (!getVal() || Date.now() - start > 8_000) { done(); return; }
+      fb = setTimeout(poll, 400);
+    };
+    fb = setTimeout(poll, 300);
   }
 
   /** Sets a SAP input field value and fires the change event. */
@@ -87,29 +178,60 @@
   }
 
   /**
-   * Polls until the SAP MessageBox confirmation button appears in the DOM.
-   * Tries the exact ID first, then a broad mbox selector.
-   * @param {function} cb  - called with the button element, or null on timeout
+   * Polls until a SAP MessageBox dialog appears and returns its primary button
+   * plus metadata about the dialog type.
+   *
+   * SAP UI5 assigns an incrementing global element counter to dialog buttons,
+   * producing IDs like __mbox-btn-4 on first load and __mbox-btn-37+ later.
+   * When multiple dialogs are stacked (a bug state) the LAST one in the DOM
+   * is the topmost/newest, so we always target that one.
+   *
+   * @param {function} cb  - called with {btn, isError, errorText} | null on timeout
    * @param {number}   t   - timeout in ms (default 8000)
    */
   function waitForMbox(cb, t) {
-    const start = Date.now();
     const limit = t || 8_000;
-    const chk = () => {
-      // SAP UI5 assigns an incrementing global element counter to dialog buttons,
-      // producing IDs like __mbox-btn-4 on a fresh page and __mbox-btn-37 (or higher)
-      // after other UI elements have been created. Match by prefix, not exact ID.
-      // getClientRects().length > 0 is a robust visibility check: it returns an
-      // empty array for elements in display:none subtrees while still returning
-      // a rect for fixed-position elements, unlike offsetParent which is null
-      // for fixed elements even when they are fully visible.
-      const el = [...document.querySelectorAll('button[id^="__mbox-btn-"]')]
-                   .find(b => b.getClientRects().length > 0);
-      if (el) { cb(el); return; }
-      if (Date.now() - start > limit) { cb(null); return; }
-      setTimeout(chk, 100);
+    const start = Date.now();
+
+    const findDialog = () => {
+      const dialogs = [...document.querySelectorAll('[role="alertdialog"]')]
+                        .filter(d => d.getClientRects().length > 0);
+      const dialog = dialogs[dialogs.length - 1];
+      if (!dialog) return null;
+      const btn = [...dialog.querySelectorAll('button[id^="__mbox-btn-"]')]
+                    .find(b => b.getClientRects().length > 0);
+      if (!btn) return null;
+      const heading   = dialog.querySelector('[role="heading"]')?.textContent?.trim() ?? '';
+      const isError   = /fehler|error/i.test(heading)
+                        || btn.textContent.trim().toLowerCase() === 'schließen';
+      const errorText = isError
+        ? (dialog.innerText ?? '').replace(heading, '').replace(/schließen/gi, '').trim()
+        : '';
+      return { btn, isError, errorText };
     };
-    setTimeout(chk, 200);
+
+    // Resolve immediately if the dialog is already present.
+    const immediate = findDialog();
+    if (immediate) { setTimeout(() => cb(immediate), 0); return; }
+
+    let settled = false;
+    const done = (result) => { if (settled) return; settled = true; obs.disconnect(); clearTimeout(fb); cb(result); };
+
+    const obs = new MutationObserver(() => {
+      const r = findDialog();
+      if (r) done(r);
+    });
+    obs.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'class', 'aria-hidden'] });
+
+    let fb;
+    const poll = () => {
+      if (settled) return;
+      if (Date.now() - start > limit) { done(null); return; }
+      const r = findDialog();
+      if (r) { done(r); return; }
+      fb = setTimeout(poll, 300);
+    };
+    fb = setTimeout(poll, 200);
   }
 
   // ── UI Build ────────────────────────────────────────────────────────────────
@@ -235,6 +357,13 @@
         return;
       }
 
+      // Guard: never start a new pallet while a dialog is still visible.
+      // If the previous confirm click didn't close the mbox fast enough,
+      // wait and retry rather than stacking a second dialog on top.
+      const openDialog = [...document.querySelectorAll('button[id^="__mbox-btn-"]')]
+                           .find(b => b.getClientRects().length > 0);
+      if (openDialog) { setTimeout(next, 500); return; }
+
       const pal = pallets[idx];
 
       if (skipEnabled && pal.startsWith(SKIP_PREFIX)) {
@@ -263,8 +392,8 @@
         addLog(idx, pal, 'busy', 'Warte auf Bestätigungsdialog…');
 
         // Step 3: wait for the MessageBox confirmation button and click it
-        waitForMbox((btn) => {
-          if (!btn) {
+        waitForMbox((result) => {
+          if (!result) {
             errors++;
             addLog(idx, pal, 'error', 'Bestätigungs-Dialog nicht erschienen');
             setProgress(++idx, pallets.length);
@@ -272,15 +401,38 @@
             return;
           }
 
-          btn.click();
-          addLog(idx, pal, 'busy', 'Bestätigt – warte auf SAP…');
+          result.btn.click();
 
-          // Step 4: wait for SAP processing, then clear & continue
-          waitBusy(() => {
-            setInp('oInputPalPage4', '');
-            addLog(idx, pal, 'done', 'Gelöscht');
-            setProgress(++idx, pallets.length);
-            setTimeout(next, 150);
+          if (result.isError) {
+            // SAP showed an error dialog (e.g. PAL unbekannt) — log as error,
+            // wait for the dialog to close, then continue without waitBusy/waitForInputClear.
+            const msg = result.errorText ? result.errorText.slice(0, 80) : 'SAP-Fehler';
+            errors++;
+            addLog(idx, pal, 'error', msg);
+            waitForMboxGone(() => {
+              setProgress(++idx, pallets.length);
+              setTimeout(next, 300);
+            });
+            return;
+          }
+
+          addLog(idx, pal, 'busy', 'Bestätigt – warte auf Dialog-Schluß…');
+
+          // Step 3b: confirm the dialog actually closed before polling SAP
+          waitForMboxGone(() => {
+            addLog(idx, pal, 'busy', 'Warte auf SAP-Verarbeitung…');
+
+            // Step 4: wait for SAP processing to finish
+            waitBusy(() => {
+              addLog(idx, pal, 'busy', 'Warte auf Feldleerung durch SAP…');
+
+              // Step 5: wait for SAP to clear the input field naturally
+              waitForInputClear('oInputPalPage4', () => {
+                addLog(idx, pal, 'done', 'Gelöscht');
+                setProgress(++idx, pallets.length);
+                setTimeout(next, 200);
+              });
+            });
           });
         });
       }, 200);

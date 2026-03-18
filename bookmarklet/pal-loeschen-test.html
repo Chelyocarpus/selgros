@@ -175,10 +175,7 @@
       margin-right: 6px;
       vertical-align: middle;
     }
-    .status-dot.ready  { background: #107e3e; }
-    .status-dot.busy   { background: #e67e22; }
-    .status-dot.dialog { background: #0a6ed1; }
-    #status-text { font-size: 12px; color: #6a6d70; }
+    .status-bar { font-size: 12px; color: #6a6d70; margin-top: 8px; }
 
     /* Log */
     #log {
@@ -213,6 +210,8 @@
     }
     .test-helper strong { color: #32363a; display: block; margin-bottom: 8px; }
     .test-helper .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .test-helper .section-label { font-size: 11px; color: #32363a; margin-bottom: 4px; }
+    .test-helper .timing-info   { font-size: 11px; color: #6a6d70; margin-top: 6px; }
     .pill {
       padding: 4px 12px;
       border-radius: 10px;
@@ -238,17 +237,17 @@
 
   <!-- SAP MessageBox (confirmation dialog) -->
   <div id="__mbox-overlay">
-    <div id="__mbox-dialog">
+    <div id="__mbox-dialog" role="alertdialog">
       <div class="mbox-header">
         <span class="mbox-header-icon">&#9888;</span>
-        <span>Best&auml;tigung</span>
+        <span role="heading">Best&auml;tigung</span>
       </div>
       <div class="mbox-body" id="__mbox-body">
         Soll die Palette gel&ouml;scht werden?
       </div>
       <div class="mbox-footer">
         <button class="sapMBtn" id="__mbox-btn-4">
-          <span class="sapMBtnInner sapMBtnReject sapMBtnEmphasized" id="__mbox-btn-4-inner">L&ouml;schen</span>
+          <span class="sapMBtnInner sapMBtnReject sapMBtnEmphasized" id="__mbox-btn-4-inner">OK</span>
         </button>
         <button class="sapMBtn" id="__mbox-btn-5">
           <span class="sapMBtnInner sapMBtnDefault" id="__mbox-btn-5-inner">Abbrechen</span>
@@ -286,7 +285,7 @@
       </button>
     </div>
 
-    <div style="font-size:12px;color:#6a6d70;margin-top:8px;">
+    <div class="status-bar">
       <span class="status-dot ready" id="status-dot"></span>
       <span id="status-text">Bereit</span>
     </div>
@@ -301,7 +300,13 @@
       <button class="pill" data-pal="999999">999999</button>
       <button class="pill" data-pal="001191001">001191001 (skip)</button>
     </div>
-
+    <div class="section-label">SAP-Geschwindigkeit simulieren:</div>
+    <div class="pill-row" id="speed-pills">
+      <button class="pill active" data-busy="900" data-prebusy="350" data-clear="500">Normal (900ms)</button>
+      <button class="pill" data-busy="1800" data-prebusy="600" data-clear="800">Langsam (1.8s)</button>
+      <button class="pill" data-busy="3500" data-prebusy="1000" data-clear="1200">Sehr langsam (3.5s)</button>
+    </div>
+    <div class="timing-info" id="timing-info">busy: 900ms &middot; pre-busy: 350ms &middot; field-clear: 500ms</div>
   </div>
 
   <div id="log">
@@ -311,7 +316,10 @@
   <script>
     'use strict';
 
-    const BUSY_DURATION = 900;
+    // Simulated timing constants (mirrors the lag profile of real SAP)
+    let BUSY_DURATION   = 900;  // ms – how long SAP's busy indicator stays on
+    let PRE_BUSY_DELAY  = 350;  // ms – gap between dialog close and busy appearing
+    let INPUT_CLEAR_DELAY = 500; // ms – how long after busy ends before SAP clears the field
 
     // ── Logger ──────────────────────────────────────────────────────────────
     const logEl = document.getElementById('log');
@@ -467,13 +475,27 @@
       setTimeout(function () {
         showMbox(pal,
           function () {
-            log('info', '[sim] SAP verarbeitet Löschung…');
-            showBusy(BUSY_DURATION, function () {
-              log('ok', 'Palette ' + pal + ' gelöscht.');
-            });
+            log('info', '[sim] SAP empfängt Löschauftrag…');
+            // Delay before busy indicator appears — exercises waitBusy Phase 1
+            // (the script must not return early just because the indicator isn't visible yet)
+            setTimeout(function () {
+              showBusy(BUSY_DURATION, function () {
+                // SAP clears the input field automatically after processing.
+                // Delay mirrors the real SAP lag — exercises waitForInputClear.
+                setTimeout(function () {
+                  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+                  setter.call(palInput, '');
+                  palInput.dispatchEvent(new Event('input',  { bubbles: true }));
+                  palInput.dispatchEvent(new Event('change', { bubbles: true }));
+                  log('ok', '[sim] Palette ' + pal + ' gelöscht — Feld durch SAP geleert.');
+                  setStatus('ready', 'Bereit');
+                }, INPUT_CLEAR_DELAY);
+              });
+            }, PRE_BUSY_DELAY);
           },
           function () {
             log('warn', '[sim] Löschung abgebrochen.');
+            setStatus('ready', 'Bereit');
           }
         );
       }, 400);
@@ -504,6 +526,21 @@
       });
       pill.classList.add('active');
       log('info', '[test] Palettennummer auf "' + pill.dataset.pal + '" gesetzt.');
+    });
+
+    document.getElementById('speed-pills').addEventListener('click', function (e) {
+      const pill = e.target.closest('.pill');
+      if (!pill) return;
+      BUSY_DURATION     = Number(pill.dataset.busy);
+      PRE_BUSY_DELAY    = Number(pill.dataset.prebusy);
+      INPUT_CLEAR_DELAY = Number(pill.dataset.clear);
+      document.getElementById('speed-pills').querySelectorAll('.pill').forEach(function (p) {
+        p.classList.remove('active');
+      });
+      pill.classList.add('active');
+      document.getElementById('timing-info').textContent =
+        'busy: ' + BUSY_DURATION + 'ms \u00b7 pre-busy: ' + PRE_BUSY_DELAY + 'ms \u00b7 field-clear: ' + INPUT_CLEAR_DELAY + 'ms';
+      log('info', '[test] Timing: busy=' + BUSY_DURATION + 'ms, pre-busy=' + PRE_BUSY_DELAY + 'ms, clear=' + INPUT_CLEAR_DELAY + 'ms.');
     });
   </script>
 </body>
