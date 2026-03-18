@@ -204,9 +204,10 @@
       const heading   = dialog.querySelector('[role="heading"]')?.textContent?.trim() ?? '';
       const isError   = /fehler|error/i.test(heading)
                         || btn.textContent.trim().toLowerCase() === 'schließen';
-      const errorText = isError
-        ? (dialog.innerText ?? '').replace(heading, '').replace(/schließen/gi, '').trim()
-        : '';
+      const contentEl = dialog.querySelector('[role="document"]')
+                      || dialog.querySelector('.mbox-text')
+                      || dialog;
+      const errorText = isError ? (contentEl.innerText ?? '').trim() : '';
       return { btn, isError, errorText };
     };
 
