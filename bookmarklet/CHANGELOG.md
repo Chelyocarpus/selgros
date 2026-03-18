@@ -5,6 +5,21 @@ All notable changes to BV Bookmarklets are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.7] - 2026-03-18
+
+### Fixed
+- PAL löschen: `waitForMbox` was using a flat `button[id^="__mbox-btn-"]` query and returning the first match in the DOM, which could be the oldest/bottom dialog when multiple were stacked. It now queries all visible `[role="alertdialog"]` elements and targets the last one (topmost), then finds the primary button inside it.
+- PAL löschen: `waitForMbox` now distinguishes between SAP confirmation dialogs ("Bestätigung") and error dialogs ("Fehler"). When SAP shows an error (e.g. unknown PAL number), the script now correctly closes the error dialog, logs an error entry, and advances without waiting for a busy indicator or field clear — instead of incorrectly counting the pallet as "Gelöscht" after timing out.
+
+## [1.3.6] - 2026-03-18
+
+### Fixed
+- PAL löschen: dialogs were stacking up because `waitBusy` started polling 400 ms after the confirm click — if SAP hadn't shown the busy indicator yet, the function returned immediately (false "not busy"), advancing the loop to the next pallet before the previous one was processed.
+  - `waitBusy` now uses a **two-phase approach**: Phase 1 polls up to 3 s for the busy indicator to *appear*; Phase 2 then polls up to 15 s for it to *disappear*. This guarantees SAP processing is actually detected instead of returning prematurely on a timing gap.
+- PAL löschen: added `waitForMboxGone` — after clicking the confirm button the script now waits until the MessageBox dialog is no longer visible before continuing. This ensures the action actually registered in SAP and prevents new dialogs from opening on top of an unclosed one.
+- PAL löschen: `next()` now checks for any open dialogs at the start of each iteration and retries after 500 ms if one is still visible, acting as a safety net to prevent dialog stacking even if a previous step finished early.
+- PAL löschen: the script no longer manually clears the pallet-number input after processing. Instead, `waitForInputClear` polls (up to 8 s) until SAP empties the field naturally — avoiding the race condition where a forced clear would fight with SAP's own form reset on slow connections.
+
 ## [1.3.5] - 2026-03-17
 
 ### Fixed
