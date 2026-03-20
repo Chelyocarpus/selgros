@@ -5,6 +5,108 @@ All notable changes to BV Bookmarklets are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-03-19
+
+### Added
+- **PB-Empfehlung** (`pb-recommend-source.js`): new bookmarklet that analyses the Präsentationsbestand (PB in Basis-ME) for all visible rows on the F&R Bestellvorschlag and recommends a target PB per article.
+  - Formula: `Empf.-PB = min(⌈(Prog/KW ÷ 7) × Ziel-Tage⌉, ⌊(Prog/KW ÷ 7) × RLZ⌋)`. For perishable articles (RLZ < 9999) the recommendation is capped by RLZ so that the shelf stock can realistically be sold before expiry.
+  - Target days: quick-select buttons for 2 / 3 / 5 / 7 days plus a free number input for any custom value. Default is 3 days.
+  - Status classification with a small **color-coded dot** (Unicode ●) injected inline next to the PB value in the SAP grid — sits inside `sapMObjectNumberInner` so it aligns on the same text line as the number (hover for recommendation and status details):
+    - Red dot — PB = 0 (Kein PB) or Ist-PB < 80 % of recommended (Zu niedrig)
+    - Orange dot — Ist-PB > 150 % of recommended (Zu hoch)
+    - Green dot — Ist-PB within 80–150 % of recommended (OK)
+  - Additional text badges for special conditions (also in the PB column):
+    - **RLZ↓** (teal) — recommendation is being capped by RLZ (Frischartikel)
+    - **⚠ Verderb** (orange) — Ist-PB exceeds the RLZ-based maximum, items risk expiring unsold
+  - Result table in the panel shows Artikel-Nr | Ist-PB | Empf. | RLZ | Status. RLZ column shows `Xd` in teal/orange for perishables, `–` for non-perishables. Clicking a table row scrolls and briefly highlights the corresponding article row in the SAP grid.
+  - Summary feedback line with counts per status; orange warning line for Verderbgefahr when applicable.
+  - Panel is draggable (grab title bar). × button closes panel and removes all badges. Re-clicking the bookmarklet also toggles off completely. "Badges" secondary button clears only the grid overlays without closing the panel.
+
+## [1.7.0] - 2026-03-19
+
+### Added
+- **BV-Menge Auto-Fill** (`bv-autofill-source.js`): new bookmarklet with a draggable floating panel on the F&R Bestellvorschlag. Three functions in one:
+  1. **Befüllen** — computes and fills BV-Menge for all visible rows to reach a configurable target coverage in days (Ziel-Reichweite). Quick-select buttons for 7 / 14 / 21 days plus a free-input field. Optional "Nur leere Felder befüllen" checkbox to skip rows that already have a non-zero entry. Formula: `ceil(max(0, (targetDays ÷ 7 × Prog/KW) − (Bestand + PB)) ÷ Faktor)` — PB (Planbestand/Sicherheitsbestand) is included to match SAP's displayed RW Bestand, preventing fills when the displayed RW already meets the target.
+  2. **Leeren** — sets all currently filled BV-Menge fields to 0.
+  3. **ME-Wächter** — automatically clears a row's BV-Menge when its Bestell-ME button is clicked and the unit text changes (polls for up to 5 s after each ME button click), preventing wrong-unit order quantities after a unit switch.
+  - Panel is draggable and the × button hides it without disabling the ME-Wächter. Re-clicking the bookmarklet fully toggles off including the click listener.
+  - Uses the native `HTMLInputElement.prototype.value` setter + `input`/`change` events to set values in SAP UI5 inputs where `sap.ui.getCore().byId()` is not available.
+
+
+
+### Fixed
+- **Ampel-Highlighter**: fixed three bugs that prevented any rows from being highlighted on the F&R Bestellvorschlag page:
+  1. `getColIdx()` was querying all column headers globally across all four grids on the page (calendar, info, article table, time series — 53 total), returning the wrong index (22) instead of the correct index within the article grid (9).
+  2. `scan()` iterated `[role="rowgroup"]` elements, but F&R renders rows as direct children of `[role="grid"]` with no rowgroup wrapper — so the loop always processed 0 rows.
+  3. The MutationObserver was attached to the first grid (the calendar week grid) instead of the article grid, so virtual-scroll re-coloring never triggered.
+  - Added `getMainGrid()` to locate the correct grid by detecting the "RW Bestand" column header within each grid. `getColIdx()` now takes the located grid as a parameter and queries column headers within it. `scan()` now queries rows directly on `mainGrid`, skipping header rows by checking for `[role="gridcell"]` descendants. Observer attaches to `mainGrid`.
+
+### Changed
+- **Ampel-Highlighter**: legend panel is now draggable (grab the title bar to reposition) and the × button only hides the panel without disabling the row highlighting or disconnecting the MutationObserver. Click the bookmarklet again to fully toggle off.
+
+## [1.6.2] - 2026-03-19
+
+### Added
+- **Artikel-Info Tooltip**: `artikel-info-userscript.js` — Tampermonkey userscript version that uses `GM_xmlhttpRequest` with `withCredentials: true` to bypass the CORS restriction. Works on any domain (SAP F&R, different origin) since Tampermonkey's privileged XHR skips the browser's CORS enforcement entirely while still sending the user's Transgourmet session cookies.
+
+### Notes
+- The plain bookmarklet version works only when run from the same origin as `apps.transgourmet.de`. For cross-origin SAP pages the userscript version is required.
+
+## [1.6.1] - 2026-03-19
+
+### Fixed
+- **Artikel-Info Tooltip**: updated field mappings to match actual API response structure — `content[]` (paginated wrapper), `p.name`, `p.imageUrl`, `p.ean`, `p.brand`, `p.unitName`, `p.productGroup.name` (nested), `p.description`, `p.packagingText`. Previous guessed field names (`productName`, `category`, `manufacturer`, `salesUnit`, etc.) resolved to empty strings.
+- **Artikel-Info Tooltip**: tooltip now shows product name as header subtitle, truncated description (≤120 chars) next to the image, and a "Verpackung" row in the detail table.
+
+## [1.6.0] - 2026-03-19
+
+### Added
+- **Artikel-Info Tooltip**: new bookmarklet that enters a passive hover mode on the F&R Bestellvorschlag list. After hovering over any Artikel-Name cell for 2 seconds, the bookmarklet reads the corresponding Artikel-Nr from the same row, calls the Transgourmet product search API (`/recor/api/productposterdocument/product/search?term={nr}`), and renders the result as a floating tooltip next to the cursor — with product name, thumbnail image, brand, order unit, EAN, and category. A small status badge (bottom-right) shows the mode is active; clicking × or re-running the bookmarklet cleans up all listeners and UI elements.
+
+
+
+### Added
+- **Abgang-Trend**: new `↑↑` tier for projected growth above **+100 %** vs. prior year, displayed in deep emerald green (`#005f27`). The threshold sits above the existing `↑` tier (≥ +10 %) so extremely high-growth articles are visually distinct. Updated the legend panel accordingly.
+
+## [1.5.3] - 2026-03-19
+
+### Changed
+- **Abgang-Trend**: removed "Vorjahr" value from the hover tooltip — the tooltip now shows only the projected full-year value and the day reference (e.g. `↑ ~3.188 (+26 %) | Tag 79/365`).
+- **Abgang-Trend**: panel `×` button now only hides the panel (`display:none`) without disabling the badges or the MutationObserver. Re-clicking the bookmarklet still performs a full teardown.
+- **Abgang-Trend**: panel is now draggable — grab the header to reposition it anywhere on the page. The header shows a `grab` cursor; `×` still closes the panel only.
+- **Abgang-Trend**: panel z-index raised to `2147483647` (true 32-bit max) to reduce the chance of SAP popups appearing on top.
+
+## [1.5.2] - 2026-03-19
+
+### Fixed
+- **Abgang-Trend**: badge text was being clipped horizontally because the "Abgang aktuelles Jahr" column is narrow and the old format included the full projected value (e.g. `↑ ~3.188 (+26 %)`). Changed to a compact format: `↑ +26 %` (arrow + percentage only) in the cell; the full projection, prior-year baseline, and formula are shown in the native browser tooltip (`title` attribute) on hover. Cell `overflow` and `position` are set to `visible`/`relative` to let the badge overflow the SAP cell boundary rather than be clipped. Cells are restored to their original style on toggle-off.
+- **Abgang-Trend**: legend panel moved from bottom-right to **top-right** (`top: 70px`) to avoid overlap with SAP action buttons at the bottom.
+- **Abgang-Trend**: panel subtitle updated to "Akt. Jahr vs. Vorjahr · Hover für Details" to hint at the tooltip interaction.
+
+## [1.5.1] - 2026-03-19
+
+### Fixed
+- **Abgang-Trend**: corrected column and row detection — the SAP F&R Bestellvorschlag page contains multiple `[role="grid"]` elements (calendar widget, filter panel, etc.); the old code scanned `document.querySelectorAll('[role="columnheader"]')` globally which returned wrong column indices (34/35 instead of 21/22), causing zero rows to be annotated. Replaced `getColIndices()` with `findTargetGrid()` which iterates all grids and picks the one whose headers contain "vorjahr" and "aktuell". Row iteration now uses `targetGrid.querySelectorAll('[role="row"]')` skipping index 0 (header row), since the Positionen grid does not use `[role="rowgroup"]`. `MutationObserver` now observes `targetGrid` instead of the first grid found globally.
+
+## [1.5.0] - 2026-03-19
+
+### Added
+- New bookmarklet **Abgang-Trend**: annotates each row in the F&R Bestellvorschlag with a projected full-year sales badge (YTD ÷ day-fraction × 365) and a percentage trend against Abgang Vorjahr — ↑ Wachsend (≥ +10 %), → Stabil (±10 %), ↓ Schwächer (−10 to −30 %), ↓↓ Deutlich schwächer (< −30 %)
+- `abgang-trend-source.js` — readable, unminified source for Abgang-Trend
+- Day-of-year is computed at run time so the projection remains accurate on any date
+- `MutationObserver` with busy-flag debounce via `requestAnimationFrame` prevents badge injection from re-triggering scan (infinite loop guard)
+- Cell `title` attribute provides full projection detail as a tooltip when row height clips the badge
+- New indigo color variant (`.bm-icon--indigo` / `.bm-link--indigo`) for analytical/trend bookmarklets
+
+## [1.4.0] - 2026-03-19
+
+### Added
+- New bookmarklet **Ampel-Highlighter**: colors every row in the F&R Bestellvorschlag table according to its **Reichweite Bestand** (stock reach in days) — red (≤ 7), orange (8–14), yellow (15–21), green (> 21). A floating legend panel appears in the lower-right corner; clicking the bookmarklet again or the × button removes all highlights
+- `ampel-highlighter-source.js` — readable, unminified source for Ampel-Highlighter
+- `MutationObserver` in Ampel-Highlighter automatically colors rows added by virtual scroll without requiring any user interaction
+- Column detection by scanning `[role="columnheader"]` aria-labels for "reichweite" — works regardless of exact column position in the table
+- New teal color variant (`.bm-icon--teal` / `.bm-link--teal`) for analysis/visualization bookmarklets
+
 ## [1.3.7] - 2026-03-18
 
 ### Fixed

@@ -18,6 +18,34 @@ Supports German number formatting (e.g. `-109,000` or `1.234,56`). Decimal quant
 
 ---
 
+### Abgang-Trend
+Annotates each row in the F&R **Bestellvorschlag** with a small projection badge appended to the **Abgang aktuelles Jahr** cell. The badge shows the extrapolated full-year sales figure and the percentage trend against last year:
+
+| Badge | Range | Meaning |
+|-------|-------|---------|
+| ↑ ~3.229 (+28%) | ≥ +10 % | Wachsend |
+| → ~856 (−3%)   | ±10 %  | Stabil  |
+| ↓ ~412 (−18%)  | −10 to −30 % | Schwächer |
+| ↓↓ ~120 (−42%) | < −30 % | Deutlich schwächer |
+
+Projection formula: `Abgang YTD × 365 ÷ day-of-year`. The day-of-year is computed at run time, so the projection stays accurate regardless of when the bookmarklet is run. A tooltip on the cell shows the full details. `MutationObserver` re-annotates rows added by virtual scroll.
+
+---
+
+### Ampel-Highlighter
+Colors every row in the F&R **Bestellvorschlag** table according to its current **Reichweite Bestand** (stock reach in days):
+
+| Color  | Range        | Meaning   |
+|--------|--------------|-----------|
+| Red    | ≤ 7 days     | Critical  |
+| Orange | 8–14 days    | Warning   |
+| Yellow | 15–21 days   | Caution   |
+| Green  | > 21 days    | OK        |
+
+A floating legend panel appears in the lower-right corner. Clicking the bookmarklet again (or the × button) removes all highlights. A `MutationObserver` ensures rows added by virtual scroll are colored immediately without any user action.
+
+---
+
 ### Artikelliste extrahieren
 Scans the SAP article list (Reporting-Übersicht) and builds a copyable list in `ARTNO MENGE EINHEIT` format — ready to paste directly into BV Auto-Eintragen.
 
@@ -63,6 +91,8 @@ Scans the SAP Reporting-Übersicht for all `oLabelReportingOverviewPALL2` elemen
 |---|---|
 | `bookmarklet.html` | Bookmarklet install page (hosts all minified `javascript:` URLs) |
 | `bv-auto-source.js` | Readable, unminified source for BV Auto-Eintragen |
+| `ampel-highlighter-source.js` | Readable, unminified source for Ampel-Highlighter |
+| `abgang-trend-source.js` | Readable, unminified source for Abgang-Trend |
 | `pal-loeschen-source.js` | Readable, unminified source for PAL löschen |
 | `test-page.html` | Mock SAP page for testing BV Auto-Eintragen locally |
 | `pal-loeschen-test.html` | Mock SAP page for testing PAL löschen locally |
