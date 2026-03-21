@@ -402,7 +402,9 @@
             return;
           }
 
-          result.btn.click();
+          // clickBtn uses findCtrl → firePress() so SAP's full press/ontap chain fires,
+          // which is required to trigger getOnlineSubmitPALloeschen.
+          clickBtn(result.btn.id);
 
           if (result.isError) {
             // SAP showed an error dialog (e.g. PAL unbekannt) — log as error,

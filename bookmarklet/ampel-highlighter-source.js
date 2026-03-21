@@ -1,10 +1,12 @@
 /**
  * Ampel-Highlighter – Source Script
- * F&R Bestellvorschlag · Zeilen nach Reichweite Bestand (RW Bestand) einfärben
+ * F&R Bestellvorschlag · Zeilen nach berechneter Reichweite (Bestand ÷ Prognose) einfärben
  *
  * Klick auf aktives Bookmarklet entfernt alle Markierungen (Toggle).
  * Verwendet MutationObserver, um auch bei virtuellem Scroll neu gerenderte
  * Zeilen automatisch einzufärben.
+ *
+ * Reichweite = Bestand ÷ Prognose (Tage)
  */
 
 (function () {
@@ -27,7 +29,7 @@
     return;
   }
 
-  // ── Thresholds (RW Bestand in Tagen) ──────────────────────────────────────
+  // ── Thresholds (Bestand ÷ Prognose in Tagen) ───────────────────────────────
   //   max:    days threshold (inclusive)
   //   bg:     row background tint
   //   border: left-border accent color
@@ -49,57 +51,76 @@
   // ── Grid & Column detection ────────────────────────────────────────────────
 
   /**
-   * Finds the grid element that contains the "RW Bestand" column.
+   * Finds the grid element that contains both "Bestand" and "Ø Prog/KW" columns.
    * The F&R page renders multiple grids (calendar, info header, article table,
    * time series), so we must locate the correct one by its column headers.
    * Returns null if not found (wrong page or table not yet rendered).
    */
   function getMainGrid() {
     for (const grid of document.querySelectorAll('[role="grid"]')) {
-      for (const h of grid.querySelectorAll('[role="columnheader"]')) {
-        const label = (h.getAttribute('aria-label') || h.textContent || '').toLowerCase();
-        if (label.includes('rw bestand') || label.includes('reichweite')) return grid;
-      }
+      const labels = Array.from(grid.querySelectorAll('[role="columnheader"]'))
+        .map(h => (h.getAttribute('aria-label') || h.textContent || '').toLowerCase().trim());
+      const hasBestand = labels.some(l => l.startsWith('bestand') && !l.includes('rw'));
+      const hasProgKW  = labels.some(l => l.includes('prog') && l.includes('kw'));
+      if (hasBestand && hasProgKW) return grid;
     }
     return null;
   }
 
   /**
-   * Finds the 0-based column index of "RW Bestand" within the given grid.
-   * Must be scoped to the correct grid – querying all column headers globally
-   * returns headers from other grids on the page, yielding a wrong index.
-   * Returns -1 if not found.
+   * Finds the 0-based column indices for "Bestand in Basis-ME" and "Ø Prog/KW"
+   * within the given grid. Must be scoped to the correct grid to avoid picking
+   * up headers from other grids on the page.
+   * Returns an object with -1 for any column not found.
    */
-  function getColIndex(grid) {
+  function getColIndices(grid) {
     const headers = grid.querySelectorAll('[role="columnheader"]');
+    const indices = { bestand: -1, progKW: -1 };
     for (let i = 0; i < headers.length; i++) {
-      const label = (headers[i].getAttribute('aria-label') || headers[i].textContent || '').toLowerCase();
-      if (label.includes('reichweite') || label.includes('rw bestand')) return i;
+      const label = (headers[i].getAttribute('aria-label') || headers[i].textContent || '').toLowerCase().trim();
+      if (label.startsWith('bestand') && !label.includes('rw')) {
+        indices.bestand = i;
+      } else if (label.includes('prog') && label.includes('kw')) {
+        indices.progKW = i;
+      }
     }
-    return -1;
+    return indices;
   }
 
   // ── Row highlighting ───────────────────────────────────────────────────────
 
   /**
-   * Reads the RW Bestand value from the given data row, determines the
-   * matching threshold, and applies the background and border styling.
+   * Parses a numeric value from a SAP grid cell's text content.
+   * Cell text may contain "Hervorgehoben" suffix from SAP accessibility markup.
    *
-   * @param {Element} row    - ARIA grid row element
-   * @param {number}  colIdx - 0-based column index of RW Bestand
+   * @param {Element} cell - gridcell element
+   * @returns {number|null} parsed number or null if not parseable
    */
-  function applyToRow(row, colIdx) {
+  function parseCellNumber(cell) {
+    const match = cell.textContent.trim().match(/^(\d+(?:[.,]\d+)?)/); 
+    if (!match) return null;
+    const value = parseFloat(match[1].replace(',', '.'));
+    return isNaN(value) ? null : value;
+  }
+
+  /**
+   * Calculates Bestand ÷ (Ø Prog/KW ÷ 7) for the given row to get days of stock,
+   * determines the matching threshold, and applies the background and border.
+   * Skips the row if either column is missing or Prog/KW is zero.
+   *
+   * @param {Element} row  - ARIA grid row element
+   * @param {object}  cols - column index map { bestand, progKW }
+   */
+  function applyToRow(row, cols) {
     const cells = row.querySelectorAll('[role="gridcell"]');
-    if (cells.length <= colIdx) return;
+    if (cells.length <= Math.max(cols.bestand, cols.progKW)) return;
 
-    // Cell text may contain "Hervorgehoben" suffix from SAP accessibility markup
-    const rawText = cells[colIdx].textContent.trim();
-    const match   = rawText.match(/^(\d+(?:[.,]\d+)?)/);
-    if (!match) return;
+    const bestand = parseCellNumber(cells[cols.bestand]);
+    const progKW  = parseCellNumber(cells[cols.progKW]);
+    if (bestand === null || progKW === null || progKW === 0) return;
 
-    const days = parseFloat(match[1].replace(',', '.'));
-    if (isNaN(days)) return;
-
+    // Ø Prog/KW is per calendar week → multiply by 7 to convert to days
+    const days  = (bestand / progKW) * 7;
     const level = getLevel(days);
     if (!level) return;
 
@@ -113,21 +134,21 @@
 
   // ── Scan all visible data rows ─────────────────────────────────────────────
 
-  let colIdx   = -1;
+  let cols     = { bestand: -1, progKW: -1 };
   let mainGrid = null;
 
   function scan() {
     if (!mainGrid) mainGrid = getMainGrid();
     if (!mainGrid) return; // not on BV page or table not yet rendered
 
-    if (colIdx === -1) colIdx = getColIndex(mainGrid);
-    if (colIdx === -1) return;
+    if (cols.bestand === -1) cols = getColIndices(mainGrid);
+    if (cols.bestand === -1 || cols.progKW === -1) return;
 
     // F&R renders rows as direct children of the grid — no [role="rowgroup"]
     // wrapper exists. Skip header rows by checking for gridcell descendants.
     mainGrid.querySelectorAll('[role="row"]').forEach(row => {
       if (!row.querySelector('[role="gridcell"]')) return; // header row
-      applyToRow(row, colIdx);
+      applyToRow(row, cols);
     });
   }
 
@@ -197,7 +218,7 @@
   titleRow.addEventListener('pointerdown', startDrag);
 
   const titleText = document.createElement('span');
-  titleText.textContent = 'Ampel – RW Bestand';
+  titleText.textContent = 'Ampel – Bestand/Prognose';
 
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';

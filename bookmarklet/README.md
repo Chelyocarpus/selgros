@@ -65,6 +65,16 @@ Scans the SAP Reporting-Übersicht for all `oLabelReportingOverviewPALL2` elemen
 
 ---
 
+### MHD-Entscheidung
+Finds all rows where BV-Menge = 1 — often borderline orders for perishable items (MHD). Provides a quick bulk decision:
+
+- **Alle → 0** — skip the order entirely
+- **Alle → Voll** — recalculate and set the optimal amount based on target coverage days (7 / 14 / 21)
+
+A results table shows each affected article with its calculated "Voll" quantity and an MHD badge for perishable items (RLZ < 9999). Each row has a toggle button for individual 0 ↔ Voll decisions. Clicking a row scrolls the SAP grid to that article.
+
+---
+
 ## Combined Workflow
 
 1. **Palettennummern extrahieren** → copy the pallet list
@@ -94,6 +104,7 @@ Scans the SAP Reporting-Übersicht for all `oLabelReportingOverviewPALL2` elemen
 | `ampel-highlighter-source.js` | Readable, unminified source for Ampel-Highlighter |
 | `abgang-trend-source.js` | Readable, unminified source for Abgang-Trend |
 | `pal-loeschen-source.js` | Readable, unminified source for PAL löschen |
+| `mhd-entscheidung-source.js` | Readable, unminified source for MHD-Entscheidung |
 | `test-page.html` | Mock SAP page for testing BV Auto-Eintragen locally |
 | `pal-loeschen-test.html` | Mock SAP page for testing PAL löschen locally |
 | `CHANGELOG.md` | Full version history |
