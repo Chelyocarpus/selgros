@@ -6,6 +6,18 @@
  * wird die Artikel-Nr. des Eintrags ermittelt und die Transgourmet-Produktsuche
  * aufgerufen. Das Ergebnis erscheint als schwebendes Tooltip neben dem Cursor.
  *
+ * Unterstützt zwei Datenabruf-Modi:
+ *  - Direkt : fetch() mit credentials:'include' (benötigt CORS-Header der API)
+ *  - Relay  : window.postMessage an einen Transgourmet-Tab mit aktivem Relay-Receptor
+ *             → Umgehung des CORS-Problems, da der Receptor direkt auf transgourmet.de
+ *               läuft und dort same-origin auf die API zugreifen kann.
+ *
+ * Relay-Einrichtung (einmalig):
+ *   1. Dieses Bookmarklet auf dem F&R-Tab starten.
+ *   2. Im Badge auf »Relay« klicken → öffnet einen Transgourmet-Tab.
+ *   3. Auf dem Transgourmet-Tab das Bookmarklet »Artikel-Info Relay« aktivieren.
+ *   4. Verbindung wird automatisch aufgebaut (Badge: »Relay ✓«).
+ *
  * Aktivierung : Bookmarklet-Klick startet den Hover-Modus (grüner Status-Badge).
  * Deaktivierung: × im Badge oder erneuter Bookmarklet-Klick beendet den Modus.
  *
@@ -15,10 +27,16 @@
 (function () {
   'use strict';
 
-  const PANEL_ID  = '__bk_tip_panel';
+  const PANEL_ID   = '__bk_tip_panel';
   const TOOLTIP_ID = '__bk_tip_box';
-  const STYLE_ID  = '__bk_tip_style';
-  const TIMER_KEY = '__bk_tip_timer';
+  const CURSOR_ID  = '__bk_tip_cursor';
+  const STYLE_ID   = '__bk_tip_style';
+  const TIMER_KEY  = '__bk_tip_timer';
+
+  const API_URL    = 'https://apps.transgourmet.de/recor/api/productposterdocument/product/search';
+  const RELAY_PAGE = 'https://apps.transgourmet.de/recor/';
+  const RELAY_WIN  = 'tg_artikel_relay';
+  const RELAY_ORI  = 'https://apps.transgourmet.de';
 
   // ── Toggle off ───────────────────────────────────────────────────────────────
 
@@ -40,17 +58,138 @@
     return el;
   }
 
+  // ── Relay state ──────────────────────────────────────────────────────────────
+
+  let relayWin     = null;
+  let relayReady   = false;
+  let pingTimer    = null;
+  let pingAttempts = 0;
+  const pendingReqs  = {};
+  let reqIdCounter   = 0;
+  const apiCache     = new Map();
+
+  // Badge element refs for dynamic relay status updates
+  let badgeDot = null;
+  let badgeLbl = null;
+  let relayBtn = null;
+
+  /** Opens the transgourmet tab and starts a PING handshake loop. */
+  function connectRelay() {
+    relayWin     = window.open(RELAY_PAGE, RELAY_WIN);
+    relayReady   = false;
+    pingAttempts = 0;
+    updateRelayBadge('connecting');
+    schedulePing();
+  }
+
+  function schedulePing() {
+    clearTimeout(pingTimer);
+    if (pingAttempts > 20) {
+      updateRelayBadge('timeout');
+      return;
+    }
+    pingTimer = setTimeout(() => {
+      if (relayReady) return;
+      if (!relayWin || relayWin.closed) { updateRelayBadge('disconnected'); return; }
+      pingAttempts++;
+      try { relayWin.postMessage({ type: 'ARTIKEL_INFO_PING' }, RELAY_ORI); } catch (_) {}
+      schedulePing();
+    }, 500);
+  }
+
+  /** Sends an API request via the relay tab and returns a Promise. */
+  function requestViaRelay(nr) {
+    return new Promise((resolve, reject) => {
+      const reqId = ++reqIdCounter;
+      const timer = setTimeout(() => {
+        delete pendingReqs[reqId];
+        reject(new Error('Relay-Timeout'));
+      }, 10_000);
+      pendingReqs[reqId] = { resolve, reject, timer };
+      try {
+        relayWin.postMessage({ type: 'ARTIKEL_INFO_REQUEST', nr, reqId }, RELAY_ORI);
+      } catch (err) {
+        clearTimeout(timer);
+        delete pendingReqs[reqId];
+        reject(err);
+      }
+    });
+  }
+
+  /** Fetches product data – via relay if connected, direct fetch otherwise. Returns cached result when available. */
+  function fetchData(nr) {
+    if (apiCache.has(nr)) return Promise.resolve(apiCache.get(nr));
+    const req = relayReady && relayWin && !relayWin.closed
+      ? requestViaRelay(nr)
+      : fetch(`${API_URL}?size=12&page=0&term=${encodeURIComponent(nr)}`, { credentials: 'include' })
+          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    return req.then(data => { apiCache.set(nr, data); return data; });
+  }
+
+  /** Handles incoming postMessages from the relay tab. */
+  function onRelayMessage(e) {
+    const { type, reqId, data, error } = e.data || {};
+
+    if (type === 'ARTIKEL_INFO_PONG') {
+      if (!relayWin || e.source !== relayWin) return;
+      relayReady = true;
+      clearTimeout(pingTimer);
+      updateRelayBadge('connected');
+      return;
+    }
+
+    if (type === 'ARTIKEL_INFO_RESPONSE') {
+      const pending = pendingReqs[reqId];
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      delete pendingReqs[reqId];
+      if (error) pending.reject(new Error(error));
+      else       pending.resolve(data);
+    }
+  }
+
+  window.addEventListener('message', onRelayMessage);
+
+  function updateRelayBadge(state) {
+    if (!badgeDot || !badgeLbl) return;
+    switch (state) {
+      case 'connecting':
+        badgeDot.style.background = '#e65100';
+        badgeLbl.textContent      = 'Artikel-Info \u00b7 Relay verbindet\u2026';
+        if (relayBtn) relayBtn.style.display = 'none';
+        break;
+      case 'connected':
+        badgeDot.style.background = '#107e3e';
+        badgeLbl.textContent      = 'Artikel-Info \u00b7 Relay \u2713 \u00b7 1s Hover';
+        if (relayBtn) relayBtn.style.display = 'none';
+        break;
+      case 'timeout':
+        badgeDot.style.background = '#c62828';
+        badgeLbl.textContent      = 'Artikel-Info \u00b7 Relay Timeout';
+        if (relayBtn) { relayBtn.textContent = 'Retry'; relayBtn.style.display = ''; }
+        break;
+      case 'disconnected':
+        badgeDot.style.background = '#c62828';
+        badgeLbl.textContent      = 'Artikel-Info \u00b7 Relay getrennt';
+        if (relayBtn) { relayBtn.textContent = 'Relay'; relayBtn.style.display = ''; }
+        break;
+    }
+  }
+
   // ── Cleanup ──────────────────────────────────────────────────────────────────
 
   function cleanup() {
     document.removeEventListener('mouseover', onOver, true);
     document.removeEventListener('mousemove', onMove, true);
     document.removeEventListener('mouseout',  onOut,  true);
+    window.removeEventListener('message', onRelayMessage);
     if (window[TIMER_KEY]) { clearTimeout(window[TIMER_KEY]); delete window[TIMER_KEY]; }
-    [PANEL_ID, TOOLTIP_ID].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.remove();
-    });
+    clearTimeout(pingTimer);
+    for (const { reject, timer } of Object.values(pendingReqs)) {
+      clearTimeout(timer);
+      reject(new Error('Beendet'));
+    }
+    [PANEL_ID, TOOLTIP_ID, CURSOR_ID].forEach(id => document.getElementById(id)?.remove());
   }
 
   // ── Column detection ─────────────────────────────────────────────────────────
@@ -213,7 +352,7 @@
       const imgEl = document.createElement('img');
       imgEl.src = img;
       imgEl.alt = '';
-      imgEl.style.cssText = 'width:60px;height:60px;object-fit:contain;border-radius:6px;border:1px solid #f0f0f0;flex-shrink:0';
+      imgEl.style.cssText = 'width:120px;height:120px;object-fit:contain;border-radius:6px;border:1px solid #f0f0f0;flex-shrink:0';
       imgEl.onerror = function () { this.style.display = 'none'; };
       body.appendChild(imgEl);
     }
@@ -263,6 +402,51 @@
     setTimeout(() => { if (tip.style.opacity === '0') tip.style.display = 'none'; }, 200);
   }
 
+  function showCursorSpinner(x, y) {
+    let svg = document.getElementById(CURSOR_ID);
+    if (!svg) {
+      const NS = 'http://www.w3.org/2000/svg';
+      svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('width',   '16');
+      svg.setAttribute('height',  '16');
+      svg.setAttribute('viewBox', '0 0 16 16');
+      svg.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;overflow:visible';
+      svg.id = CURSOR_ID;
+
+      const track = document.createElementNS(NS, 'circle');
+      track.setAttribute('cx', '8'); track.setAttribute('cy', '8'); track.setAttribute('r', '6');
+      track.setAttribute('fill', 'none'); track.setAttribute('stroke', 'rgba(0,0,0,.12)'); track.setAttribute('stroke-width', '2');
+      svg.appendChild(track);
+
+      const arc = document.createElementNS(NS, 'circle');
+      arc.setAttribute('cx', '8'); arc.setAttribute('cy', '8'); arc.setAttribute('r', '6');
+      arc.setAttribute('fill', 'none'); arc.setAttribute('stroke', '#0a6ed1'); arc.setAttribute('stroke-width', '2');
+      arc.setAttribute('stroke-linecap', 'round');
+      arc.setAttribute('stroke-dasharray', '37.7'); arc.setAttribute('stroke-dashoffset', '37.7');
+      arc.setAttribute('transform', 'rotate(-90 8 8)');
+      arc.id = '__bk_tip_arc';
+      svg.appendChild(arc);
+
+      document.body.appendChild(svg);
+    } else {
+      // Restart animation for new cell
+      const arc = document.getElementById('__bk_tip_arc');
+      if (arc) {
+        arc.style.animation = 'none';
+        void arc.getBoundingClientRect();
+        arc.style.animation = '';
+      }
+    }
+    const arc = document.getElementById('__bk_tip_arc');
+    if (arc) arc.style.animation = '__bkProg 1s linear forwards';
+    svg.style.left = (x + 12) + 'px';
+    svg.style.top  = (y + 12) + 'px';
+  }
+
+  function hideCursorSpinner() {
+    document.getElementById(CURSOR_ID)?.remove();
+  }
+
   // ── Hover state ──────────────────────────────────────────────────────────────
 
   let currentCell = null;
@@ -275,6 +459,7 @@
       if (currentCell) {
         currentCell = null;
         if (window[TIMER_KEY]) { clearTimeout(window[TIMER_KEY]); delete window[TIMER_KEY]; }
+        hideCursorSpinner();
         hideTooltip();
       }
       return;
@@ -287,28 +472,27 @@
     hideTooltip();
     lastX = e.clientX;
     lastY = e.clientY;
+    showCursorSpinner(lastX, lastY);
 
     window[TIMER_KEY] = setTimeout(() => {
       delete window[TIMER_KEY];
+      hideCursorSpinner();
       if (!currentCell) return;
 
       const tip = showLoading(info.nr, info.txt);
       position(tip, lastX, lastY);
 
-      fetch(
-        'https://apps.transgourmet.de/recor/api/productposterdocument/product/search' +
-        '?size=12&page=0&term=' + encodeURIComponent(info.nr),
-        { credentials: 'include' }
-      )
-        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      fetchData(info.nr)
         .then(data => { renderProduct(tip, info.nr, data); position(tip, lastX, lastY); })
         .catch(err  => renderError(tip, info.nr, err));
-    }, 2000);
+    }, 1000);
   }
 
   function onMove(e) {
     lastX = e.clientX;
     lastY = e.clientY;
+    const cs = document.getElementById(CURSOR_ID);
+    if (cs) { cs.style.left = (lastX + 12) + 'px'; cs.style.top = (lastY + 12) + 'px'; }
     const tip = document.getElementById(TOOLTIP_ID);
     if (tip && tip.style.display !== 'none' && tip.style.opacity !== '0') {
       position(tip, lastX, lastY);
@@ -321,6 +505,7 @@
     if (related && currentCell.contains(related)) return;
     currentCell = null;
     if (window[TIMER_KEY]) { clearTimeout(window[TIMER_KEY]); delete window[TIMER_KEY]; }
+    hideCursorSpinner();
     hideTooltip();
   }
 
@@ -331,7 +516,9 @@
   // ── Spinner animation ────────────────────────────────────────────────────────
 
   if (!document.getElementById(STYLE_ID)) {
-    const style = mk('style', null, '@keyframes __bkSpin{to{transform:rotate(360deg)}}');
+    const style = mk('style', null,
+      '@keyframes __bkSpin{to{transform:rotate(360deg)}}' +
+      '@keyframes __bkProg{from{stroke-dashoffset:37.7}to{stroke-dashoffset:0}}');
     style.id = STYLE_ID;
     document.head.appendChild(style);
   }
@@ -358,8 +545,16 @@
   ].join(';'));
   panel.id = PANEL_ID;
 
-  panel.appendChild(mk('div', 'width:8px;height:8px;background:#107e3e;border-radius:50%;flex-shrink:0'));
-  panel.appendChild(mk('span', null, 'Artikel-Info \u00b7 2s Hover'));
+  badgeDot = mk('div', 'width:8px;height:8px;background:#107e3e;border-radius:50%;flex-shrink:0');
+  badgeLbl = mk('span', null, 'Artikel-Info \u00b7 1s Hover');
+
+  relayBtn = mk('button',
+    'background:none;border:1px solid #c0c0c0;border-radius:4px;font-size:11px;font-weight:600;' +
+    'padding:2px 8px;cursor:pointer;color:#32363a;font-family:72,Arial,sans-serif;flex-shrink:0',
+    'Relay');
+  relayBtn.type  = 'button';
+  relayBtn.title = 'Transgourmet-Tab als Relay verbinden (CORS-Umgehung)';
+  relayBtn.onclick = connectRelay;
 
   const closeBtn = mk('button',
     'background:none;border:none;font-size:16px;line-height:1;cursor:pointer;color:#6a6d70;padding:0;margin-left:4px;flex-shrink:0',
@@ -367,7 +562,10 @@
   closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', 'Artikel-Info beenden');
   closeBtn.onclick = cleanup;
-  panel.appendChild(closeBtn);
 
+  panel.appendChild(badgeDot);
+  panel.appendChild(badgeLbl);
+  panel.appendChild(relayBtn);
+  panel.appendChild(closeBtn);
   document.body.appendChild(panel);
 })();

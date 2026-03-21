@@ -5,6 +5,113 @@ All notable changes to BV Bookmarklets are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.6] - 2026-03-21
+
+### Changed
+- **MHD-Entscheidung**: removed the manual target-days selector (7 d / 14 d / 21 d). The bookmarklet now filters exclusively for rows where BV-Menge = 1 **CO/CO2/CO3** (PAL, PLL, PA2 and all other units are skipped). The recommended quantity is calculated from the article's own **RLZ** (Mindesthaltbarkeit zur Lieferzeit): `Opt. = ⌈(RLZ÷7 × Prog/KW − Bestand − PB) ÷ Faktor⌉`. The panel formula line, description, action-button labels, feedback messages, table column header, and hint text have all been updated to reflect the new logic.
+
+### Fixed
+- **Artikel-Info Relay (Receptor)**: badge dot stayed orange permanently. The receptor sent the initial `ARTIKEL_INFO_PONG` to the opener before badge DOM elements existed, so `setConnected()` had no elements to update. The opening announcement is now sent after the badge is appended to the document, and `setConnected()` is called immediately so the dot turns green as soon as the opener is notified.
+
+## [1.10.5] - 2026-03-20
+
+### Changed
+- **Artikel-Info Tooltip**: hover delay reduced from 2 seconds to 1 second. The SVG progress arc animation and badge labels updated accordingly.
+
+## [1.10.4] - 2026-03-20
+
+### Added
+- **Artikel-Info Tooltip**: in-memory API result cache (`Map`) keyed by article number. Once an article's data has been fetched (via relay or direct), subsequent hovers over the same article number return the cached result instantly without a network request. Cache lives for the duration of the bookmarklet session.
+
+## [1.10.3] - 2026-03-20
+
+### Changed
+- **Artikel-Info Tooltip**: product image enlarged further from 90 × 90 px to 120 × 120 px.
+- **Artikel-Info Tooltip**: cursor loading indicator replaced with an SVG progress arc — a 16 × 16 px circle that fills from 0 % to 100 % over the 2-second hover delay (matching the timer exactly). Resets on each new cell entry. The arc uses the SAP blue (`#0a6ed1`) on a subtle gray track.
+- **Build**: fixed the comment-stripping minifier regex to anchor to line-start (`(?m)^\s*//`) so URL strings containing `://` are no longer corrupted.
+
+## [1.10.2] - 2026-03-20
+
+### Changed
+- **Artikel-Info Tooltip**: product image in the tooltip enlarged from 60 × 60 px to 90 × 90 px.
+- **Artikel-Info Tooltip**: added a small animated spinner (14 px ring) that follows the cursor during the 2-second hover delay. It appears immediately on hover and disappears when the timer fires (tooltip shown), the mouse leaves the cell, or the bookmarklet is closed.
+
+## [1.10.1] - 2026-03-20
+
+### Fixed
+- **Artikel-Info Relay** receptor: `DOMException: An invalid or illegal string was specified` when replying via `postMessage` from a `file://` sender. `file://` origins are reported as the string `"null"` by the browser, which is not a valid `targetOrigin`. Added `safeOrigin()` helper that substitutes `'*'` whenever the origin is `"null"` or empty, used for both the `ARTIKEL_INFO_PONG` reply and the `ARTIKEL_INFO_RESPONSE` reply.
+
+## [1.10.0] - 2026-03-20
+
+### Added
+- **Artikel-Info Relay** (`artikel-info-receptor-source.js`): new companion bookmarklet that runs on a Transgourmet tab and acts as a cross-origin relay.
+  - Activated once on any `apps.transgourmet.de` tab via drag-and-drop bookmarklet.
+  - Listens for `ARTIKEL_INFO_PING` / `ARTIKEL_INFO_REQUEST` messages via `window.postMessage`.
+  - Fetches the product search API same-origin (no CORS restriction) and replies with `ARTIKEL_INFO_RESPONSE`.
+  - Automatically announces itself to the opener window via `window.opener.postMessage` on activation.
+  - Status badge shows connection origin hostname when a relay client connects.
+  - Toggle off via × button or second bookmarklet click.
+
+### Changed
+- **Artikel-Info Tooltip** (`artikel-info-source.js`): added `window.postMessage`-based relay support to bypass CORS restrictions when the API does not return `Access-Control-Allow-Origin` for the F&R origin.
+  - New **»Relay«** button in the status badge opens a named Transgourmet tab (`tg_artikel_relay`) via `window.open()` and starts a PING handshake loop (500 ms interval, 10 s timeout).
+  - Once the Relay receptor bookmarklet is activated on that tab, a PONG response is received and the relay is marked as connected (badge updates to »Relay ✓«).
+  - All subsequent product lookups are routed through `requestViaRelay()` → `postMessage` → receptor → same-origin fetch → `postMessage` reply.
+  - Pending relay requests tracked by auto-incrementing `reqId`; responses matched and resolved/rejected; 10 s per-request timeout.
+  - Falls back to direct `fetch()` with `credentials:'include'` when no relay is connected.
+  - Relay state updates the badge: connecting (orange), connected (green), timeout / disconnected (red + Retry button).
+  - Cleanup cancels all pending relay requests and removes the `message` event listener.
+
+## [1.9.0] - 2026-03-20
+
+### Added
+- **MHD-Entscheidung** (`mhd-entscheidung-source.js`): new bookmarklet for quick handling of borderline order quantities on the F&R Bestellvorschlag.
+  - Scans all visible rows where BV-Menge = 1 (borderline orders, common with perishable/MHD items).
+  - **Min. MHD date calculation**: computes the minimum acceptable best-before date per article using the formula `Min. MHD = heute + ⌈(Bestand + BV×Faktor) ÷ (Prog/KW÷7)⌉`. This tells the retailer the latest date by which all delivered units must be sold.
+  - **Spoilage warning (⚠)**: when the calculated sell-through time exceeds the article's RLZ, a warning badge appears — the goods would expire before being sold.
+  - Color-coded MHD dates: orange for perishable items (RLZ OK), red + ⚠ for spoilage risk, neutral for non-perishable.
+  - Formula display box in the panel for transparency.
+  - **Alle → 0**: sets all found rows to 0 (skip order).
+  - **Alle → Voll**: recalculates the optimal order quantity per row using the coverage-day formula and sets BV-Menge to that value.
+  - Target coverage days selectable: 7 / 14 / 21 days (default: 14).
+  - Scrollable results table shows Art.-Nr, Text, "Voll" quantity, and Min. MHD date.
+  - Per-row toggle button allows individual 0 ↔ Voll decisions.
+  - Click on a table row scrolls the SAP grid to that article with a brief highlight.
+  - Draggable panel; click bookmarklet again or × to close.
+
+## [1.8.3] - 2026-03-20
+
+### Changed
+- **Ampel-Highlighter** (`ampel-highlighter-source.js`): completely switched from reading the SAP "RW Bestand" column to computing reach as **Bestand ÷ (Ø Prog/KW ÷ 7)** (= `Bestand * 7 / Prog` in days).
+  - Grid detection now identifies the correct grid by locating a "Bestand…" column and a column containing both "prog" and "kw" (matching "Ø Prog/KW"), instead of relying on "RW Bestand".
+  - `getColIndices` now tracks `{ bestand, progKW }` — RW Bestand column no longer used.
+  - Formula: `days = (Bestand / Ø_Prog_KW) * 7` — the weekly prognose rate is converted to a daily rate before dividing stock.
+  - `applyToRow` skips rows where Ø Prog/KW is 0 or either value is unparseable.
+  - Legend panel title updated to "Ampel – Bestand/Prognose"..
+
+## [1.8.2] - 2026-03-20
+
+### Added
+- **Erweiterte Suche** (`suche-source.js`): new bookmarklet for fast client-side filtering of the F&R Bestellvorschlag positions table with advanced wildcard syntax.
+  - Wildcards: `*` matches any characters within a term (e.g. `sv*33` matches "Sv.Pap.33x33").
+  - Exact phrase: `"text"` matches only rows containing the exact string.
+  - Exclusion: `-term` hides all rows containing that term.
+  - Required: `+term` shows only rows where that term appears.
+  - Multiple terms are combined with implicit AND logic.
+  - Live-filtering as you type (100 ms debounce); all hidden rows are automatically restored on close or Escape.
+  - MutationObserver re-applies the active filter whenever SAP re-renders rows (virtual scroll).
+  - Draggable panel with row counter showing matched vs. total rows.
+  - Second click on the bookmarklet (or clicking `×` / pressing Escape) removes the panel and restores all hidden rows.
+
+## [1.8.1] - 2026-03-20
+
+### Fixed
+- **PAL löschen**: Fixed bookmarklet not actually deleting palettes despite reporting "Gelöscht".
+  - `waitBusy` — replaced the 600 ms single-phase fallback (which fired before SAP had time to show its busy indicator) with a proper two-phase approach matching the source file: phase 1 polls up to 3 seconds for the busy indicator to appear, phase 2 waits up to 15 seconds for it to disappear.
+  - Dialog button click — replaced `result.btn.click()` (raw DOM click) with `clickBtn(result.btn.id)` which resolves the SAP Button control via `findCtrl` and calls `firePress()`. This properly triggers SAP's internal press/ontap chain, which is required to invoke `getOnlineSubmitPALloeschen` and complete the deletion.
+  - Success path — after confirming the dialog the script now waits for the dialog to close (`waitForMboxGone`) before calling `waitBusy`, and then additionally waits for SAP to clear the palette-number input field (`waitForInputClear`) as confirmation that the deletion actually completed.
+  - Error path — replaced the fixed 500 ms `setTimeout(next, 500)` with `waitForMboxGone` so the loop only advances after the error dialog has actually closed.
+
 ## [1.8.0] - 2026-03-19
 
 ### Added
