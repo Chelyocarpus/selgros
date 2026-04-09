@@ -5,6 +5,12 @@ All notable changes to BV Bookmarklets are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.7] - 2026-04-01
+
+### Fixed
+- **PAL löschen**: log row icons (⏳ ↻ ✓ ✗) and the summary completion message (✓ Fertig) were rendering as `?` because the Unicode characters were lost during minification. Replaced all instances with JavaScript Unicode escape sequences.
+- **PAL löschen**: log rows were truncated with ellipsis and could not be fully read. Changed row style from `white-space:nowrap;overflow:hidden;text-overflow:ellipsis` to `white-space:pre-wrap;word-break:break-word` so long messages wrap and the existing vertical scroll in the log container makes them fully readable.
+
 ## [1.10.6] - 2026-03-21
 
 ### Changed
