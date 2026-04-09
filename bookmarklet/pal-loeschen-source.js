@@ -308,11 +308,11 @@
   function addLog(idx, pal, status, msg) {
     if (!logRows[idx]) {
       const row = document.createElement('div');
-      row.style.cssText = 'padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+      row.style.cssText = 'padding:1px 0;white-space:pre-wrap;word-break:break-word';
       logWrap.appendChild(row);
       logRows[idx] = row;
     }
-    const icons = { pending: '⏳', busy: '↻', done: '✓', error: '✗' };
+    const icons = { pending: '\u23F3', busy: '\u21BB', done: '\u2713', error: '\u2717' };
     const cols  = { pending: '#888', busy: '#6db3f2', done: '#66bb6a', error: '#e57373' };
     logRows[idx].style.color = cols[status] || '#888';
     logRows[idx].textContent = `[${ts()}] ${icons[status] || '?'} ${pal} — ${msg}`;
@@ -346,7 +346,7 @@
         if (errors === 0) {
           summaryEl.style.background = '#e8f5e9';
           summaryEl.style.color      = '#1b5e20';
-          summaryEl.textContent      = `✓ Fertig — ${ok} gelöscht${skipNote}`;
+          summaryEl.textContent      = `\u2713 Fertig \u2014 ${ok} gel\u00F6scht${skipNote}`;
           btnOK.style.display        = 'none';
         } else {
           summaryEl.style.background = '#fff3e0';
