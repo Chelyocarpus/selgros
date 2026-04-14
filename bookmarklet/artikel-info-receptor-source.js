@@ -25,8 +25,9 @@
 (function () {
   'use strict';
 
-  const BADGE_ID = '__tg_relay_badge';
-  const API_URL  = 'https://apps.transgourmet.de/recor/api/productposterdocument/product/search';
+  const BADGE_ID   = '__tg_relay_badge';
+  const API_URL    = 'https://apps.transgourmet.de/recor/api/productposterdocument/product/search';
+  const API_URL_NEW = 'https://apps.transgourmet.de/search/api/product/search';
 
   // ── Toggle off ──────────────────────────────────────────────────────────────
 
@@ -54,6 +55,29 @@
     return (ori && ori !== 'null') ? ori : '*';
   }
 
+  /**
+   * Converts a new-API single-product response to the Spring-pageable shape
+   * the source script's renderProduct expects.
+   */
+  function normalizeNewApiData(raw) {
+    if (!raw || !raw.name) return null;
+    const selUnit = (raw.units || []).find(u => u.code === raw.selectedUnit) || (raw.units || [])[0] || {};
+    return {
+      _apiSource:    'new',
+      content: [{
+        name:          raw.name,
+        imageUrl:      raw.asset || '',
+        ean:           selUnit.ean || '',
+        unitName:      selUnit.unitName || '',
+        brand:         '',
+        productGroup:  null,
+        description:   '',
+        packagingText: selUnit.content ? `${selUnit.content}\u00d7` : '',
+      }],
+      totalElements: 1,
+    };
+  }
+
   // ── Message handler ─────────────────────────────────────────────────────────
 
   function onMessage(e) {
@@ -69,10 +93,26 @@
     if (!nr || !/^\d{5,}$/.test(nr)) return;
 
     // Fetch is same-origin here → no CORS issue
+    // Try old API first; fall back to new API when old returns no results.
     const { source, origin } = e;
     const tgt = safeOrigin(origin);
     fetch(`${API_URL}?size=12&page=0&term=${encodeURIComponent(nr)}`, { credentials: 'include' })
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => {
+        const items = data && (data.content || (Array.isArray(data) ? data : null));
+        if (!Array.isArray(items) || !items.length) throw new Error('not_found');
+        data._apiSource = 'old';
+        return data;
+      })
+      .catch(() =>
+        fetch(`${API_URL_NEW}?term=${encodeURIComponent(nr)}&locale=DE&plant=0119&isNameRequired=true`, { credentials: 'include' })
+          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(raw => {
+            const normalized = normalizeNewApiData(raw);
+            if (!normalized) throw new Error('Kein Produkt gefunden');
+            return normalized;
+          })
+      )
       .then(data  => source.postMessage({ type: 'ARTIKEL_INFO_RESPONSE', reqId, data   }, tgt))
       .catch(err  => source.postMessage({ type: 'ARTIKEL_INFO_RESPONSE', reqId, error: String(err) }, tgt));
   }

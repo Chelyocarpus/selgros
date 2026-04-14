@@ -1,8 +1,8 @@
 /**
  * Artikel-Info Tooltip – Source Script
- * F&R Bestellvorschlag · Hover 2 Sek. über Artikel-Name → Transgourmet Produktinfos
+ * F&R Bestellvorschlag · Hover 1 Sek. über Artikel-Name → Transgourmet Produktinfos
  *
- * Nach 2 Sekunden Hover auf einem Artikelnamen in der Bestellvorschlag-Liste
+ * Nach 1 Sekunde Hover auf einem Artikelnamen in der Bestellvorschlag-Liste
  * wird die Artikel-Nr. des Eintrags ermittelt und die Transgourmet-Produktsuche
  * aufgerufen. Das Ergebnis erscheint als schwebendes Tooltip neben dem Cursor.
  *
@@ -21,8 +21,11 @@
  * Aktivierung : Bookmarklet-Klick startet den Hover-Modus (grüner Status-Badge).
  * Deaktivierung: × im Badge oder erneuter Bookmarklet-Klick beendet den Modus.
  *
- * API: https://apps.transgourmet.de/recor/api/productposterdocument/product/search
+ * APIs:
+ *  - Primär : https://apps.transgourmet.de/recor/api/productposterdocument/product/search
+ *  - Fallback: https://apps.transgourmet.de/search/api/product/search (neu, für kürzlich hinzugefügte Artikel)
  */
+
 
 (function () {
   'use strict';
@@ -33,7 +36,8 @@
   const STYLE_ID   = '__bk_tip_style';
   const TIMER_KEY  = '__bk_tip_timer';
 
-  const API_URL    = 'https://apps.transgourmet.de/recor/api/productposterdocument/product/search';
+  const API_URL     = 'https://apps.transgourmet.de/recor/api/productposterdocument/product/search';
+  const API_URL_NEW = 'https://apps.transgourmet.de/search/api/product/search';
   const RELAY_PAGE = 'https://apps.transgourmet.de/recor/';
   const RELAY_WIN  = 'tg_artikel_relay';
   const RELAY_ORI  = 'https://apps.transgourmet.de';
@@ -116,14 +120,67 @@
     });
   }
 
-  /** Fetches product data – via relay if connected, direct fetch otherwise. Returns cached result when available. */
+  /**
+   * Converts a new-API single-product response to the Spring-pageable shape
+   * that renderProduct expects, so no changes to the rendering layer are needed.
+   * Also surfaces price data (not available in the old API).
+   */
+  function normalizeNewApiData(raw) {
+    if (!raw || !raw.name) return null;
+    const selUnit = (raw.units || []).find(u => u.code === raw.selectedUnit) || (raw.units || [])[0] || {};
+    return {
+      _apiSource:    'new',
+      content: [{
+        name:          raw.name,
+        imageUrl:      raw.asset || '',
+        ean:           selUnit.ean || '',
+        unitName:      selUnit.unitName || '',
+        brand:         '',
+        productGroup:  null,
+        description:   '',
+        packagingText: selUnit.content ? `${selUnit.content}\u00d7` : '',
+      }],
+      totalElements: 1,
+    };
+  }
+
+  /** Fetches directly from the new search API (direct mode only). */
+  function fetchFromNewApiDirect(nr) {
+    return fetch(
+      `${API_URL_NEW}?term=${encodeURIComponent(nr)}&locale=DE&plant=0119&isNameRequired=true`,
+      { credentials: 'include' }
+    )
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(raw => {
+        const normalized = normalizeNewApiData(raw);
+        if (!normalized) throw new Error('Kein Produkt gefunden');
+        return normalized;
+      });
+  }
+
+  /**
+   * Fetches product data – via relay if connected, direct fetch otherwise.
+   * Falls back to the new API when the old API returns no results.
+   * Returns cached result when available.
+   */
   function fetchData(nr) {
     if (apiCache.has(nr)) return Promise.resolve(apiCache.get(nr));
-    const req = relayReady && relayWin && !relayWin.closed
+
+    const oldApiFetch = relayReady && relayWin && !relayWin.closed
       ? requestViaRelay(nr)
       : fetch(`${API_URL}?size=12&page=0&term=${encodeURIComponent(nr)}`, { credentials: 'include' })
           .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
-    return req.then(data => { apiCache.set(nr, data); return data; });
+
+    return oldApiFetch
+      .then(data => {
+        // Old API returns a paged result – treat empty content as "not found" and trigger fallback
+        const items = data && (data.content || (Array.isArray(data) ? data : null));
+        if (!Array.isArray(items) || !items.length) throw new Error('not_found');
+        data._apiSource = 'old';
+        return data;
+      })
+      .catch(() => fetchFromNewApiDirect(nr))
+      .then(data => { apiCache.set(nr, data); return data; });
   }
 
   /** Handles incoming postMessages from the relay tab. */
@@ -383,9 +440,10 @@
       tip.appendChild(tbl);
     }
 
+    const apiLabel = data._apiSource === 'new' ? ' \u00b7 neue API' : '';
     tip.appendChild(mk('div',
       'margin-top:10px;padding-top:8px;border-top:1px solid #f0f0f0;font-size:10px;color:#8b90a8',
-      'transgourmet.de \u00b7 ' + nr));
+      'transgourmet.de \u00b7 ' + nr + apiLabel));
   }
 
   function renderError(tip, nr, err) {
