@@ -5,7 +5,25 @@ All notable changes to BV Bookmarklets are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.10.7] - 2026-04-01
+## [1.12.0] - 2026-04-14
+
+### Changed
+- **Artikel-Info Tooltip**: added automatic fallback to the new Transgourmet search API (`/search/api/product/search`) when the primary API returns no results (e.g. for newly added articles).
+  - Both direct-fetch mode and relay mode (via `artikel-info-receptor-source.js`) implement the fallback.
+  - New API response is normalized to the same shape `renderProduct` already handles, so tooltip layout is unchanged.
+
+## [1.11.0] - 2026-04-09
+
+### Added
+- **Ampel-Highlighter**: incorporated "Geplante Wareneingänge" from the Zeitreihen panel into the Ampel calculation.
+  - **Day-by-day simulation**: planned deliveries (per KW from the Zeitreihen "Geplante Wareneingänge" row) are injected at the start of their respective week offset. This gives an accurate "effective Reichweite" without simply adding the planned total to the current Bestand.
+  - **Dual visual indicator**: for the article currently shown in the Zeitreihen panel, the row now shows two distinct signals — the **background color** reflects the adjusted effective Reichweite (with planned incoming), while the **left border color** retains the original Reichweite level (without planned incoming).
+  - **Blue badge** (↑ +X ≈YT): appended inside the Bestand cell, showing the total planned incoming units and the adjusted effective stock days. A hover tooltip lists the per-KW delivery breakdown.
+  - **Legend panel**: added a "Geplante Wareneingänge" section explaining the border/background color duality and the badge format.
+  - **MutationObserver** now observes `document.body` (subtree) with a 100 ms debounce so the Ampel updates automatically when the user selects a different article in the Zeitreihen panel, as well as during virtual-scroll events.
+  - Detects "Artikel-Nr" column to match the Zeitreihen article with the correct main-grid row. Falls back gracefully when no planned incoming data is available.
+
+
 
 ### Fixed
 - **PAL löschen**: log row icons (⏳ ↻ ✓ ✗) and the summary completion message (✓ Fertig) were rendering as `?` because the Unicode characters were lost during minification. Replaced all instances with JavaScript Unicode escape sequences.
