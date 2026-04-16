@@ -6,11 +6,10 @@
  * wird die Artikel-Nr. des Eintrags ermittelt und die Transgourmet-Produktsuche
  * aufgerufen. Das Ergebnis erscheint als schwebendes Tooltip neben dem Cursor.
  *
- * Unterstützt zwei Datenabruf-Modi:
- *  - Direkt : fetch() mit credentials:'include' (benötigt CORS-Header der API)
- *  - Relay  : window.postMessage an einen Transgourmet-Tab mit aktivem Relay-Receptor
- *             → Umgehung des CORS-Problems, da der Receptor direkt auf transgourmet.de
- *               läuft und dort same-origin auf die API zugreifen kann.
+ * Datenabruf ausschließlich via Relay:
+ *   window.postMessage an einen Transgourmet-Tab mit aktivem Relay-Receptor.
+ *   Der Receptor läuft same-origin auf transgourmet.de und führt die API-Abfragen
+ *   dort direkt aus, ohne CORS-Einschränkungen.
  *
  * Relay-Einrichtung (einmalig):
  *   1. Dieses Bookmarklet auf dem F&R-Tab starten.
@@ -18,12 +17,8 @@
  *   3. Auf dem Transgourmet-Tab das Bookmarklet »Artikel-Info Relay« aktivieren.
  *   4. Verbindung wird automatisch aufgebaut (Badge: »Relay ✓«).
  *
- * Aktivierung : Bookmarklet-Klick startet den Hover-Modus (grüner Status-Badge).
+ * Aktivierung : Bookmarklet-Klick startet den Hover-Modus (Badge wird orange bis Relay verbunden).
  * Deaktivierung: × im Badge oder erneuter Bookmarklet-Klick beendet den Modus.
- *
- * APIs:
- *  - Primär : https://apps.transgourmet.de/recor/api/productposterdocument/product/search
- *  - Fallback: https://apps.transgourmet.de/search/api/product/search (neu, für kürzlich hinzugefügte Artikel)
  */
 
 
@@ -36,8 +31,6 @@
   const STYLE_ID   = '__bk_tip_style';
   const TIMER_KEY  = '__bk_tip_timer';
 
-  const API_URL     = 'https://apps.transgourmet.de/recor/api/productposterdocument/product/search';
-  const API_URL_NEW = 'https://apps.transgourmet.de/search/api/product/search';
   const RELAY_PAGE = 'https://apps.transgourmet.de/recor/';
   const RELAY_WIN  = 'tg_artikel_relay';
   const RELAY_ORI  = 'https://apps.transgourmet.de';
@@ -121,66 +114,16 @@
   }
 
   /**
-   * Converts a new-API single-product response to the Spring-pageable shape
-   * that renderProduct expects, so no changes to the rendering layer are needed.
-   * Also surfaces price data (not available in the old API).
-   */
-  function normalizeNewApiData(raw) {
-    if (!raw || !raw.name) return null;
-    const selUnit = (raw.units || []).find(u => u.code === raw.selectedUnit) || (raw.units || [])[0] || {};
-    return {
-      _apiSource:    'new',
-      content: [{
-        name:          raw.name,
-        imageUrl:      raw.asset || '',
-        ean:           selUnit.ean || '',
-        unitName:      selUnit.unitName || '',
-        brand:         '',
-        productGroup:  null,
-        description:   '',
-        packagingText: selUnit.content ? `${selUnit.content}\u00d7` : '',
-      }],
-      totalElements: 1,
-    };
-  }
-
-  /** Fetches directly from the new search API (direct mode only). */
-  function fetchFromNewApiDirect(nr) {
-    return fetch(
-      `${API_URL_NEW}?term=${encodeURIComponent(nr)}&locale=DE&plant=0119&isNameRequired=true`,
-      { credentials: 'include' }
-    )
-      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(raw => {
-        const normalized = normalizeNewApiData(raw);
-        if (!normalized) throw new Error('Kein Produkt gefunden');
-        return normalized;
-      });
-  }
-
-  /**
-   * Fetches product data – via relay if connected, direct fetch otherwise.
-   * Falls back to the new API when the old API returns no results.
+   * Fetches product data via the relay tab.
+   * The receptor handles both API variants same-origin on transgourmet.de.
    * Returns cached result when available.
    */
   function fetchData(nr) {
     if (apiCache.has(nr)) return Promise.resolve(apiCache.get(nr));
-
-    const oldApiFetch = relayReady && relayWin && !relayWin.closed
-      ? requestViaRelay(nr)
-      : fetch(`${API_URL}?size=12&page=0&term=${encodeURIComponent(nr)}`, { credentials: 'include' })
-          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
-
-    return oldApiFetch
-      .then(data => {
-        // Old API returns a paged result – treat empty content as "not found" and trigger fallback
-        const items = data && (data.content || (Array.isArray(data) ? data : null));
-        if (!Array.isArray(items) || !items.length) throw new Error('not_found');
-        data._apiSource = 'old';
-        return data;
-      })
-      .catch(() => fetchFromNewApiDirect(nr))
-      .then(data => { apiCache.set(nr, data); return data; });
+    if (!relayReady || !relayWin || relayWin.closed) {
+      return Promise.reject(new Error('Kein Relay verbunden. Bitte »Relay« klicken.'));
+    }
+    return requestViaRelay(nr).then(data => { apiCache.set(nr, data); return data; });
   }
 
   /** Handles incoming postMessages from the relay tab. */
@@ -603,8 +546,8 @@
   ].join(';'));
   panel.id = PANEL_ID;
 
-  badgeDot = mk('div', 'width:8px;height:8px;background:#107e3e;border-radius:50%;flex-shrink:0');
-  badgeLbl = mk('span', null, 'Artikel-Info \u00b7 1s Hover');
+  badgeDot = mk('div', 'width:8px;height:8px;background:#e65100;border-radius:50%;flex-shrink:0');
+  badgeLbl = mk('span', null, 'Artikel-Info \u00b7 Relay ben\u00f6tigt');
 
   relayBtn = mk('button',
     'background:none;border:1px solid #c0c0c0;border-radius:4px;font-size:11px;font-weight:600;' +
