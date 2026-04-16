@@ -5,6 +5,28 @@ All notable changes to BV Bookmarklets are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-04-16
+
+### Fixed
+- **Artikel-Info Tooltip**: corrected mojibake in the bookmarklet href caused by the previous build using PowerShell `Get-Content` which reads UTF-8 source files as Windows-1252, corrupting multi-byte characters (`·`, `»`, `«`, `…`, `✓`) before percent-encoding them.
+  - Added `build.js` — a permanent Node.js build script that minifies all source-backed bookmarklets via `npx terser` and percent-encodes the result using Node's `encodeURIComponent`, which handles UTF-8 correctly in a single pass.
+  - All affected string literals in the tooltip badge (`Relay benötigt`, `Relay verbindet…`, `Relay ✓ · 1s Hover`, `· neue API`, `Lade Produktdaten…`, `»Relay«`) now encode correctly.
+
+## [1.13.0] - 2026-04-16
+
+### Changed
+- **Artikel-Info Tooltip**: removed direct-fetch mode entirely. The Transgourmet API never sends `Access-Control-Allow-Origin` headers, so direct fetches from the F&R origin are always blocked by CORS. The bookmarklet now requires the Relay to be connected before hover lookups work.
+  - Removed `API_URL`, `API_URL_NEW`, `normalizeNewApiData`, and `fetchFromNewApiDirect`.
+  - `fetchData` is now relay-only; returns a rejected promise with a user-readable message when no relay is connected.
+  - Initial badge state is orange ("Relay benötigt") instead of green, making the required setup step visible immediately.
+
+## [1.12.1] - 2026-04-16
+
+### Fixed
+- **Artikel-Info Tooltip**: relay mode no longer falls back to a direct fetch of the new API (`/search/api/product/search`) when the relay fails or returns no results.
+  Previously, a relay failure triggered `fetchFromNewApiDirect` on the F&R tab, which was blocked by CORS (the new API returns a 301 redirect that browsers reject cross-origin).
+  The relay receptor already handles both APIs same-origin; in relay mode the client now propagates the error instead of retrying directly.
+
 ## [1.12.0] - 2026-04-14
 
 ### Changed
