@@ -72,7 +72,7 @@
 
   /** Opens the transgourmet tab and starts a PING handshake loop. */
   function connectRelay() {
-    relayWin     = window.open(RELAY_PAGE, RELAY_WIN);
+    relayWin     = window.open(RELAY_PAGE, '_blank');
     relayReady   = false;
     pingAttempts = 0;
     updateRelayBadge('connecting');
