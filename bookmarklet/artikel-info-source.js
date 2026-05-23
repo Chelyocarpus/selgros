@@ -115,7 +115,7 @@
 
   /**
    * Fetches product data via the relay tab.
-   * The receptor handles both API variants same-origin on transgourmet.de.
+   * The receptor calls the recorservice API same-origin on transgourmet.de.
    * Returns cached result when available.
    */
   function fetchData(nr) {
@@ -325,28 +325,25 @@
   function renderProduct(tip, nr, data) {
     clearContent(tip);
 
-    // API returns a Spring-pageable wrapper: { content: [...], totalElements: n, ... }
-    const items = data && (data.content || (Array.isArray(data) ? data : null));
-    const p = Array.isArray(items) && items.length ? items[0] : null;
-
-    if (!p) {
+    // API: recorservice/api/aggregate/recor/{nr}?plant=0119
+    if (!data || !data.name) {
       buildHeader(tip, nr, '');
       tip.appendChild(mk('div', 'color:#c62828;font-size:12px', 'Kein Produkt gefunden.'));
       return;
     }
 
-    const name  = p.name  || '';
-    const img   = p.imageUrl || '';
-    const ean   = p.ean   || '';
-    const brand = p.brand || '';
-    const cat   = (p.productGroup && p.productGroup.name) || '';
-    const unit  = p.unitName || p.unit || '';
-    const desc  = p.description || p.shopDescription || '';
-    const pkg   = p.packagingText || '';
+    const name    = data.name  || '';
+    const img     = data.asset || '';
+    const selUnit = (data.units || []).find(u => u.code === data.selectedUnit)
+                    || (data.units || [])[0]
+                    || {};
+    const ean  = selUnit.ean      || '';
+    const unit = selUnit.unitName || '';
+    const pkg  = selUnit.content  ? selUnit.content + '\u00d7' : '';
 
     buildHeader(tip, nr, name);
 
-    // Body: product image + truncated description
+    // Body: product image
     const body = mk('div', 'display:flex;gap:10px;align-items:flex-start;margin-bottom:10px');
     if (img) {
       const imgEl = document.createElement('img');
@@ -356,19 +353,13 @@
       imgEl.onerror = function () { this.style.display = 'none'; };
       body.appendChild(imgEl);
     }
-    if (desc) {
-      body.appendChild(mk('div', 'flex:1;min-width:0;font-size:11px;color:#5b607a;line-height:1.4',
-        desc.length > 120 ? desc.slice(0, 117) + '\u2026' : desc));
-    }
     tip.appendChild(body);
 
     // Details table
     const rows = [];
-    if (brand) rows.push(['Marke',      brand]);
-    if (pkg)   rows.push(['Verpackung', pkg]);
-    if (unit)  rows.push(['Einheit',    unit]);
-    if (ean)   rows.push(['EAN',        ean]);
-    if (cat)   rows.push(['Kategorie',  cat]);
+    if (pkg)  rows.push(['Verpackung', pkg]);
+    if (unit) rows.push(['Einheit',    unit]);
+    if (ean)  rows.push(['EAN',        ean]);
 
     if (rows.length) {
       const tbl = mk('table', 'width:100%;border-collapse:collapse;font-size:11px;color:#32363a');
@@ -383,10 +374,9 @@
       tip.appendChild(tbl);
     }
 
-    const apiLabel = data._apiSource === 'new' ? ' \u00b7 neue API' : '';
     tip.appendChild(mk('div',
       'margin-top:10px;padding-top:8px;border-top:1px solid #f0f0f0;font-size:10px;color:#8b90a8',
-      'transgourmet.de \u00b7 ' + nr + apiLabel));
+      'transgourmet.de \u00b7 ' + nr));
   }
 
   function renderError(tip, nr, err) {
